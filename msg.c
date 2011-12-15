@@ -14,7 +14,7 @@
  ***************************************************************************/
 #include "msg.h"
 
-int iofw_send_msg(int dst_proc_id, iofw_buf *buf)
+int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
 {
     int tag = 1;
 
@@ -33,11 +33,76 @@ int iofw_recv_int1(int src_proc_id, int *data)
     return 0;
 }
 
-int iofw_pack_msg_nc_create(
-	iofw_buf *buf,
+int iofw_pack_msg_create(
+	iofw_buf_t *buf,
 	const char *path, int cmode)
 {
     pack32(FUNC_NC_CREATE, buf);
     packstr(path, buf);
     pack32(cmode, buf);
+
+    return 0;
+}
+
+int iofw_pack_msg_def_dim(
+	iofw_buf_t *buf,
+	int ncid, const char *name, size_t len)
+{
+    pack32(FUNC_NC_DEF_DIM, buf);
+    pack32(ncid, buf);
+    packstr(name, buf);
+    
+    //TODO when pack size_t , how
+    pack32(len, buf);
+
+    return 0;
+}
+
+int iofw_pack_msg_def_var(
+	iofw_buf_t *buf,
+	int ncid, const char *name, nc_type xtype,
+	int ndims, const int dimids[])
+{
+    pack32(FUNC_NC_DEF_VAR, buf);
+    pack32(ncid, buf);
+    packstr(name, buf);
+    pack32(xtype);
+    pack32(ndims, buf);
+    pack32_array(dimids, sizeof(dimids)/sizeof(int));
+
+    return 0;
+}
+
+int iofw_pack_msg_enddef(
+	iofw_buf_t *buf,
+	int ncid)
+{
+    pack32(FUNC_NC_ENDDEF, buf);
+    pack32(ncid, buf);
+
+    return 0;
+}
+
+int iofw_pack_msg_put_var1_float(
+	iofw_buf_t *buf,
+	int ncid, int varid, const size_t index[],
+	const float *fp)
+{
+    pack32(FUNC_NC_PUT_VAR1_FLOAT, buf);
+    pack32(ncid, buf);
+    pack32(varid, buf);
+    //TODO pack size_t
+    pack32_array(index, sizeof(index)/sizeof(size_t));
+
+    return 0;
+}
+
+int iofw_pack_msg_close(
+	iofw_buf_t *buf,
+	int ncid)
+{
+    pack32(FUNC_NC_CLOSE, buf);
+    pack32(ncid, buf);
+
+    return 0;
 }

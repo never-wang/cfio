@@ -77,7 +77,7 @@ struct yuga_buf {
 };
 
 typedef struct yuga_buf* Buf;
-typedef struct yuga_buf iofw_buf;
+typedef struct yuga_buf iofw_buf_t;
 
 #define get_buf_data(__buf)		(__buf->head)
 #define get_buf_offset(__buf)		(__buf->processed)

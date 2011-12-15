@@ -1,6 +1,6 @@
 /****************************************************************************\
  *  pack.c - lowest level un/pack functions
- *  NOTE: The memory buffer will expand as needed using yuga_xrealloc()
+ *  NOTE: The memory buffer will expand as needed using realloc()
  *****************************************************************************
  *  Copyright (C) 2002-2007 The Regents of the University of California.
  *  Copyright (C) 2008 Lawrence Livermore National Security.
@@ -81,7 +81,7 @@ Buf create_buf(char *data, int size)
 		return NULL;
 	}
 
-	my_buf = yuga_xmalloc(sizeof(struct yuga_buf));
+	my_buf = malloc(sizeof(struct yuga_buf));
 	my_buf->magic = BUF_MAGIC;
 	my_buf->size = size;
 	my_buf->processed = 0;
@@ -94,8 +94,8 @@ Buf create_buf(char *data, int size)
 void free_buf(Buf my_buf)
 {
 	assert(my_buf->magic == BUF_MAGIC);
-	yuga_xfree(my_buf->head);
-	yuga_xfree(my_buf);
+	free(my_buf->head);
+	free(my_buf);
 }
 
 /* Grow a buffer by the specified amount */
@@ -107,7 +107,7 @@ void grow_buf (Buf buffer, int size)
 	}
 
 	buffer->size += size;
-	yuga_xrealloc(buffer->head, buffer->size);
+	realloc(buffer->head, buffer->size);
 }
 
 /* init_buf - create an empty buffer of the given size */
@@ -121,11 +121,11 @@ Buf init_buf(int size)
 	}
 	if(size <= 0)
 		size = BUF_SIZE;
-	my_buf = yuga_xmalloc(sizeof(struct yuga_buf));
+	my_buf = malloc(sizeof(struct yuga_buf));
 	my_buf->magic = BUF_MAGIC;
 	my_buf->size = size;
 	my_buf->processed = 0;
-	my_buf->head = yuga_xmalloc(sizeof(char)*size);
+	my_buf->head = malloc(sizeof(char)*size);
 	return my_buf;
 }
 
@@ -137,7 +137,7 @@ void *xfer_buf_data(Buf my_buf)
 
 	assert(my_buf->magic == BUF_MAGIC);
 	data_ptr = (void *) my_buf->head;
-	yuga_xfree(my_buf);
+	free(my_buf);
 	return data_ptr;
 }
 
@@ -155,7 +155,7 @@ void pack_time(time_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &n64, sizeof(n64));
@@ -199,7 +199,7 @@ void 	packdouble(double val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -239,7 +239,7 @@ void pack64(uint64_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -276,7 +276,7 @@ void pack32(uint32_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -320,7 +320,7 @@ int unpack16_array(uint16_t ** valp, uint32_t * size_val, Buf buffer)
 	if (unpack32(size_val, buffer))
 		return _ERROR;
 
-	*valp = yuga_xmalloc((*size_val) * sizeof(uint16_t));
+	*valp = malloc((*size_val) * sizeof(uint16_t));
 	for (i = 0; i < *size_val; i++) {
 		if (unpack16((*valp) + i, buffer))
 			return _ERROR;
@@ -349,7 +349,7 @@ int unpack32_array(uint32_t ** valp, uint32_t * size_val, Buf buffer)
 	if (unpack32(size_val, buffer))
 		return _ERROR;
 
-	*valp = yuga_xmalloc((*size_val) * sizeof(uint32_t));
+	*valp = malloc((*size_val) * sizeof(uint32_t));
 	for (i = 0; i < *size_val; i++) {
 		if (unpack32((*valp) + i, buffer))
 			return _ERROR;
@@ -371,7 +371,7 @@ void pack16(uint16_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -407,7 +407,7 @@ void pack8(uint8_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &val, sizeof(uint8_t));
@@ -443,7 +443,7 @@ void packmem(char *valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += (size_val + BUF_SIZE);
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -525,7 +525,7 @@ int unpackmem(char *valp, uint32_t * size_valp, Buf buffer)
  * specified by valp.  Also return the sizes of 'valp' in bytes.
  * Adjust buffer counters.
  * NOTE: valp is set to point into a newly created buffer,
- *	the caller is responsible for calling yuga_xfree() on *valp
+ *	the caller is responsible for calling free() on *valp
  *	if non-NULL (set to NULL on zero size buffer value)
  */
 int unpackmem_xmalloc(char **valp, uint32_t * size_valp, Buf buffer)
@@ -544,7 +544,7 @@ int unpackmem_xmalloc(char **valp, uint32_t * size_valp, Buf buffer)
 	else if (*size_valp > 0) {
 		if (remaining_buf(buffer) < *size_valp)
 			return _ERROR;
-		*valp = yuga_xmalloc(*size_valp);
+		*valp = malloc(*size_valp);
 		memcpy(*valp, &buffer->head[buffer->processed],
 		       *size_valp);
 		buffer->processed += *size_valp;
@@ -602,7 +602,7 @@ void packstr_array(char **valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -619,7 +619,7 @@ void packstr_array(char **valp, uint32_t size_val, Buf buffer)
  * (size) and a array of strings  store the number of strings in
  * 'size_valp' and the array of strings in valp
  * NOTE: valp is set to point into a newly created buffer,
- *	the caller is responsible for calling yuga_xfree on *valp
+ *	the caller is responsible for calling free on *valp
  *	if non-NULL (set to NULL on zero size buffer value)
  */
 int unpackstr_array(char ***valp, uint32_t * size_valp, Buf buffer)
@@ -638,7 +638,7 @@ int unpackstr_array(char ***valp, uint32_t * size_valp, Buf buffer)
 	if (*size_valp > MAX_PACK_ARRAY_LEN)
 		return _ERROR;
 	else if (*size_valp > 0) {
-		*valp = yuga_xmalloc(sizeof(char *) * (*size_valp + 1));
+		*valp = malloc(sizeof(char *) * (*size_valp + 1));
 		for (i = 0; i < *size_valp; i++) {
 			if (unpackmem_xmalloc(&(*valp)[i], &uint32_tmp, buffer))
 				return _ERROR;
@@ -662,7 +662,7 @@ void packmem_array(char *valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += (size_val + BUF_SIZE);
-		yuga_xrealloc(buffer->head, buffer->size);
+		realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], valp, size_val);
