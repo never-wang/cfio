@@ -44,6 +44,9 @@ int iofw_pack_msg_create(
     return 0;
 }
 
+/**
+ *pack msg function
+ **/
 int iofw_pack_msg_def_dim(
 	iofw_buf_t *buf,
 	int ncid, const char *name, size_t len)
@@ -66,9 +69,9 @@ int iofw_pack_msg_def_var(
     pack32(FUNC_NC_DEF_VAR, buf);
     pack32(ncid, buf);
     packstr(name, buf);
+    //TODO xtype is 32-byte?
     pack32(xtype, buf);
-    pack32(ndims, buf);
-    pack32_array((uint32_t*)dimids, sizeof(dimids)/sizeof(int), buf);
+    pack32_array((uint32_t*)dimids, ndims, buf);
 
     return 0;
 }
@@ -106,3 +109,88 @@ int iofw_pack_msg_close(
 
     return 0;
 }
+/**
+ *unpack msg function
+ **/
+int iofw_unpack_msg_func_code(
+	iofw_buf_t *buf)
+{
+    int func_code;
+
+    unpack32(&func_code, buf);
+
+    return func_code;
+}
+
+int iofw_unpack_msg_create(
+	iofw_buf_t *buf,
+	char **path, int *cmode)
+{
+    int len;
+
+    unpackstr_malloc(path, &len, buf);
+    unpack32(cmode, buf);
+
+    return 0;
+}
+
+int iofw_unpack_msg_def_dim(
+	iofw_buf_t *buf,
+	int *ncid, char **name, size_t *len)
+{
+    int len;
+
+    unpack32(ncid, buf);
+    unpackstr_malloc(name, &len, buf);
+    unpack32(len, buf);
+
+    return 0;
+}
+
+int iofw_unpack_msg_def_var(
+	iofw_buf_t *buf,
+	int *ncid, char **name, nc_type *xtype,
+	int *ndims, int **dimids)
+{
+    int len;
+
+    unpack32(ncid, buf);
+    unpackstr_malloc(name, &len, buf);
+    unpack32(xtype, buf);
+    unpack32(ndims, buf);
+    
+    unpack32_array(dimids, ndims, buf);
+
+    return 0;
+}
+
+int iofw_unpack_msg_enddef(
+	iofw_buf_t *buf,
+	int *ncid)
+{
+    unpack32(ncid, buf);
+
+    return 0;
+}
+
+int iofw_unpack_msg_put_var1_float(
+	iofw_buf_t *buf,
+	int *ncid, int *varid, int *indexdim, size_t *index)
+{
+    unpack32(ncid, buf);
+    unpack32(varid, buf);
+    unpack32_array(index, indexdim, buf);
+
+    return 0;
+}
+
+int iofw_unpack_msg_close(
+	    iofw_buf_t *buf,
+	    int *ncid)
+{
+    unpack32(ncid, buf);
+
+    return 0;
+
+}
+
