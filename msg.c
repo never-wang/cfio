@@ -66,9 +66,9 @@ int iofw_pack_msg_def_var(
     pack32(FUNC_NC_DEF_VAR, buf);
     pack32(ncid, buf);
     packstr(name, buf);
-    pack32(xtype);
+    pack32(xtype, buf);
     pack32(ndims, buf);
-    pack32_array(dimids, sizeof(dimids)/sizeof(int));
+    pack32_array((uint32_t*)dimids, sizeof(dimids)/sizeof(int), buf);
 
     return 0;
 }
@@ -92,7 +92,7 @@ int iofw_pack_msg_put_var1_float(
     pack32(ncid, buf);
     pack32(varid, buf);
     //TODO pack size_t
-    pack32_array(index, sizeof(index)/sizeof(size_t));
+    pack32_array((uint32_t*)index, sizeof(index)/sizeof(size_t), buf);
 
     return 0;
 }

@@ -15,6 +15,8 @@
 #ifndef _IO_H
 #define _IO_H
 #include <stdlib.h>
+
+#include <netcdf.h>
 /**
  * @brief: nc_create
  *

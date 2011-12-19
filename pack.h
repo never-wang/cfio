@@ -109,13 +109,13 @@ int	unpack16(uint16_t *valp, Buf buffer);
 void	pack8(uint8_t val, Buf buffer);
 int	unpack8(uint8_t *valp, Buf buffer);
 
-void    pack16_array(uint16_t *valp, uint32_t size_val, Buf buffer);
+void    pack16_array(const uint16_t *valp, uint32_t size_val, Buf buffer);
 int     unpack16_array(uint16_t **valp, uint32_t* size_val, Buf buffer);
 
-void	pack32_array(uint32_t *valp, uint32_t size_val, Buf buffer);
+void	pack32_array(const uint32_t *valp, uint32_t size_val, Buf buffer);
 int	unpack32_array(uint32_t **valp, uint32_t* size_val, Buf buffer);
 
-void	packmem(char *valp, uint32_t size_val, Buf buffer);
+void	packmem(const char *valp, uint32_t size_val, Buf buffer);
 int	unpackmem(char *valp, uint32_t *size_valp, Buf buffer);
 int	unpackmem_ptr(char **valp, uint32_t *size_valp, Buf buffer);
 int	unpackmem_xmalloc(char **valp, uint32_t *size_valp, Buf buffer);

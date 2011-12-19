@@ -40,12 +40,13 @@ int iofw_nc_create(
     int dst_proc_id;
 
     buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_nc_create(buf, path, cmode);
+    iofw_pack_msg_create(buf, path, cmode);
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, buf);
 
     iofw_recv_int1(dst_proc_id, ncidp);
 
+    free_buf(buf);
     return 0;
 }
 
@@ -78,6 +79,7 @@ int iofw_nc_def_dim(
 
     iofw_recv_int1(dst_proc_id, idp);
 
+    free_buf(buf);
     return 0;
 }
 /**
@@ -114,6 +116,7 @@ int iofw_nc_def_var(
 
     iofw_recv_int1(dst_proc_id, varidp);
 
+    free_buf(buf);
     return 0;
 }
 
@@ -138,6 +141,7 @@ int iofw_nc_enddef(
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, buf);
 
+    free_buf(buf);
     return 0;
 }
 
@@ -150,11 +154,12 @@ int iofw_nc_put_var1_float(
     int dst_proc_id;
 
     buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_var1(buf, ncid, varid, index, fp);
+    iofw_pack_msg_put_var1_float(buf, ncid, varid, index, fp);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, buf);
 
+    free_buf(buf);
     return 0;
 }
 
@@ -174,11 +179,12 @@ int iofw_nc_close(
     int dst_proc_id;
 
     buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_close(ncid);
+    iofw_pack_msg_close(buf, ncid);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, buf);
 
+    free_buf(buf);
     return 0;
 }
 

@@ -52,7 +52,6 @@
 #include <inttypes.h>
 
 #include "pack.h"
-#include "xmem.h"
 
 /* If we unpack a buffer that contains bad data, we want to avoid
  * memory allocation error due to array or buffer sizes that are
@@ -107,7 +106,7 @@ void grow_buf (Buf buffer, int size)
 	}
 
 	buffer->size += size;
-	realloc(buffer->head, buffer->size);
+	buffer->head = realloc(buffer->head, buffer->size);
 }
 
 /* init_buf - create an empty buffer of the given size */
@@ -155,7 +154,7 @@ void pack_time(time_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &n64, sizeof(n64));
@@ -181,7 +180,7 @@ int unpack_time(time_t * valp, Buf buffer)
  * typecast to a uint64_t in host byte order, convert to network byte order
  * store in buffer, and adjust buffer counters.
  */
-void 	packdouble(double val, Buf buffer)
+void packdouble(double val, Buf buffer)
 {
 	double nl1 =  (val * FLOAT_MULT) + .5; /* the .5 is here to
 						  round off.  We have
@@ -199,7 +198,7 @@ void 	packdouble(double val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -239,7 +238,7 @@ void pack64(uint64_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -276,7 +275,7 @@ void pack32(uint32_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -300,7 +299,7 @@ int unpack32(uint32_t * valp, Buf buffer)
 }
 
 /* Given a *uint16_t, it will pack an array of size_val */
-void pack16_array(uint16_t * valp, uint32_t size_val, Buf buffer)
+void pack16_array(const uint16_t * valp, uint32_t size_val, Buf buffer)
 {
 	uint32_t i = 0;
 
@@ -329,7 +328,7 @@ int unpack16_array(uint16_t ** valp, uint32_t * size_val, Buf buffer)
 }
 
 /* Given a *uint32_t, it will pack an array of size_val */
-void pack32_array(uint32_t * valp, uint32_t size_val, Buf buffer)
+void pack32_array(const uint32_t * valp, uint32_t size_val, Buf buffer)
 {
 	uint32_t i = 0;
 
@@ -371,7 +370,7 @@ void pack16(uint16_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -407,7 +406,7 @@ void pack8(uint8_t val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &val, sizeof(uint8_t));
@@ -433,7 +432,7 @@ int unpack8(uint8_t * valp, Buf buffer)
  * size_val to network byte order and store at buffer followed by
  * the data at valp. Adjust buffer counters.
  */
-void packmem(char *valp, uint32_t size_val, Buf buffer)
+void packmem(const char *valp, uint32_t size_val, Buf buffer)
 {
 	uint32_t ns = htonl(size_val);
 
@@ -443,7 +442,7 @@ void packmem(char *valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += (size_val + BUF_SIZE);
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -602,7 +601,7 @@ void packstr_array(char **valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += BUF_SIZE;
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &ns, sizeof(ns));
@@ -662,7 +661,7 @@ void packmem_array(char *valp, uint32_t size_val, Buf buffer)
 			return;
 		}
 		buffer->size += (size_val + BUF_SIZE);
-		realloc(buffer->head, buffer->size);
+		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], valp, size_val);

@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include "mpi.h"
+#include "netcdf.h"
 #include "pack.h"
 
 /**
