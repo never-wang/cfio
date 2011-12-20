@@ -19,14 +19,7 @@
 #define	_IO_FW_H
 #define CHUNK_SIZE 32*1024
 #include "pomme_queue.h"
-typedef struct io_op
-{
-	void *head;
-	int offset;
-	int length;//both the length of the head and data
-	queue_body_t next_head;
-}io_op_t;
-
+#include "unmap.h"
 /**********************************************************
  *  des: init the io forwrding invironment
  *  @param iofw_servers: the number of iofw_servers;
