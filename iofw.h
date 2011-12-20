@@ -17,6 +17,7 @@
  */
 #ifndef _IO_FW_H
 #define	_IO_FW_H
+#define CHUNK_SIZE 32*1024
 
 /**********************************************************
  *  des: init the io forwrding invironment
@@ -33,6 +34,6 @@ int iofw_init(int iofw_servers,
  * @param buffer_size: the total buffer_size of the server
  *************************************************************************************
  */
-int iofw_server(int buffer_size);
+int iofw_server(unsigned int buffer_size);
 
 #endif

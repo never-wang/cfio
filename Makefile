@@ -18,6 +18,7 @@ GREPCMD := grep -L 'int main\s*(.*)' *.c
 #Find the files doesn't contain main fun
 NONEXESOURCES := $(shell $(GREPCMD))
 NONEXEOBJECTS := $(patsubst %.c, %.o, $(NONEXESOURCES))  
+HEADERS := $(shell ls | grep '\.h$$' )
 CFLAGS += $(INCLUDEDIR)
 CFLAGS += -Wall
 define GenExeCmd
@@ -29,7 +30,7 @@ endef
 all:$(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
 #Generate execuable file
 rmcmd := rm $(EXEFILES)2>/dev/null
-%.o:%.c
+%.o:%.c $(HEADERS)
 	$(CC) -O2 $(INCLUDEDIR) -c -Wall $< -fPIC
 	$(shell $(rmcmd))
 $(EXEFILES):$(NONEXEOBJECTS)
