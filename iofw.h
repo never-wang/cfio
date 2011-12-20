@@ -18,6 +18,14 @@
 #ifndef _IO_FW_H
 #define	_IO_FW_H
 #define CHUNK_SIZE 32*1024
+#include "pomme_queue.h"
+typedef struct io_op
+{
+	void *head;
+	int offset;
+	int length;//both the length of the head and data
+	queue_body_t next_head;
+}io_op_t;
 
 /**********************************************************
  *  des: init the io forwrding invironment
@@ -25,8 +33,7 @@
  *  @param is_server: whether current proc is a iofw_server
  *********************************************************/
 int iofw_init(int iofw_servers,
-	      int *is_server
-		);
+	      int *is_server);
 
 /*
  ************************************************************************************

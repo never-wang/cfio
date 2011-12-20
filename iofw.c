@@ -49,10 +49,32 @@ int iofw_server(unsigned int buffer_size)
 	while( done == 0 )
 	{
 		int offset = 0;
+		/*
+		 * wait for any mesg header
+		 */
 		do{
 			offset = pomme_buffer_next(buffer,buffer->chunk_size);
 		}while(offset<0);	
 		p_buffer = buffer->buffer+offset;
+		/*
+		 * chunk size is set to the max length of the header
+		 */
+		MPI_Status status;
+		ret = MPI_Recv(p_buffer,buffer->chunk_size,
+				MPI_BYTE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+		int count = 0;
+		MPI_Get_count(&status,MPI_BYTE,&count);
+		pomme_buffer_take(buffer,count);
+		io_op_t *tp = malloc(sizeof(io_op_t));
+		if( tp == NULL )
+		{
+			printf("Malloc Errori@%s %s %d\n",__FILE__,__func__,__LINE__);
+			exit(-1);
+		}
+		tp->head = p_buffer+offset;
+		/*the length should include the data length */
+
 	}
+	return 0;
 		
 }

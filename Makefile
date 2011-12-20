@@ -40,6 +40,7 @@ $(SOOBJECTS):$(ALLOBJECTS)
 .PHONY:clean run install
 clean:
 	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
+	-rm *~
 run:
 	#$(shell ./startserver.sh)
 #install:
