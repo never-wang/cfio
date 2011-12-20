@@ -16,6 +16,7 @@
  * =====================================================================================
  */
 #include "iofw.h"
+#include "pomme_buffer.h"
 #include <pthread.h>
 #include <mpi.h>
 /* the thread read the buffer and write to the real io node */
@@ -23,7 +24,7 @@ static pthread_t writer;
 /* the thread listen to the mpi message and put data into buffer */
 static pthread_t reader;
 /* buffer */
-static pomme_buffer_t *buffer = NULL;
+static pomme_buffer_t *buffer;
 int iofw_server(int buffer_size)
 {
 	
