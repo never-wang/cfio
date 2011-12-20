@@ -117,7 +117,7 @@ int iofw_unpack_msg_func_code(
 {
     int func_code;
 
-    unpack32(&func_code, buf);
+    unpack32((uint32_t*)&func_code, buf);
 
     return func_code;
 }
@@ -126,10 +126,10 @@ int iofw_unpack_msg_create(
 	iofw_buf_t *buf,
 	char **path, int *cmode)
 {
-    int len;
+    uint32_t len;
 
     unpackstr_malloc(path, &len, buf);
-    unpack32(cmode, buf);
+    unpack32((uint32_t*)cmode, buf);
 
     return 0;
 }
@@ -138,11 +138,11 @@ int iofw_unpack_msg_def_dim(
 	iofw_buf_t *buf,
 	int *ncid, char **name, size_t *len)
 {
-    int len;
+    uint32_t len_t;
 
-    unpack32(ncid, buf);
-    unpackstr_malloc(name, &len, buf);
-    unpack32(len, buf);
+    unpack32((uint32_t*)ncid, buf);
+    unpackstr_malloc(name, &len_t, buf);
+    unpack32((uint32_t*)len, buf);
 
     return 0;
 }
@@ -152,14 +152,14 @@ int iofw_unpack_msg_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids)
 {
-    int len;
+    uint32_t len;
 
-    unpack32(ncid, buf);
+    unpack32((uint32_t*)ncid, buf);
     unpackstr_malloc(name, &len, buf);
-    unpack32(xtype, buf);
-    unpack32(ndims, buf);
+    unpack32((uint32_t*)xtype, buf);
+    unpack32((uint32_t*)ndims, buf);
     
-    unpack32_array(dimids, ndims, buf);
+    unpack32_array((uint32_t**)dimids, (uint32_t*)ndims, buf);
 
     return 0;
 }
@@ -168,7 +168,7 @@ int iofw_unpack_msg_enddef(
 	iofw_buf_t *buf,
 	int *ncid)
 {
-    unpack32(ncid, buf);
+    unpack32((uint32_t*)ncid, buf);
 
     return 0;
 }
@@ -177,9 +177,9 @@ int iofw_unpack_msg_put_var1_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *indexdim, size_t *index)
 {
-    unpack32(ncid, buf);
-    unpack32(varid, buf);
-    unpack32_array(index, indexdim, buf);
+    unpack32((uint32_t*)ncid, buf);
+    unpack32((uint32_t*)varid, buf);
+    unpack32_array((uint32_t**)index, (uint32_t*)indexdim, buf);
 
     return 0;
 }
@@ -188,7 +188,7 @@ int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid)
 {
-    unpack32(ncid, buf);
+    unpack32((uint32_t*)ncid, buf);
 
     return 0;
 
