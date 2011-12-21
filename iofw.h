@@ -20,6 +20,13 @@
 #define CHUNK_SIZE 32*1024
 #include "pomme_queue.h"
 #include "unmap.h"
+
+#ifdef DEBUG
+#define debug(msg,argc...) fprintf(stderr,msg,##argc)
+#else 
+#define debug(msg,argc...) 0
+#endif
+
 /**********************************************************
  *  des: init the io forwrding invironment
  *  @param iofw_servers: the number of iofw_servers;

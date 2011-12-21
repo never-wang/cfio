@@ -17,6 +17,7 @@
  */
 #include "iofw.h"
 #include "pomme_buffer.h"
+#include "pomme_queue.h"
 #include <pthread.h>
 #include <mpi.h>
 /* the thread read the buffer and write to the real io node */
@@ -25,8 +26,10 @@ static pthread_t writer;
 static pthread_t reader;
 /* buffer */
 static pomme_buffer_t *buffer = NULL;
+/* global head queue */
 static void * iofw_writer(void *argv)
 {
+	
 	return NULL;	
 }
 int iofw_server(unsigned int buffer_size)

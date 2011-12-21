@@ -48,6 +48,13 @@ int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf);
  * @return: 0 if success
  */
 int iofw_recv_int1(int src_por_id, int *data);
+/**
+ * @brief: send an interter to other proc
+ * @param des_por_id: destination
+ * @param data: the data to send
+ * @return: 0 if success
+ */
+int iofw_send_int1(int des_por_id, int data);
 
 /**
  * @brief: pack for ifow_nc_create function
