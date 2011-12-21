@@ -20,13 +20,15 @@
 #include "unmap.h"
 #include "pack.h"
 #include "netcdf.h"
-static int iofw_nc_create(BUF); 
+#include "pomme_queue.h"
+#include "pomme_buffer.h"
+static int iofw_nc_create(int source, int tag, int my_rank,Buf); 
 int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 {	
 	int ret = 0;
 	Buf buf = create_buf(buffer, size);
 	int code = iofw_unpack_msg_func_code(buf);
-       	swtich(code)
+       	switch(code)
 	{
 		case FUNC_NC_CREATE: 
 			break;
@@ -52,7 +54,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
  * des: do the real nc create, 
  */
 static int iofw_nc_create(int source, int tag, 
-		int my_rank, BUF buf)
+		int my_rank, Buf buf)
 {
 	int ret, cmode;
 	char *path;
@@ -62,7 +64,7 @@ static int iofw_nc_create(int source, int tag,
 		debug("unpack mesg create error@%s %s %d\n",FFL);
 		return ret;
 	}
-	int ncid = nccreate(path,mode);
+	int ncid = nccreate(path,cmode);
 	
 
 	

@@ -18,6 +18,7 @@
 #ifndef _UNMAP_H
 #define _UNMAP_H
 #include "utils.h"
+#include "pomme_buffer.h"
 
 #define FFL __FILE__,__func__,__LINE__
 
@@ -42,22 +43,26 @@ typedef struct io_op_queue
 }ioop_queue_t;
 /*
  ************************************************************************************
- *  unmap an oper and real do it
+ *  brief:unmap an oper , buffer of real do it
+ *  @param src, where the msg come from
+ *  @param tag, the msg tag
+ *  @param my_rank, self rank
  *  @param data: the data header
  *  @param size: the size of the data
  *************************************************************************************
  */
-int unmap(void *data ,int size);
+int unmap(int src, int tag, int my_rank,void *data ,int size);
 
 /*
  ************************************************************************************
- *  init an io_op_queue structure
+ *  @brief:init an io_op_queue structure
  *  @param size: the size of the buffer
  *  @param chunk_size: the max message size
  *  @param max_qlength: the max length of the queue
  *  @queue_name: the name of the queue
  *************************************************************************************
  */
-int io_op_queue_init(int size, int chunk_size, int max_qlength,char *queue_name);
+int io_op_queue_init(ioop_queue_t *io_queue,int size, 
+		int chunk_size, int max_qlength,char *queue_name);
 
 #endif
