@@ -31,15 +31,15 @@
 
 typedef struct pomme_buffer
 {
-	int32 begin;
-	int32 end;
+    int32 begin;
+    int32 end;
 
-	int32 chunk_size;// the buffer is not availale if the avalable buffer is smaller than this
-	int32 size;
-	u_int32 flags;
+    int32 chunk_size;// the buffer is not availale if the avalable buffer is smaller than this
+    int32 size;
+    u_int32 flags;
 
-	pthread_mutex_t mutex;
-	void *buffer;
+    pthread_mutex_t mutex;
+    void *buffer;
 }pomme_buffer_t;
 
 /*-----------------------------------------------------------------------------

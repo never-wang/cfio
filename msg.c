@@ -37,9 +37,8 @@ int iofw_recv_int1(int src_proc_id, int *data)
 }
 int iofw_send_int1(int des_por_id, int my_rank,int data)
 {
-	MPI_Status status;
-	MPI_Send(&data, 1 , MPI_INT, des_por_id, my_rank, MPI_COMM_WORLD,&status);
-	return 0;	
+    MPI_Send(&data, 1 , MPI_INT, des_por_id, my_rank, MPI_COMM_WORLD);
+    return 0;	
 }
 
 int iofw_pack_msg_create(
