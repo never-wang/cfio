@@ -25,12 +25,21 @@ int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
 
 int iofw_recv_int1(int src_proc_id, int *data)
 {
-    int tag = 1;
+/*
+ * why set tag == 1 ?
+ */
+//    int tag = 1;
     MPI_Status status;
 
-    MPI_Recv(data, 1, MPI_INT, src_proc_id, tag, MPI_COMM_WORLD, &status);
+    MPI_Recv(data, 1, MPI_INT, src_proc_id, src_proc_id, MPI_COMM_WORLD, &status);
 
     return 0;
+}
+int iofw_send_int1(int des_por_id, int my_rank,int data)
+{
+	MPI_Status status;
+	MPI_Send(&data, 1 , MPI_INT, des_por_id, my_rank, MPI_COMM_WORLD,&status);
+	return 0;	
 }
 
 int iofw_pack_msg_create(

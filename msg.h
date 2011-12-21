@@ -51,10 +51,11 @@ int iofw_recv_int1(int src_por_id, int *data);
 /**
  * @brief: send an interter to other proc
  * @param des_por_id: destination
+ * @param my_rank: self rank
  * @param data: the data to send
  * @return: 0 if success
  */
-int iofw_send_int1(int des_por_id, int data);
+int iofw_send_int1(int des_por_id, int my_rank, int data);
 
 /**
  * @brief: pack for ifow_nc_create function
