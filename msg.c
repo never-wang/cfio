@@ -104,6 +104,31 @@ int iofw_pack_msg_put_var1_float(
     pack32(varid, buf);
     //TODO pack size_t
     pack32_array((uint32_t*)index, sizeof(index)/sizeof(size_t), buf);
+    pack32((uint32_t*)fp, buf);
+
+    return 0;
+}
+
+int iofw_pack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int ncid, int varid, const size_t start[],
+	const size_t count[])
+{
+    int dim;
+    size_t data_size;
+
+    pack32(FUNC_NC_PUT_VARA_FLOAT, buf);
+    pack32(ncid, buf);
+    pack32(varid, buf);
+    
+    if((dim = sizeof(start) / sizeof(size_t)) != 
+	    sizeof(count) / sizeof(size_t))
+    {
+	//TODO DEBUG
+	return IOFW_UNEQUAL_DIM;
+    }
+    pack32_array((uint32_t*)start, dim, buf);
+    pack32_array((uint32_t*)count, dim, buf);
 
     return 0;
 }

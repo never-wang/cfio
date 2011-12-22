@@ -163,6 +163,34 @@ int iofw_nc_put_var1_float(
     return 0;
 }
 
+int iofw_nc_put_vara_float(
+	int io_proc_id,
+	int ncid, int varid, const size_t start[],
+	const size_t count[], const float *fp)
+{
+    iofw_buf_t *head_buf, *data_buf;
+    int dst_proc_id;
+    int data_len, i, dim;
+
+    head_buf = init_buf(BUF_SIZE);
+    iofw_pack_msg_put_vara_float(buf, ncid, varid, start, count);
+    
+    data_buf = init_buf(BUF_SIZE);
+    dim = sizeof(start) / sizeof(size_t);
+    data_len = 1;
+    for(i = 0; i < dim; i ++)
+    {
+	data_len *= count[i]; 
+    }
+    pack32_array((*uint32_t)fp, data_len, data_buf);
+
+    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
+    iofw_send_msg(dst_proc_id, buf);
+
+    free_buf(buf);
+    return 0;
+}
+
 /**
  * @brief: nc_close
  *
