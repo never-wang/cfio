@@ -16,6 +16,7 @@
  * =====================================================================================
  */
 #include "iofw.h"
+#include "unmap.h"
 #include "pomme_buffer.h"
 #include "pomme_queue.h"
 #include <pthread.h>
@@ -27,13 +28,15 @@ static pthread_t reader;
 /* buffer */
 static pomme_buffer_t *buffer = NULL;
 /* global head queue */
+ioop_queue_t *server_queue = NULL;
+
+static int my_server_rank = -1;
 static void * iofw_writer(void *argv)
 {
 	
 	return NULL;	
 }
 int iofw_server(unsigned int buffer_size)
-{
     int ret = 0;
     ret = pomme_buffer_init(&buffer,buffer_size,CHUNK_SIZE);
     if( ret < 0 )
@@ -79,5 +82,25 @@ int iofw_server(unsigned int buffer_size)
 
     }
     return 0;
+
+}
+int iofw_init(int iofw_server, int *is_server)
+{
+    int rc, i;
+    int size,rank;
+
+    rc = MPI_Initialized(&i); 
+    if( !i )
+    {
+	debug("MPI should be initialized before the iofw\n");
+	return -1;
+    }
+
+    MPI_Comm_size(MPI_COMM_WORLD,&size);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    if( rank < iofw_server )
+    {
+	*is_server = 1;
+    }
 
 }
