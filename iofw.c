@@ -17,6 +17,7 @@
  */
 #include "iofw.h"
 #include "unmap.h"
+#include "map.h"
 #include "pomme_buffer.h"
 #include "pomme_queue.h"
 #include <pthread.h>
@@ -40,12 +41,13 @@ static int server_proc_num = -1;
 /* the number of the client i serve */
 int client_to_serve = 0;
 /* the number of the client i served */
-int client_to_served = 0;
+int client_served = 0;
+/* all the client report done */
+int done = 0;
 
 /*
  * get the rank of the server of me 
  */
-static inline int get_server_rank(int my_rank);
 
 static void * iofw_writer(void *argv)
 {
@@ -120,7 +122,7 @@ int iofw_init(int iofw_servers, int *is_server)
     {
 	*is_server = 1;
     }else{
-	my_server_rank = get_server_num(rank); 
+	iofw_map_forwarding_proc(rank, &my_server_rank);
 	app_rank = rank;
     }
     if( *is_server )
@@ -128,6 +130,7 @@ int iofw_init(int iofw_servers, int *is_server)
 	int ret = 0;
 	char name[10];
 	sprintf(name,"buffer@%d",rank);
+	memset(&server_queue, 0, sizeof(ioop_queue_t));
 	ret = io_op_queue_init(&server_queue, BUFFER_SIZE, 
 		CHUNK_SIZE, MAX_QUEUE_SIZE, name);
 	if( ret < 0 )
@@ -137,9 +140,6 @@ int iofw_init(int iofw_servers, int *is_server)
 	}
 	rc = iofw_server();
     }
+    return 0;
 
-}
-static inline int get_server_rank(int my_rank)
-{
-    return (app_proc_num + my_rank%server_proc_num);
 }

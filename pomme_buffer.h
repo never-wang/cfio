@@ -61,4 +61,8 @@ int pomme_buffer_init(pomme_buffer_t **pomme_buffer,int32 size,int32 chunk_size)
  *  set part of the buffer as occupied
  *-----------------------------------------------------------------------------*/
 int pomme_buffer_take(pomme_buffer_t *buffer,int offset);
+/*-----------------------------------------------------------------------------
+ *  distroy an buffer
+ *-----------------------------------------------------------------------------*/
+int pomme_buffer_distroy(pomme_buffer_t **buffer);
 #endif

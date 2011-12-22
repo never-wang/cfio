@@ -22,10 +22,16 @@
 #include "netcdf.h"
 #include "pomme_queue.h"
 #include "pomme_buffer.h"
+
+extern int client_to_serve;
+extern int client_served;
+extern int done;
+
 static int iofw_nc_create(int source, int tag, int my_rank,Buf buf); 
 static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf);
 static int iofw_nc_def_var(int src, int tag, int my_rank,Buf buf);
 static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
+static inline int iofw_client_done(int client_rank);
 int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 {	
     int ret = 0;
@@ -35,6 +41,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
     {
 	case FUNC_NC_CREATE: 
 	    iofw_nc_create(source, tag, my_rank, buf);
+	    debug("server %d done nc_create for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_ENDDEF:
 	    break;
@@ -42,11 +49,17 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 	    break;
 	case FUNC_NC_DEF_DIM:
 	    iofw_nc_def_dim(source, tag, my_rank, buf);
+	    debug("server %d done nc_def_dim for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_DEF_VAR:
 	    iofw_nc_def_var(source, tag, my_rank, buf);
+	    debug("server %d done nc_def_var for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_PUT_VAR1_FLOAT:
+	    break;
+	case CLIENT_END_IO:
+	    iofw_client_done(source);
+	    debug("server %s done client_end_io for client %d\n",my_rank,source);
 	    break;
 	default:
 	    debug("unknow operation code is %d @%s %s %d",code,FFL);
@@ -55,6 +68,22 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
     }	
 
     return ret;
+}
+/**
+ * @brief iofw_client_done : report the finish of
+ * 			     client
+ * @param client_rank
+ *
+ * @return 
+ */
+static inline int iofw_client_done(int client_rank)
+{
+	client_served++;
+	if( client_served == client_to_serve)
+	{
+	    done = 1;
+	}
+	return 0;	
 }
 /*
  * @brief: do the real nc create, 
@@ -231,7 +260,7 @@ int io_op_queue_distroy(ioop_queue_t *io_queue)
 	debug("distroy queue fail %s",io_queue->opq->name);
 	return ret;
     }
-    pomme_buffer_distroy(io_queue->buffer);
+    pomme_buffer_distroy(&io_queue->buffer);
     memset(io_queue,0,sizeof(ioop_queue_t));
     return 0;
 

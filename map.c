@@ -13,7 +13,8 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include "map.h"
-
+extern int app_proc_num;
+extern int server_proc_num;
 /**
  * @brief: map from IO proc to IO Forwarding Proc
  *
@@ -25,7 +26,7 @@
 int iofw_map_forwarding_proc(
 	int io_proc_id, int *forwarding_proc_id)
 {
-    *forwarding_proc_id = io_proc_id / 4 + 8;
+    *forwarding_proc_id =  app_proc_num + io_proc_id%server_proc_num;
 
     return 0;
 }

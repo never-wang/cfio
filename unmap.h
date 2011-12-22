@@ -28,6 +28,8 @@
 #define debug(msg,argc...) 0
 #endif
 
+#define	ALL_CLINET_REPORT_DONE 1
+
 typedef struct io_op
 {
 	void *head;

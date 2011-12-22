@@ -121,6 +121,8 @@ int iofw_pack_msg_close(
 int iofw_pack_msg_io_stop(
 	iofw_buf_t *buf)
 {
+    pack32(CLIENT_END_IO, buf);
+    return 0;
 }
 /**
  *unpack msg function

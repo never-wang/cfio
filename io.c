@@ -195,7 +195,7 @@ int iofw_nc_close(
  *
  * @return : 0 for success , < for failure
  */
-int iofw_io_stop(int s_rank)
+int iofw_io_stop(int io_proc_id)
 {
 
     iofw_buf_t *buf;
