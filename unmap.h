@@ -27,8 +27,13 @@
 #else 
 #define debug(msg,argc...) 0
 #endif
-
+/* return codes */
 #define	ALL_CLINET_REPORT_DONE 1
+/* the msg is delt, the buffer could be reused inmmediately */
+#define DEALT_MSG 2
+/* the msg is put into the queue, the buffer should be keep util
+ * the write to free it */
+#define ENQUEUE_MSG 3
 
 typedef struct io_op
 {
