@@ -25,6 +25,7 @@
 static int iofw_nc_create(int source, int tag, int my_rank,Buf buf); 
 static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf);
 static int iofw_nc_def_var(int src, int tag, int my_rank,Buf buf);
+static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
 int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 {	
     int ret = 0;
@@ -77,7 +78,7 @@ static int iofw_nc_create(int source, int tag,
     ret = nc_create(path,cmode,&ncid);
     if( ret != NC_NOERR )
     {
-	debug("Error happened when open %s",path);
+	debug("Error happened when open %s %s",path,nc_stderror(ret));
 	return ret;
     }
     free(path);
@@ -110,7 +111,7 @@ static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf)
     ret = nc_def_dim(ncid,name,len,&dimid);
     if( ret != NC_NOERR )
     {
-	debug("def dim error@%s %s %d\n",FFL);
+	debug("def dim error:%s@%s %s %d\n",nc_stderror(ret),FFL);
 	return ret;
     }
     free(name);
@@ -151,7 +152,7 @@ static int iofw_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
 	if( ret != NC_NOERR )
 	{
-	    debug("nc_def_var failed ret is %d@%s %s %d\n",ret, FFL);
+	    debug("nc_def_var failed error:%s@%s %s %d\n",nc_sdterror(ret), FFL);
 	    return ret;
 	}
 	ret = iofw_send_int1(src,my_rank, varid);
@@ -165,7 +166,19 @@ static int iofw_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	return 0;
 }
 
-
+/**
+ * @brief iofw_nc_put_var1_float : 
+ *
+ * @param src: the rank of the client
+ * @param tag: the tag of the msg
+ * @param my_rank: 
+ * @param buf
+ *
+ * @return 
+ */
+static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
+{
+}
 
 
 

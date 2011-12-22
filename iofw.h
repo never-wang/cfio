@@ -17,7 +17,10 @@
  */
 #ifndef _IO_FW_H
 #define	_IO_FW_H
-#define CHUNK_SIZE 32*1024
+
+const int BUFFER_SIZE = (1024*1024*1024);
+const int CHUNK_SIZE = 32*1024;
+const int MAX_QUEUE_SIZE = 1024*1024*1024;
 #include "pomme_queue.h"
 #include "unmap.h"
 
@@ -34,13 +37,5 @@
  *********************************************************/
 int iofw_init(int iofw_servers,
 	      int *is_server);
-
-/*
- ************************************************************************************
- *  des: the function for the server,receiving and do the io operation
- * @param buffer_size: the total buffer_size of the server
- *************************************************************************************
- */
-int iofw_server(unsigned int buffer_size);
 
 #endif
