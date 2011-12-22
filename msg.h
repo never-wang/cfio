@@ -19,6 +19,8 @@
 #include "mpi.h"
 #include "netcdf.h"
 #include "pack.h"
+/* define for control messge */
+#define CLINET_END_IO 201
 
 /**
  *define for nc function code

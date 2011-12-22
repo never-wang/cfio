@@ -42,11 +42,6 @@ int client_to_serve = 0;
 /* the number of the client i served */
 int client_to_served = 0;
 
-
-
-
-
-
 /*
  * get the rank of the server of me 
  */
