@@ -100,4 +100,13 @@ int iofw_nc_put_var1_float(
 int iofw_nc_close(
 	int io_proc_id,
 	int ncid);
+
+/**
+ * @brief iofw_io_stop : tell the server the client is over
+ *
+ * @param s_rank: the rank of the server
+ *
+ * @return : 0 for success , < for failure
+ */
+int iofw_io_stop(int s_rank);
 #endif

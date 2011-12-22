@@ -142,6 +142,17 @@ int iofw_pack_msg_put_var1_float(
 int iofw_pack_msg_close(
 	iofw_buf_t *buf,
 	int ncid);
+
+/**
+ * @brief iofw_pack_msg_io_stop : tell the server the client
+ * is finish
+ *
+ * @param buf: where the packed function is stored
+ *
+ * @return 0 if success , < 0 for failure 
+ */
+int iofw_pack_msg_io_stop(
+	iofw_buf_t *buf);
 /**
  * @brief: unpack funciton code from the msg 
  *

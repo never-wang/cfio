@@ -188,5 +188,27 @@ int iofw_nc_close(
     return 0;
 }
 
+/**
+ * @brief iofw_io_stop : tell the server the client is over
+ *
+ * @param s_rank: the rank of the server
+ *
+ * @return : 0 for success , < for failure
+ */
+int iofw_io_stop(int s_rank)
+{
 
+    iofw_buf_t *buf;
+    int dst_proc_id;
+
+    buf = init_buf(BUF_SIZE);
+    iofw_pack_msg_io_stop(buf);
+
+    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
+    iofw_send_msg(dst_proc_id, buf);
+
+    free_buf(buf);
+    return 0;
+
+}
 
