@@ -66,7 +66,6 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 	    ret = -1;
 	    break;
     }	
-
     return ret;
 }
 /**
@@ -207,11 +206,8 @@ static int iofw_nc_def_var(int src, int tag, int my_rank, Buf buf)
  */
 static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
 {
+	
 }
-
-
-
-
 int io_op_queue_init(ioop_queue_t *io_queue,int buffer_size,
 	int chunk_size, int max_qlength, char *queue_name)
 {
