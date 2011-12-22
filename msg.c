@@ -13,6 +13,7 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include "msg.h"
+#include "error.h"
 
 int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
 {
@@ -104,7 +105,7 @@ int iofw_pack_msg_put_var1_float(
     pack32(varid, buf);
     //TODO pack size_t
     pack32_array((uint32_t*)index, sizeof(index)/sizeof(size_t), buf);
-    pack32((uint32_t*)fp, buf);
+    pack32(*fp, buf);
 
     return 0;
 }
@@ -115,7 +116,6 @@ int iofw_pack_msg_put_vara_float(
 	const size_t count[])
 {
     int dim;
-    size_t data_size;
 
     pack32(FUNC_NC_PUT_VARA_FLOAT, buf);
     pack32(ncid, buf);
@@ -215,12 +215,25 @@ int iofw_unpack_msg_enddef(
 
 int iofw_unpack_msg_put_var1_float(
 	iofw_buf_t *buf,
-	int *ncid, int *varid, int *indexdim, size_t *index)
+	int *ncid, int *varid, int *indexdim, size_t **index)
 {
     unpack32((uint32_t*)ncid, buf);
     unpack32((uint32_t*)varid, buf);
     unpack32_array((uint32_t**)index, (uint32_t*)indexdim, buf);
 
+    return 0;
+}
+
+int iofw_unpack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
+{
+    unpack32((uint32_t*)ncid, buf);
+    unpack32((uint32_t*)varid, buf);
+    
+    unpack32_array((uint32_t**)start, (uint32_t*)dim, buf);
+    unpack32_array((uint32_t**)count, (uint32_t*)dim, buf);
+    
     return 0;
 }
 
