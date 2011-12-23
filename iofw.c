@@ -44,6 +44,8 @@ int client_to_serve = 0;
 int client_served = 0;
 /* all the client report done */
 int done = 0;
+/* if i am server */
+int i_am_server = 0;
 
 /*
  * get the rank of the server of me 
@@ -67,10 +69,10 @@ int iofw_server()
     }
     static int done = 0;
     void *p_buffer = NULL;
+    pomme_buffer_t *buffer = server_queue.buffer;
+    pomme_queue_t *queue = server_queue.opq;
     while( done == 0 )
     {
-	/* buffer */
-	pomme_buffer_t *buffer = server_queue.buffer;
 	int offset = 0;
 	/*
 	 * wait for any mesg header
@@ -94,6 +96,15 @@ int iofw_server()
 	    debug("unmap data failed\n");
 	    continue;
 	}
+	if( ret == ENQUEUE_MSG )
+	{
+	    io_op_t * op = malloc(sizeof(io_op_t));
+	    memset(op, 0, sizeof(io_op_t));
+	    op->head = p_buffer;
+	    op->head_len = count;
+	    queue_push_back(queue,&op->next_head);
+	    init_queue(&op->data, "op data queue", MAX_QUEUE_SIZE); 
+	}  
     }
     return 0;
 }
@@ -121,6 +132,7 @@ int iofw_init(int iofw_servers, int *is_server)
     if( rank >= app_proc_num)
     {
 	*is_server = 1;
+	i_am_server = 1;
     }else{
 	iofw_map_forwarding_proc(rank, &my_server_rank);
 	app_rank = rank;
@@ -142,4 +154,21 @@ int iofw_init(int iofw_servers, int *is_server)
     }
     return 0;
 
+}
+int iofw_Finalize()
+{
+    int ret,flag;
+    
+    ret = MPI_Finalized(&flag);
+    if(flag)
+    {
+	debug("***You should not call MPI_Finalize before iofw_Finalized");
+    }
+    if( i_am_server )
+    {
+	debug("server %d exit\n",rank);
+    }else{
+	ret = iofw_io_stop(rank);
+    }
+    return 0;
 }

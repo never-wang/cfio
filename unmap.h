@@ -38,8 +38,9 @@
 typedef struct io_op
 {
 	void *head;
-	int offset;
+	int head_len;
 	int length;//both the length of the head and data
+	pomme_buffer_t *data;
 	queue_body_t next_head;
 }io_op_t;
 
@@ -56,6 +57,7 @@ typedef struct io_op_queue
  *  @param my_rank, self rank
  *  @param data: the data header
  *  @param size: the size of the data
+ *  @return : the rest length of the real data
  *************************************************************************************
  */
 int unmap(int src, int tag, int my_rank,void *data ,int size);

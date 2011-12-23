@@ -290,4 +290,14 @@ int iofw_unpack_msg_put_vara_float(
 int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid);
+/**
+ * @brief iofw_get_extra_data_len : get the data len of this operation
+ *
+ * @param buf: pointer to the struct buf where the packed function is stored
+ * @param len: the data len will be stored here
+ * @return 
+ */
+int iofw_get_extra_data_len(
+	iofw_buf_t  *buf,
+	size_t *len);
 #endif
