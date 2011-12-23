@@ -31,6 +31,7 @@
 #define FUNC_NC_DEF_DIM 10
 #define FUNC_NC_DEF_VAR 20
 #define FUNC_NC_PUT_VAR1_FLOAT 100
+#define FUNC_NC_PUT_VARA_FLOAT 110
 
 /**
  * @brief: send msg to othre proc by mpi
@@ -133,6 +134,24 @@ int iofw_pack_msg_put_var1_float(
 	int ncid, int varid, const size_t index[],
 	const float *fp);
 /**
+ * @brief: pack for function: iofw_pack_msg_put_vara_float
+ *
+ * @param buf: 
+ * @param buf: pointer to the struct buf where the packed function is stored
+ * @param ncid: netCDF ID
+ * @param varid: variable ID
+ * @param start[]: a vector of size_t intergers specifying the index in the variable
+ *	where the first of the data values will be written
+ * @param count[]: a vector of size_t intergers specifying the edge lengths along 
+ *	each dimension of the block of data values to be written
+ *
+ * @return: 0 if success, IOFW_UNEQUAL_DIM if the size of start and count is noequal
+ */
+int iofw_pack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int ncid, int varid, const size_t start[],
+	const size_t count[]);
+/**
  * @brief: pack for the iofw_nc_close function
  *
  * @param buf: pointer to the struct buf where the packed function is 
@@ -231,8 +250,8 @@ int iofw_unpack_msg_enddef(
  *	stored
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param varid: pointer to where variable ID is to be stored 
- * @param indexdim: pointer to where the dimensionality of the to be written data 
- *	value's index is to be stored 
+ * @param indexdim: pointer to where the dimensionality of the to be written 
+ *	variable is to be stored 
  * @param index: pointer to where the index of the to be written data value to be 
  *	stored
  *
@@ -240,7 +259,26 @@ int iofw_unpack_msg_enddef(
  */
 int iofw_unpack_msg_put_var1_float(
 	iofw_buf_t *buf,
-	int *ncid, int *varid, int *indexdim, size_t *index);
+	int *ncid, int *varid, int *indexdim, size_t **index);
+/**
+ * @brief: unpack arguments for function : iofw_unpack_msg_put_vara_float
+ *
+ * @param buf: pointer to the struct buf where the packed function is 
+ *	stored
+ * @param ncid: pointer to where netCDF ID is to be stored
+ * @param varid: pointer to where variable ID is to be stored 
+ * @param dim: pointer to where the dimensionality of to be written variable
+ *	 is to be stored 
+ * @param start: pointer to where the start index of to be written data value 
+ *	to be stored
+ * @param count: pointer to where the size of to be written data value 
+ *	to be stored
+ *
+ * @return: 0 if success
+ */
+int iofw_unpack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int *ncid, int *varid, int *dim, size_t **start, size_t **count);
 /**
  * @brief: unpack arguments for the iofw_nc_close function
  *
