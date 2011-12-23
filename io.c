@@ -191,7 +191,6 @@ int iofw_nc_close(
 /**
  * @brief iofw_io_stop : tell the server the client is over
  *
- * @param s_rank: the rank of the server
  *
  * @return : 0 for success , < for failure
  */

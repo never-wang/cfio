@@ -38,4 +38,12 @@ const int MAX_QUEUE_SIZE = 1024*1024*1024;
 int iofw_init(int iofw_servers,
 	      int *is_server);
 
+/**
+ * @brief iofw_Finalize : stop the iofw services, the function 
+ * should be called before the mpi_Finalize
+ *
+ * @return 
+ */
+int iofw_Finalize();
+
 #endif
