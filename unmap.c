@@ -41,6 +41,11 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
     int ret = 0;
 	*data_len = 0;
     Buf buf = create_buf(buffer, size);
+	if( buf == NULL )
+	{
+		debug("create buf failure@%s %s %d\n",FFL);
+		return -1;
+	}
     int code = iofw_unpack_msg_func_code(buf);
     switch(code)
     {
@@ -74,6 +79,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	    ret = -1;
 	    break;
     }	
+	free(buf);
     return ret;
 }
 
@@ -150,13 +156,12 @@ static int iofw_do_nc_create(int source, int tag,
 	debug("Error happened when open %s %s",path,nc_stderror(ret));
 	return ret;
     }
-    free(path);
+//    free(path);
     if( (ret = iofw_send_int1(source,my_rank,ncid) ) < 0 )
     {
 	debug("send ncid to client error%s %s %d\n",FFL);
 	return ret;
     }
-    free_buf(buf);
     return 0;
 }
 /*@brief: nc define dim 
@@ -183,7 +188,7 @@ static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
 	debug("def dim error:%s@%s %s %d\n",nc_stderror(ret),FFL);
 	return ret;
     }
-    free(name);
+ //   free(name);
     ret = iofw_send_int1(source,my_rank, dimid);
     if( ret < 0 )
     {
@@ -230,8 +235,8 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	    debug("send varible id to client failed@%s %s %d\n",FFL);
 	    return ret;
 	}
-	free(name);
-	free(dimids);
+//	free(name);
+//	free(dimids);
 	return 0;
 }
 
