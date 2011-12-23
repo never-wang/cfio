@@ -15,6 +15,7 @@
  *
  * =====================================================================================
  */
+#include "io.h"
 #include "iofw.h"
 #include "unmap.h"
 #include "map.h"
@@ -56,8 +57,6 @@ static void * iofw_writer(void *argv)
     pomme_queue_t *queue = server_queue.opq;
 	pomme_buffer_t *buffer = server_queue.buffer;
     queue_body_t *pos = NULL;
-	iofw_buf_t *h_buf = NULL;
-	iofw_buf_t *d_buf = NULL;
 	int ret = 0;
     while(1)
     {
@@ -119,13 +118,14 @@ int iofw_server()
 	int count = 0;
 	MPI_Get_count(&status,MPI_BYTE,&count);
 	/*the length should include the data length */
-	ret = unmap(status.MPI_SOURCE, status.MPI_TAG, rank,p_buffer,count);
+	size_t len,recv_len;
+	ret = unmap(status.MPI_SOURCE, status.MPI_TAG, rank,p_buffer,count, &len);
 	if( ret < 0 )
 	{
 	    debug("unmap data failed\n");
 	    continue;
 	}
-	if( ret > 0 )
+	if( len > 0 )
 	{
 	    io_op_t * op = malloc(sizeof(io_op_t));
 	    memset(op, 0, sizeof(io_op_t));
@@ -135,7 +135,7 @@ int iofw_server()
 		op->tag = status.MPI_TAG;
 
 	    queue_push_back(queue,&op->next_head);
-	    int len = ret, recv_len = 0;
+	    recv_len = 0;
 
 	    do
 	    {

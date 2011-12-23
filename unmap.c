@@ -16,6 +16,7 @@
  *
  * =====================================================================================
  */
+#include "io.h"
 #include "msg.h"
 #include "unmap.h"
 #include "pack.h"
@@ -27,23 +28,24 @@ extern int client_to_serve;
 extern int client_served;
 extern int done;
 
-static int iofw_nc_create(int source, int tag, int my_rank,Buf buf); 
-static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf);
-static int iofw_nc_def_var(int src, int tag, int my_rank,Buf buf);
-static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
+static int iofw_do_nc_create(int source, int tag, int my_rank,Buf buf); 
+static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf);
+static int iofw_do_nc_def_var(int src, int tag, int my_rank,Buf buf);
+static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
 static inline int iofw_client_done(int client_rank);
-static int iofw_nc_put_vara_float(int src, int tag, int my_rank, 
+static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf);
-int unmap(int source, int tag ,int my_rank,void *buffer,int size)
+int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_len)
 {	
     int ret = 0;
+	*data_len = 0;
     Buf buf = create_buf(buffer, size);
     int code = iofw_unpack_msg_func_code(buf);
     switch(code)
     {
 	case FUNC_NC_CREATE: 
-	    iofw_nc_create(source, tag, my_rank, buf);
+	    iofw_do_nc_create(source, tag, my_rank, buf);
 	    debug("server %d done nc_create for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_ENDDEF:
@@ -51,11 +53,11 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 	case FUNC_NC_CLOSE:
 	    break;
 	case FUNC_NC_DEF_DIM:
-	    iofw_nc_def_dim(source, tag, my_rank, buf);
+	    iofw_do_nc_def_dim(source, tag, my_rank, buf);
 	    debug("server %d done nc_def_dim for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_DEF_VAR:
-	    iofw_nc_def_var(source, tag, my_rank, buf);
+	    iofw_do_nc_def_var(source, tag, my_rank, buf);
 	    debug("server %d done nc_def_var for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_PUT_VAR1_FLOAT:
@@ -65,7 +67,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 	    debug("server %s done client_end_io for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_PUT_VARA_FLOAT:
-	    iofw_unpack_msg_extra_data_size(buf,&ret);
+	    iofw_unpack_msg_extra_data_size(buf,data_len);
 	    break;
 	default:
 	    debug("unknow operation code is %d @%s %s %d",code,FFL);
@@ -91,7 +93,7 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 	switch(code)
 	{
 		case FUNC_NC_PUT_VARA_FLOAT:
-			ret = iofw_nc_put_vara_float(source, tag,
+			ret = iofw_do_nc_put_vara_float(source, tag,
 				   	my_rank, h_buf, d_buf);
 			break;
 
@@ -130,7 +132,7 @@ static inline int iofw_client_done(int client_rank)
  * @param my_rank: self rank
  * @Buf buf: pack bufer
  */
-static int iofw_nc_create(int source, int tag, 
+static int iofw_do_nc_create(int source, int tag, 
 	int my_rank, Buf buf)
 {
     int ret, cmode;
@@ -163,7 +165,7 @@ static int iofw_nc_create(int source, int tag,
  *@param my_rank: self rank
  *@param buf: msg content 
  * */
-static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf)
+static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
 {
     int ret = 0;
     int ncid,dimid;
@@ -201,7 +203,7 @@ static int iofw_nc_def_dim(int source, int tag, int my_rank,Buf buf)
  *
  * @return : o for success ,< for error
  */
-static int iofw_nc_def_var(int src, int tag, int my_rank, Buf buf)
+static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 {
 	int ret = 0;
 	int ncid, ndims;
@@ -244,7 +246,7 @@ static int iofw_nc_def_var(int src, int tag, int my_rank, Buf buf)
  *
  * @return 
  */
-static int iofw_nc_put_vara_float(int src, int tag, int my_rank, 
+static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf)
 {
@@ -259,8 +261,8 @@ static int iofw_nc_put_vara_float(int src, int tag, int my_rank,
 		return -1;
 	}
 
-	void *data;
-	int data_len;
+	uint32_t *data;
+	uint32_t data_len;
 	ret = unpack32_array(&data,&data_len, d_buf);
 
 	if( ret < 0 )
@@ -273,7 +275,7 @@ static int iofw_nc_put_vara_float(int src, int tag, int my_rank,
 	memcpy(_start,start,sizeof(_start));
 	memcpy(_count,count,sizeof(_count));
 
-	ret = nc_put_vara_float( ncid, varid, _start, _count, data);
+	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)data);
 	if( ret != NC_NOERR )
 	{
 		debug("write nc failure(%s) @%s %s %d",nc_stderror(ret),FFL);
@@ -294,7 +296,7 @@ static int iofw_nc_put_vara_float(int src, int tag, int my_rank,
  *
  * @return 
  */
-static int iofw_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
+static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
 {
 	
 }

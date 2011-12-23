@@ -300,7 +300,7 @@ int iofw_unpack_msg_close(
  
  * @return: 0 if success
  */
-int iofw_upack_msg_extra_data_size(
+int iofw_unpack_msg_extra_data_size(
 	iofw_buf_t  *buf,
 	size_t *data_size);
 #endif
