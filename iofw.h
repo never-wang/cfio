@@ -23,6 +23,7 @@ const int CHUNK_SIZE = 32*1024;
 const int MAX_QUEUE_SIZE = 1024*1024*1024;
 #include "pomme_queue.h"
 #include "unmap.h"
+#include "pack.h"
 
 #ifdef DEBUG
 #define debug(msg,argc...) fprintf(stderr,msg,##argc)

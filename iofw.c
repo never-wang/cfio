@@ -53,8 +53,37 @@ int i_am_server = 0;
 
 static void * iofw_writer(void *argv)
 {
-	
-	return NULL;	
+    pomme_queue_t *queue = server_queue.opq;
+	pomme_buffer_t *buffer = server_queue.buffer;
+    queue_body_t *pos = NULL;
+	iofw_buf_t *h_buf = NULL;
+	iofw_buf_t *d_buf = NULL;
+	int ret = 0;
+    while(1)
+    {
+		do
+		{
+			pos = queue_get_front(queue);
+		}while(pos == NULL);
+		io_op_t *entry = queue_entry(pos, io_op_t,next_head);  
+
+		ret = iofw_do_io(entry->src, entry->tag, rank, entry);
+		if( ret < 0 )
+		{
+			debug("iofw_writer write fail@%s %s %d\n",FFL);
+		}
+		int h_start = (char *)entry->head - (char *)server_queue.buffer;
+		int b_start = (char *)entry->body - (char *)server_queue.buffer;
+
+		pomme_buffer_release(buffer, h_start, entry->head_len);
+		pomme_buffer_release(buffer, b_start, entry->body_len);
+
+		/* here need optimaze*/
+		free(entry);
+
+    }
+
+    return NULL;	
 }
 int iofw_server()
 {
@@ -96,14 +125,35 @@ int iofw_server()
 	    debug("unmap data failed\n");
 	    continue;
 	}
-	if( ret == ENQUEUE_MSG )
+	if( ret > 0 )
 	{
 	    io_op_t * op = malloc(sizeof(io_op_t));
 	    memset(op, 0, sizeof(io_op_t));
 	    op->head = p_buffer;
 	    op->head_len = count;
+		op->src = status.MPI_SOURCE;
+		op->tag = status.MPI_TAG;
+
 	    queue_push_back(queue,&op->next_head);
-	    init_queue(&op->data, "op data queue", MAX_QUEUE_SIZE); 
+	    int len = ret, recv_len = 0;
+
+	    do
+	    {
+		offset = pomme_buffer_next(buffer,ret);
+	    }while( offset < 0 );
+
+	    p_buffer = buffer->buffer + offset;
+	    op->body = p_buffer;
+	    int src = status.MPI_SOURCE;
+	    int tag = status.MPI_TAG;
+	    int tlen = 0;
+	    do{
+		ret = MPI_Recv(p_buffer, len, MPI_BYTE, src, tag, MPI_COMM_WORLD,&status);
+		MPI_Get_count(&status, MPI_BYTE, &tlen);
+		recv_len += tlen;
+		p_buffer += tlen;
+	    }while(recv_len < len );
+	    op->body_len = len;
 	}  
     }
     return 0;
@@ -158,7 +208,7 @@ int iofw_init(int iofw_servers, int *is_server)
 int iofw_Finalize()
 {
     int ret,flag;
-    
+
     ret = MPI_Finalized(&flag);
     if(flag)
     {

@@ -37,10 +37,12 @@
 
 typedef struct io_op
 {
+	int src;
+	int tag;
 	void *head;
 	int head_len;
-	int length;//both the length of the head and data
-	pomme_buffer_t *data;
+	void *body;
+	int body_len;
 	queue_body_t next_head;
 }io_op_t;
 
