@@ -291,13 +291,16 @@ int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid);
 /**
- * @brief iofw_get_extra_data_len : get the data len of this operation
+ * @brief iofw_unpack_msg_extra_data_size : get the data len of this operation.you 
+ *	should call the func after function iofw_unpack_msg_func_code, and can be
+ *	called only once
  *
  * @param buf: pointer to the struct buf where the packed function is stored
  * @param len: the data len will be stored here
- * @return 
+ 
+ * @return: 0 if success
  */
-int iofw_get_extra_data_len(
+int iofw_upack_msg_extra_data_size(
 	iofw_buf_t  *buf,
-	size_t *len);
+	size_t *data_size);
 #endif

@@ -115,6 +115,7 @@ int iofw_pack_msg_put_vara_float(
 	int ncid, int varid, const size_t start[],
 	const size_t count[])
 {
+    int i;
     int dim, data_size;
     
     if((dim = sizeof(start) / sizeof(size_t)) != 
@@ -132,7 +133,7 @@ int iofw_pack_msg_put_vara_float(
     data_size *= sizeof(float);
 
     pack32(FUNC_NC_PUT_VARA_FLOAT, buf);
-    pack32(data_len, buf);
+    pack32(data_size, buf);
     pack32(ncid, buf);
     pack32(varid, buf);
     
@@ -237,9 +238,6 @@ int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
 {
-    uint32_t data_size;
-    
-    unpack32(&data_size, buf);
     unpack32((uint32_t*)ncid, buf);
     unpack32((uint32_t*)varid, buf);
     
@@ -257,5 +255,13 @@ int iofw_unpack_msg_close(
 
     return 0;
 
+}
+
+int iofw_unpack_msg_extra_data_len(
+	iofw_buf_t  *buf,
+	size_t *data_size)
+{
+    unpack32((uint32_t*)data_size, buf);
+    return 0;
 }
 
