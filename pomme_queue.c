@@ -67,7 +67,7 @@ int init_queue(struct queue_head **queue,char *name,int maxLength)
  *  		  incur error
  * =====================================================================================
  */
-int destory_queue(struct queue_head *queue)
+int distroy_queue(struct queue_head *queue)
 {
 	int ret = 0;
 	lock_queue(queue);

@@ -257,7 +257,7 @@ int iofw_unpack_msg_close(
 
 }
 
-int iofw_unpack_msg_extra_data_len(
+int iofw_unpack_msg_extra_data_size(
 	iofw_buf_t  *buf,
 	size_t *data_size)
 {

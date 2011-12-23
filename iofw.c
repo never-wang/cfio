@@ -36,9 +36,9 @@ static int rank = -1;
 /* the app_rank is the rank of self in the world*/
 static int app_rank = -1;
 /* the number of the app proc*/
-static int app_proc_num = -1;
+int app_proc_num = -1;
 /* the number of the server proc */
-static int server_proc_num = -1;
+int server_proc_num = -1;
 /* the number of the client i serve */
 int client_to_serve = 0;
 /* the number of the client i served */

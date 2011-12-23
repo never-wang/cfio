@@ -18,9 +18,9 @@
 #ifndef _IO_FW_H
 #define	_IO_FW_H
 
-const int BUFFER_SIZE = (1024*1024*1024);
-const int CHUNK_SIZE = 32*1024;
-const int MAX_QUEUE_SIZE = 1024*1024*1024;
+#define BUFFER_SIZE  1024*1024*1024
+#define CHUNK_SIZE  32*1024
+#define MAX_QUEUE_SIZE  1024*1024*1024
 #include "pomme_queue.h"
 #include "unmap.h"
 #include "pack.h"
