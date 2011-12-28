@@ -121,6 +121,7 @@ int iofw_pack_msg_close(
 int iofw_pack_msg_io_stop(
 	iofw_buf_t *buf)
 {
+
 }
 /**
  *unpack msg function
