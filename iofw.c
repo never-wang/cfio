@@ -63,6 +63,10 @@ static void * iofw_writer(void *argv)
 		do
 		{
 			pos = queue_get_front(queue);
+			if( pos == NULL && done == 1)
+			{
+			    goto msg_over;
+			}
 		}while(pos == NULL);
 		io_op_t *entry = queue_entry(pos, io_op_t,next_head);  
 
@@ -81,7 +85,7 @@ static void * iofw_writer(void *argv)
 		free(entry);
 
     }
-
+msg_over:
     return NULL;	
 }
 int iofw_server()
@@ -193,6 +197,9 @@ int iofw_init(int iofw_servers, int *is_server)
 	char name[10];
 	sprintf(name,"buffer@%d",rank);
 	memset(&server_queue, 0, sizeof(ioop_queue_t));
+	
+	ret = iofw_map_client_num(rank, &client_to_serve);
+
 	ret = io_op_queue_init(&server_queue, BUFFER_SIZE, 
 		CHUNK_SIZE, MAX_QUEUE_SIZE, name);
 	if( ret < 0 )
@@ -205,7 +212,7 @@ int iofw_init(int iofw_servers, int *is_server)
     return 0;
 
 }
-int iofw_Finalize()
+int iofw_finalize()
 {
     int ret,flag;
 

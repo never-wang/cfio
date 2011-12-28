@@ -45,6 +45,6 @@ int iofw_init(int iofw_servers,
  *
  * @return 
  */
-int iofw_Finalize();
+int iofw_finalize();
 
 #endif

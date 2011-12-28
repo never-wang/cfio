@@ -24,5 +24,15 @@
  */
 int iofw_map_forwarding_proc(
 	int io_proc_id, int *forwarding_proc_id);
+/**
+ * @brief iofw_map_client_num 
+ *
+ * @param rank: the runk of the server
+ * @param clien_num: return of the number of client assigned to this server
+ *
+ * @return : < 0 for error, 0 for succss
+ */
+int iofw_map_client_num(
+	int rank, int *clien_num);
 
 #endif
