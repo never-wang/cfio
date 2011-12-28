@@ -1,7 +1,7 @@
-CC := mpicc
-INCLUDEDIR := 
-LIBDIR := -L/home/bus/lt/usr/lib 
-LIB := -lnetcdf
+CC := mpiicc
+INCLUDEDIR := -I/home/never/usr/include
+LIBDIR := -L/home/never/usr/lib 
+LIB := -lpthread -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lcurl -lsz 
 ALLOBJECTS := $(patsubst %.c, %.o, $(wildcard *.c)) 
 GREPCMD := grep -l 'int main.*(.*)' *.c
 #Find the files containing main fun
@@ -21,15 +21,16 @@ NONEXEOBJECTS := $(patsubst %.c, %.o, $(NONEXESOURCES))
 HEADERS := $(shell ls | grep '\.h$$' )
 CFLAGS += $(INCLUDEDIR)
 CFLAGS += $(LIBDIR) 
-CFLAGS += $(LIB)
 CFLAGS += -Wall
 define GenExeCmd
-$(CC) $(CFLAGS) $(INCLUDEDIR) $(LIBDIR) -o $@ $^ $@.o $(LIB)
+$(CC) $(CFLAGS) -o $@ $^ $@.o $(LIB)
 endef
 
 
 #Must add $(EXEFILES)
-all:$(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
+all:$(ALLOBJECTS) $(EXEFILES) 
+
+#TODO just ignore #$(SOOBJECTS)
 #Generate execuable file
 rmcmd := rm $(EXEFILES)2>/dev/null
 %.o:%.c $(HEADERS)
@@ -42,7 +43,6 @@ $(SOOBJECTS):$(ALLOBJECTS)
 .PHONY:clean run install
 clean:
 	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
-	-rm *~
 run:
 	#$(shell ./startserver.sh)
 #install:

@@ -33,8 +33,8 @@ int iofw_nc_create(
 	int io_proc_id,
 	const char *path, int cmode, int *ncidp)
 {
-    assert(path == NULL);
-    assert(ncidp == NULL);
+    assert(path != NULL);
+    assert(ncidp != NULL);
 
     iofw_buf_t *buf;
     int dst_proc_id;
@@ -65,8 +65,8 @@ int iofw_nc_def_dim(
 	int io_proc_id,
 	int ncid, const char *name, size_t len, int *idp)
 {
-    assert(name == NULL);
-    assert(idp == NULL);
+    assert(name != NULL);
+    assert(idp != NULL);
 
     iofw_buf_t *buf;
     int dst_proc_id;
@@ -101,9 +101,9 @@ int iofw_nc_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int dimids[], int *varidp)
 {
-    assert(name == NULL);
-    assert(dimids == NULL);
-    assert(varidp == NULL);
+    assert(name != NULL);
+    assert(dimids != NULL);
+    assert(varidp != NULL);
 
     iofw_buf_t *buf;
     int dst_proc_id;
