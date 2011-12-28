@@ -13,6 +13,7 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include "msg.h"
+#include "error.h"
 
 int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
 {
@@ -104,6 +105,40 @@ int iofw_pack_msg_put_var1_float(
     pack32(varid, buf);
     //TODO pack size_t
     pack32_array((uint32_t*)index, sizeof(index)/sizeof(size_t), buf);
+    pack32(*fp, buf);
+
+    return 0;
+}
+
+int iofw_pack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int ncid, int varid, const size_t start[],
+	const size_t count[])
+{
+    int i;
+    int dim, data_size;
+    
+    if((dim = sizeof(start) / sizeof(size_t)) != 
+	    sizeof(count) / sizeof(size_t))
+    {
+	//TODO DEBUG
+	return IOFW_UNEQUAL_DIM;
+    }
+
+    data_size = 1;
+    for(i = 0; i < dim; i ++)
+    {
+	data_size *= count[i]; 
+    }
+    data_size *= sizeof(float);
+
+    pack32(FUNC_NC_PUT_VARA_FLOAT, buf);
+    pack32(data_size, buf);
+    pack32(ncid, buf);
+    pack32(varid, buf);
+    
+    pack32_array((uint32_t*)start, dim, buf);
+    pack32_array((uint32_t*)count, dim, buf);
 
     return 0;
 }
@@ -121,7 +156,8 @@ int iofw_pack_msg_close(
 int iofw_pack_msg_io_stop(
 	iofw_buf_t *buf)
 {
-
+    pack32(CLIENT_END_IO, buf);
+    return 0;
 }
 /**
  *unpack msg function
@@ -189,12 +225,25 @@ int iofw_unpack_msg_enddef(
 
 int iofw_unpack_msg_put_var1_float(
 	iofw_buf_t *buf,
-	int *ncid, int *varid, int *indexdim, size_t *index)
+	int *ncid, int *varid, int *indexdim, size_t **index)
 {
     unpack32((uint32_t*)ncid, buf);
     unpack32((uint32_t*)varid, buf);
     unpack32_array((uint32_t**)index, (uint32_t*)indexdim, buf);
 
+    return 0;
+}
+
+int iofw_unpack_msg_put_vara_float(
+	iofw_buf_t *buf,
+	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
+{
+    unpack32((uint32_t*)ncid, buf);
+    unpack32((uint32_t*)varid, buf);
+    
+    unpack32_array((uint32_t**)start, (uint32_t*)dim, buf);
+    unpack32_array((uint32_t**)count, (uint32_t*)dim, buf);
+    
     return 0;
 }
 
@@ -206,5 +255,13 @@ int iofw_unpack_msg_close(
 
     return 0;
 
+}
+
+int iofw_unpack_msg_extra_data_size(
+	iofw_buf_t  *buf,
+	size_t *data_size)
+{
+    unpack32((uint32_t*)data_size, buf);
+    return 0;
 }
 

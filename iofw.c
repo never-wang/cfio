@@ -15,8 +15,10 @@
  *
  * =====================================================================================
  */
+#include "io.h"
 #include "iofw.h"
 #include "unmap.h"
+#include "map.h"
 #include "pomme_buffer.h"
 #include "pomme_queue.h"
 #include <pthread.h>
@@ -34,23 +36,53 @@ static int rank = -1;
 /* the app_rank is the rank of self in the world*/
 static int app_rank = -1;
 /* the number of the app proc*/
-static int app_proc_num = -1;
+int app_proc_num = -1;
 /* the number of the server proc */
-static int server_proc_num = -1;
+int server_proc_num = -1;
 /* the number of the client i serve */
 int client_to_serve = 0;
 /* the number of the client i served */
-int client_to_served = 0;
+int client_served = 0;
+/* all the client report done */
+int done = 0;
+/* if i am server */
+int i_am_server = 0;
 
 /*
  * get the rank of the server of me 
  */
-static inline int get_server_rank(int my_rank);
 
 static void * iofw_writer(void *argv)
 {
-	
-	return NULL;	
+    pomme_queue_t *queue = server_queue.opq;
+	pomme_buffer_t *buffer = server_queue.buffer;
+    queue_body_t *pos = NULL;
+	int ret = 0;
+    while(1)
+    {
+		do
+		{
+			pos = queue_get_front(queue);
+		}while(pos == NULL);
+		io_op_t *entry = queue_entry(pos, io_op_t,next_head);  
+
+		ret = iofw_do_io(entry->src, entry->tag, rank, entry);
+		if( ret < 0 )
+		{
+			debug("iofw_writer write fail@%s %s %d\n",FFL);
+		}
+		int h_start = (char *)entry->head - (char *)server_queue.buffer;
+		int b_start = (char *)entry->body - (char *)server_queue.buffer;
+
+		pomme_buffer_release(buffer, h_start, entry->head_len);
+		pomme_buffer_release(buffer, b_start, entry->body_len);
+
+		/* here need optimaze*/
+		free(entry);
+
+    }
+
+    return NULL;	
 }
 int iofw_server()
 {
@@ -65,10 +97,10 @@ int iofw_server()
     }
     static int done = 0;
     void *p_buffer = NULL;
+    pomme_buffer_t *buffer = server_queue.buffer;
+    pomme_queue_t *queue = server_queue.opq;
     while( done == 0 )
     {
-	/* buffer */
-	pomme_buffer_t *buffer = server_queue.buffer;
 	int offset = 0;
 	/*
 	 * wait for any mesg header
@@ -86,12 +118,43 @@ int iofw_server()
 	int count = 0;
 	MPI_Get_count(&status,MPI_BYTE,&count);
 	/*the length should include the data length */
-	ret = unmap(status.MPI_SOURCE, status.MPI_TAG, rank,p_buffer,count);
+	size_t len,recv_len;
+	ret = unmap(status.MPI_SOURCE, status.MPI_TAG, rank,p_buffer,count, &len);
 	if( ret < 0 )
 	{
 	    debug("unmap data failed\n");
 	    continue;
 	}
+	if( len > 0 )
+	{
+	    io_op_t * op = malloc(sizeof(io_op_t));
+	    memset(op, 0, sizeof(io_op_t));
+	    op->head = p_buffer;
+	    op->head_len = count;
+		op->src = status.MPI_SOURCE;
+		op->tag = status.MPI_TAG;
+
+	    queue_push_back(queue,&op->next_head);
+	    recv_len = 0;
+
+	    do
+	    {
+		offset = pomme_buffer_next(buffer,ret);
+	    }while( offset < 0 );
+
+	    p_buffer = buffer->buffer + offset;
+	    op->body = p_buffer;
+	    int src = status.MPI_SOURCE;
+	    int tag = status.MPI_TAG;
+	    int tlen = 0;
+	    do{
+		ret = MPI_Recv(p_buffer, len, MPI_BYTE, src, tag, MPI_COMM_WORLD,&status);
+		MPI_Get_count(&status, MPI_BYTE, &tlen);
+		recv_len += tlen;
+		p_buffer += tlen;
+	    }while(recv_len < len );
+	    op->body_len = len;
+	}  
     }
     return 0;
 }
@@ -119,8 +182,9 @@ int iofw_init(int iofw_servers, int *is_server)
     if( rank >= app_proc_num)
     {
 	*is_server = 1;
+	i_am_server = 1;
     }else{
-	my_server_rank = get_server_num(rank); 
+	iofw_map_forwarding_proc(rank, &my_server_rank);
 	app_rank = rank;
     }
     if( *is_server )
@@ -128,6 +192,7 @@ int iofw_init(int iofw_servers, int *is_server)
 	int ret = 0;
 	char name[10];
 	sprintf(name,"buffer@%d",rank);
+	memset(&server_queue, 0, sizeof(ioop_queue_t));
 	ret = io_op_queue_init(&server_queue, BUFFER_SIZE, 
 		CHUNK_SIZE, MAX_QUEUE_SIZE, name);
 	if( ret < 0 )
@@ -137,9 +202,23 @@ int iofw_init(int iofw_servers, int *is_server)
 	}
 	rc = iofw_server();
     }
+    return 0;
 
 }
-static inline int get_server_rank(int my_rank)
+int iofw_Finalize()
 {
-    return (app_proc_num + my_rank%server_proc_num);
+    int ret,flag;
+
+    ret = MPI_Finalized(&flag);
+    if(flag)
+    {
+	debug("***You should not call MPI_Finalize before iofw_Finalized");
+    }
+    if( i_am_server )
+    {
+	debug("server %d exit\n",rank);
+    }else{
+	ret = iofw_io_stop(rank);
+    }
+    return 0;
 }

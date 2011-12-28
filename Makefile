@@ -1,7 +1,7 @@
 CC := mpicc
 INCLUDEDIR := 
-LIBDIR := 
-LIB := 
+LIBDIR := -L/home/bus/lt/usr/lib 
+LIB := -lnetcdf
 ALLOBJECTS := $(patsubst %.c, %.o, $(wildcard *.c)) 
 GREPCMD := grep -l 'int main.*(.*)' *.c
 #Find the files containing main fun
@@ -20,6 +20,8 @@ NONEXESOURCES := $(shell $(GREPCMD))
 NONEXEOBJECTS := $(patsubst %.c, %.o, $(NONEXESOURCES))  
 HEADERS := $(shell ls | grep '\.h$$' )
 CFLAGS += $(INCLUDEDIR)
+CFLAGS += $(LIBDIR) 
+CFLAGS += $(LIB)
 CFLAGS += -Wall
 define GenExeCmd
 $(CC) $(CFLAGS) $(INCLUDEDIR) $(LIBDIR) -o $@ $^ $@.o $(LIB)
