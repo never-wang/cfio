@@ -1,5 +1,5 @@
 CC := mpicc
-INCLUDEDIR := 
+INCLUDEDIR := -I/home/bus/lt/usr/include 
 LIBDIR := -L/home/bus/lt/usr/lib 
 LIB := -lnetcdf
 ALLOBJECTS := $(patsubst %.c, %.o, $(wildcard *.c)) 
