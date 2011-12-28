@@ -35,18 +35,15 @@ int main(int argc, char** argv)
     gossip_enable_stderr();
     gossip_set_debug_mask(GOSSIP_DEBUG_ON, DEBUG_USER); 
 
-    gossip_debug(DEBUG_USER, "\n");
     
     iofw_init(size / 3, &is_server);
 
-    gossip_debug(DEBUG_USER, "\n");
-
     if(!is_server)
     {
-	iofw_nc_create(rank, path, 0, &ncidp);
+		iofw_nc_create(rank, path, 0, &ncidp);
     }
 
-    iofw_Finalize();
+    iofw_finalize();
     MPI_Finalize();
     return 0;
 }

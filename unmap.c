@@ -20,7 +20,7 @@
 #include "msg.h"
 #include "unmap.h"
 #include "pack.h"
-#include "netcdf.h"
+#include <netcdf.h>
 #include "pomme_queue.h"
 #include "pomme_buffer.h"
 
@@ -47,6 +47,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 		return -1;
 	}
     int code = iofw_unpack_msg_func_code(buf);
+	debug("from %d code %d\n",source,code);
     switch(code)
     {
 	case FUNC_NC_CREATE: 
@@ -68,8 +69,8 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	case FUNC_NC_PUT_VAR1_FLOAT:
 	    break;
 	case CLIENT_END_IO:
+	    debug("server %d done client_end_io for client %d\n",my_rank,source);
 	    iofw_client_done(source);
-	    debug("server %s done client_end_io for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_PUT_VARA_FLOAT:
 	    iofw_unpack_msg_extra_data_size(buf,data_len);
@@ -125,6 +126,7 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 static inline int iofw_client_done(int client_rank)
 {
 	client_served++;
+
 	if( client_served == client_to_serve)
 	{
 	    done = 1;
@@ -143,20 +145,22 @@ static int iofw_do_nc_create(int source, int tag,
 {
     int ret, cmode;
     char *path;
+    int ncid = 0;
     ret = iofw_unpack_msg_create(buf, &path,&cmode);
     if( ret < 0 )
     {
 	debug("unpack mesg create error@%s %s %d\n",FFL);
-	return ret;
+	ncid = ret;
+	goto ack;
     }
-    int ncid = 0;
     ret = nc_create(path,cmode,&ncid);
     if( ret != NC_NOERR )
     {
-	debug("Error happened when open %s %s",path,nc_stderror(ret));
-	return ret;
+		debug("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
+		ncid = ret;
     }
 //    free(path);
+ack:
     if( (ret = iofw_send_int1(source,my_rank,ncid) ) < 0 )
     {
 	debug("send ncid to client error%s %s %d\n",FFL);
@@ -185,14 +189,14 @@ static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
     ret = nc_def_dim(ncid,name,len,&dimid);
     if( ret != NC_NOERR )
     {
-	debug("def dim error:%s@%s %s %d\n",nc_stderror(ret),FFL);
+	debug("def dim error:@%s %s %d\n",FFL);
 	return ret;
     }
  //   free(name);
     ret = iofw_send_int1(source,my_rank, dimid);
     if( ret < 0 )
     {
-	debug("Send dim id back to client error@%s %s %d\n",FLL);
+	debug("Send dim id back to client error@%s %s %d\n",FFL);
 	return ret;
     }
     return 0;
@@ -226,7 +230,7 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
 	if( ret != NC_NOERR )
 	{
-	    debug("nc_def_var failed error:%s@%s %s %d\n",nc_sdterror(ret), FFL);
+	    debug("nc_def_var failed error@%s %s %d\n", FFL);
 	    return ret;
 	}
 	ret = iofw_send_int1(src,my_rank, varid);
@@ -283,7 +287,7 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)data);
 	if( ret != NC_NOERR )
 	{
-		debug("write nc failure(%s) @%s %s %d",nc_stderror(ret),FFL);
+		debug("write nc failure() @%s %s %d",FFL);
 		return -1;
 	}
 
@@ -303,7 +307,7 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
  */
 static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
 {
-	
+	return 0;	
 }
 int io_op_queue_init(ioop_queue_t *io_queue,int buffer_size,
 	int chunk_size, int max_qlength, char *queue_name)

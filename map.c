@@ -42,7 +42,7 @@ int iofw_map_client_num(
 	int rank, int *client_num)
 {
     *client_num = app_proc_num / server_proc_num;
-    if( rank < server_proc_num )
+    if( rank <= app_proc_num + app_proc_num%server_proc_num )
     {
 	*client_num++;
     }
