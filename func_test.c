@@ -16,8 +16,8 @@
 
 #include "mpi.h"
 #include "io.h"
-#include "gossip.h"
 #include "debug.h"
+
 
 int main(int argc, char** argv)
 {
@@ -32,21 +32,20 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    gossip_enable_stderr();
-    gossip_set_debug_mask(GOSSIP_DEBUG_ON, DEBUG_USER); 
+    set_debug_mask(DEBUG_USER); 
 
-    gossip_debug(DEBUG_USER, "\n");
+    debug_mark(DEBUG_USER);
     
     iofw_init(size / 3, &is_server);
 
-    gossip_debug(DEBUG_USER, "\n");
+    debug_mark(DEBUG_USER);
 
     if(!is_server)
     {
 	iofw_nc_create(rank, path, 0, &ncidp);
     }
 
-    iofw_Finalize();
+    iofw_finalize();
     MPI_Finalize();
     return 0;
 }
