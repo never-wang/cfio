@@ -21,6 +21,7 @@
 #include "pomme_buffer.h"
 
 #define FFL __FILE__,__func__,__LINE__
+#define DEBUG 1
 
 #ifdef DEBUG
 #define debug(msg,argc...) fprintf(stderr,msg,##argc)
