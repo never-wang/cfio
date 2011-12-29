@@ -79,6 +79,8 @@ static void * iofw_writer(void *argv)
 		int h_start = (char *)entry->head - (char *)server_queue.buffer;
 		int b_start = (char *)entry->body - (char *)server_queue.buffer;
 
+		debug(" body: %p, head p:%p\n",entry->body,entry->head);
+
 		pomme_buffer_release(buffer, h_start, entry->head_len);
 		pomme_buffer_release(buffer, b_start, entry->body_len);
 
@@ -123,6 +125,8 @@ int iofw_server()
 
 		int count = 0;
 		MPI_Get_count(&status,MPI_BYTE,&count);
+
+		pomme_buffer_take(buffer, count*sizeof(MPI_BYTE));
 		/*the length should include the data length */
 		size_t len,recv_len;
 		ret = unmap(status.MPI_SOURCE, status.MPI_TAG, rank,p_buffer,count, &len);
@@ -143,7 +147,6 @@ int iofw_server()
 			op->src = status.MPI_SOURCE;
 			op->tag = status.MPI_TAG;
 
-			queue_push_back(queue,&op->next_head);
 			recv_len = 0;
 
 			do
@@ -153,10 +156,14 @@ int iofw_server()
 
 			p_buffer = buffer->buffer + offset;
 			op->body = p_buffer;
+			printf("op->body : %p,op->head %p\n",op->body, op->head);
+			debug("start:  %d\n",offset);
+			queue_push_back(queue,&op->next_head);
 
 			int src = status.MPI_SOURCE;
 			int tag = status.MPI_TAG;
 			int tlen = 0;
+			debug("data len:%d\n",len);
 
 			do{
 				ret = MPI_Recv(p_buffer, len, MPI_BYTE, src, tag, MPI_COMM_WORLD,&status);
@@ -167,6 +174,7 @@ int iofw_server()
 
 			}while(recv_len < len );
 			op->body_len = len;
+			pomme_buffer_take(buffer,len);
 		}  
 	}
 	while( 0 == write_done);

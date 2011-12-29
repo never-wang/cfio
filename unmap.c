@@ -29,6 +29,7 @@ extern int client_served;
 extern int done;
 
 static int iofw_do_nc_create(int source, int tag, int my_rank,Buf buf); 
+static int iofw_do_nc_end_def(int, int ,int, Buf);
 static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf);
 static int iofw_do_nc_def_var(int src, int tag, int my_rank,Buf buf);
 static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
@@ -55,6 +56,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	    debug("server %d done nc_create for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_ENDDEF:
+		iofw_do_nc_end_def(source, tag, my_rank, buf);
 	    break;
 	case FUNC_NC_CLOSE:
 	    break;
@@ -93,6 +95,8 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 		return -1;
 	}
 
+	debug("op_head:%p\n",op->head);
+	debug("body_head:%p\n",op->body);
 	iofw_buf_t * h_buf = create_buf(op->head, op->head_len);
 	iofw_buf_t * d_buf = create_buf(op->body, op->body_len);
 
@@ -145,7 +149,7 @@ static int iofw_do_nc_create(int source, int tag,
 {
     int ret, cmode;
     char *path;
-    int ncid = 0;
+    int ncid = 0,dimid;
     ret = iofw_unpack_msg_create(buf, &path,&cmode);
     if( ret < 0 )
     {
@@ -153,18 +157,19 @@ static int iofw_do_nc_create(int source, int tag,
 	ncid = ret;
 	goto ack;
     }
-    ret = nc_create(path,cmode,&ncid);
+    ret = nc_create(path,cmode,&ncid);	
     if( ret != NC_NOERR )
     {
 		debug("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
 		ncid = ret;
     }
 //    free(path);
+	debug("ncid for %d is %d",source, ncid);
 ack:
     if( (ret = iofw_send_int1(source,my_rank,ncid) ) < 0 )
     {
-	debug("send ncid to client error%s %s %d\n",FFL);
-	return ret;
+		debug("send ncid to client error%s %s %d\n",FFL);
+		return ret;
     }
     return 0;
 }
@@ -176,30 +181,36 @@ ack:
  * */
 static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
 {
-    int ret = 0;
-    int ncid,dimid;
-    size_t len;
-    char *name;
-    ret = iofw_unpack_msg_def_dim(buf, &ncid, &name, &len);
-    if( ret < 0 )
-    {
-	debug("upack for nc_def_dim error@%s %s %d\n",FFL);
-	return ret;
-    }
-    ret = nc_def_dim(ncid,name,len,&dimid);
-    if( ret != NC_NOERR )
-    {
-	debug("def dim error:@%s %s %d\n",FFL);
-	return ret;
-    }
- //   free(name);
-    ret = iofw_send_int1(source,my_rank, dimid);
-    if( ret < 0 )
-    {
-	debug("Send dim id back to client error@%s %s %d\n",FFL);
-	return ret;
-    }
-    return 0;
+	int ret = 0;
+	int ncid,dimid;
+	size_t len;
+	char *name;
+	ret = iofw_unpack_msg_def_dim(buf, &ncid, &name, &len);
+	if( ret < 0 )
+	{
+		debug("upack for nc_def_dim error@%s %s %d\n",FFL);
+		dimid = ret;
+		goto ack;
+	}
+	debug("ncid %d name : %s len:%lld\n",ncid,name,len);
+	printf("size size_t %d\n",sizeof(size_t));
+
+	ret = nc_def_dim(ncid,"time",len,&dimid);
+	if( ret != NC_NOERR )
+	{
+		debug("def dim error(%s):@%s %s %d\n",nc_strerror(ret),FFL);
+		dimid = ret;
+		goto ack;
+	}
+	//   free(name);
+ack:
+	ret = iofw_send_int1(source,my_rank, dimid);
+	if( ret < 0 )
+	{
+		debug("Send dim id back to client error@%s %s %d\n",FFL);
+		return ret;
+	}
+	return 0;
 }
 
 /**
@@ -242,6 +253,33 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 //	free(name);
 //	free(dimids);
 	return 0;
+}
+
+/**
+ * @brief iofw_do_nc_end_def 
+ *
+ * @param src
+ * @param tag
+ * @param my_rank
+ * @param buf
+ *
+ * @return 
+ */
+static int iofw_do_nc_end_def( int src, int tag, int my_rank, iofw_buf_t *buf)
+{
+	int ncid, ret ;
+	ret = iofw_unpack_msg_enddef(buf, &ncid);
+	if( ret < 0 )
+	{
+		debug("[%s %s %d]:unapck msg error\n",FFL);
+		return ret;
+	}
+	ret = nc_enddef(ncid);
+	if( ret != NC_NOERR )
+	{
+		debug("[%s %s %d]: nc_enddef error(%s)",FFL,nc_strerror(ret));
+	}
+	return ret;
 }
 
 /**

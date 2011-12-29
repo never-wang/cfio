@@ -1,4 +1,5 @@
 /****************************************************************************\
+	dcebug("%d", data_len);
  *  pack.c - lowest level un/pack functions
  *  NOTE: The memory buffer will expand as needed using realloc()
  *****************************************************************************
@@ -354,8 +355,36 @@ int unpack32_array(uint32_t ** valp, uint32_t * size_val, Buf buffer)
 			return _ERROR;
 	}
 	return _SUCCESS;
+
+}
+void pack64_array(const uint64_t * valp, uint64_t size_val, Buf buffer)
+{
+	uint64_t i = 0;
+
+	pack64(size_val, buffer);
+
+	for (i = 0; i < size_val; i++) {
+		pack64(*(valp + i), buffer);
+	}
 }
 
+/* Given a int ptr, it will unpack an array of size_val
+ */
+int unpack64_array(uint64_t ** valp, uint64_t * size_val, Buf buffer)
+{
+	uint64_t i = 0;
+
+	if (unpack64(size_val, buffer))
+		return _ERROR;
+
+	*valp = malloc((*size_val) * sizeof(uint64_t));
+	for (i = 0; i < *size_val; i++) {
+		if (unpack64((*valp) + i, buffer))
+			return _ERROR;
+	}
+	return _SUCCESS;
+
+}
 /*
  * Given a 16-bit integer in host byte order, convert to network byte order,
  * store in buffer and adjust buffer counters.

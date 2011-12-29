@@ -65,7 +65,7 @@ int iofw_pack_msg_def_dim(
     packstr(name, buf);
     
     //TODO when pack size_t , how
-    pack32(len, buf);
+    pack64(len, buf);
 
     return 0;
 }
@@ -137,8 +137,8 @@ int iofw_pack_msg_put_vara_float(
     pack32(ncid, buf);
     pack32(varid, buf);
     
-    pack32_array((uint32_t*)start, dim, buf);
-    pack32_array((uint32_t*)count, dim, buf);
+    pack64_array((uint64_t*)start, dim, buf);
+    pack64_array((uint64_t*)count, dim, buf);
 
     return 0;
 }
@@ -192,7 +192,7 @@ int iofw_unpack_msg_def_dim(
 
     unpack32((uint32_t*)ncid, buf);
     unpackstr_malloc(name, &len_t, buf);
-    unpack32((uint32_t*)len, buf);
+    unpack64((uint32_t*)len, buf);
 
     return 0;
 }
@@ -241,8 +241,8 @@ int iofw_unpack_msg_put_vara_float(
     unpack32((uint32_t*)ncid, buf);
     unpack32((uint32_t*)varid, buf);
     
-    unpack32_array((uint32_t**)start, (uint32_t*)dim, buf);
-    unpack32_array((uint32_t**)count, (uint32_t*)dim, buf);
+    unpack64_array((uint64_t**)start, (uint64_t*)dim, buf);
+    unpack64_array((uint64_t**)count, (uint64_t*)dim, buf);
     
     return 0;
 }
