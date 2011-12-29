@@ -48,7 +48,6 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 		return -1;
 	}
     int code = iofw_unpack_msg_func_code(buf);
-	debug("from %d code %d\n",source,code);
     switch(code)
     {
 	case FUNC_NC_CREATE: 
@@ -95,8 +94,6 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 		return -1;
 	}
 
-	debug("op_head:%p\n",op->head);
-	debug("body_head:%p\n",op->body);
 	iofw_buf_t * h_buf = create_buf(op->head, op->head_len);
 	iofw_buf_t * d_buf = create_buf(op->body, op->body_len);
 
@@ -192,13 +189,11 @@ static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
 		dimid = ret;
 		goto ack;
 	}
-	debug("ncid %d name : %s len:%lld\n",ncid,name,len);
-	printf("size size_t %d\n",sizeof(size_t));
 
-	ret = nc_def_dim(ncid,"time",len,&dimid);
+	ret = nc_def_dim(ncid,name,len,&dimid);
 	if( ret != NC_NOERR )
 	{
-		debug("def dim error(%s):@%s %s %d\n",nc_strerror(ret),FFL);
+		debug("def dim(%s) error(%s):@%s %s %d\n",name,nc_strerror(ret),FFL);
 		dimid = ret;
 		goto ack;
 	}
@@ -238,6 +233,7 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	    return ret;
 	}
 	int varid;
+	debug("ndims %d\n",ndims);
 	ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
 	if( ret != NC_NOERR )
 	{
@@ -297,7 +293,7 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf)
 {
-	int ret = 0,ncid, varid, dim;
+	int i,ret = 0,ncid, varid, dim;
 	size_t *start, *count;
 	ret = iofw_unpack_msg_put_vara_float(h_buf, 
 		   &ncid, &varid, &dim, &start, &count);	
@@ -311,6 +307,12 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	uint32_t *data;
 	uint32_t data_len;
 	ret = unpack32_array(&data,&data_len, d_buf);
+	debug("real get len: %u\n",data_len);
+	for( i = 0; i< data_len; i++)
+	{
+		data[i] = 1.0;
+	}
+	debug("\n");
 
 	if( ret < 0 )
 	{
@@ -322,11 +324,14 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	memcpy(_start,start,sizeof(_start));
 	memcpy(_count,count,sizeof(_count));
 
+
 	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)data);
 	if( ret != NC_NOERR )
 	{
-		debug("write nc failure() @%s %s %d",FFL);
+		debug("write nc(%d) var (%d) failure(%s) @%s %s %d",ncid,varid,nc_strerror(ret),FFL);
 		return -1;
+	}else{
+		debug("sucess\n");
 	}
 
 	return 0;	

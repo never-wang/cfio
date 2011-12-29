@@ -165,6 +165,7 @@ int pomme_buffer_release(pomme_buffer_t *buffer,int32 begin,int32 offset)
 #endif
 		return NULL_POINTER_ERROR;
 	}
+	fprintf(stderr,"release: %d %d\n",begin,offset);
 	lock_buffer(buffer);
 	buffer->begin = begin + offset;
 	unlock_buffer(buffer);

@@ -13,6 +13,8 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include "msg.h"
+#include <stdlib.h>
+#include <stdio.h>
 #include "error.h"
 
 int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
@@ -207,7 +209,7 @@ int iofw_unpack_msg_def_var(
     unpack32((uint32_t*)ncid, buf);
     unpackstr_malloc(name, &len, buf);
     unpack32((uint32_t*)xtype, buf);
-    unpack32((uint32_t*)ndims, buf);
+   // unpack32((uint32_t*)ndims, buf);
     
     unpack32_array((uint32_t**)dimids, (uint32_t*)ndims, buf);
 
@@ -238,6 +240,8 @@ int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
 {
+	uint32_t data_len;
+	unpack32(&data_len, buf);
     unpack32((uint32_t*)ncid, buf);
     unpack32((uint32_t*)varid, buf);
     
@@ -262,6 +266,7 @@ int iofw_unpack_msg_extra_data_size(
 	size_t *data_size)
 {
     unpack32((uint32_t*)data_size, buf);
+	*data_size +=4;
     return 0;
 }
 

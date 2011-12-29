@@ -40,8 +40,10 @@ typedef struct io_op
 	int src;
 	int tag;
 	void *head;
-	int head_len;
 	void *body;
+	int head_start;
+	int head_len;
+	int body_start;
 	int body_len;
 	queue_body_t next_head;
 }io_op_t;
