@@ -81,7 +81,10 @@ static void * iofw_writer(void *argv)
 
 
 		pomme_buffer_release(buffer, h_start, entry->head_len);
-		pomme_buffer_release(buffer, b_start, entry->body_len);
+		if( entry->body != NULL)
+		{
+			pomme_buffer_release(buffer, b_start, entry->body_len);
+		}
 
 		/* here need optimaze*/
 		free(entry);
@@ -131,11 +134,33 @@ int iofw_server()
 
 		if( ret < 0 )
 		{
-			debug("unmap data failed\n");
+			switch(ret)
+			{
+				case ENQUEUE_MSG:
+					pomme_buffer_take(buffer, count);
+
+					io_op_t * op = malloc(sizeof(io_op_t));
+					memset(op, 0, sizeof(io_op_t));
+
+					op->head = p_buffer;
+					op->head_start = offset;
+					op->head_len = count;
+
+					op->src = status.MPI_SOURCE;
+					op->tag = status.MPI_TAG;
+
+					op->body = NULL;
+					queue_push_back(queue,&op->next_head);
+
+					break;
+				default:
+					debug("[%s %s %d]:Error",FFL);
+			}
 			continue;
 		}
-		if( len > 0 )
+		else if( len > 0 )
 		{
+			fprintf(stderr,"receive le %d\n",len);
 			pomme_buffer_take(buffer, count);
 
 			io_op_t * op = malloc(sizeof(io_op_t));
@@ -172,10 +197,6 @@ int iofw_server()
 				p_buffer += tlen;
 
 			}while(recv_len < len );
-
-
-			int i;
-
 
 			op->body_len = len;
 			pomme_buffer_take(buffer,len);
@@ -251,6 +272,7 @@ int iofw_finalize()
 	}
 	if( i_am_server )
 	{
+		io_op_queue_distroy(server_queue);
 		debug("server %d exit\n",rank);
 	}else{
 		debug("Send over\n");

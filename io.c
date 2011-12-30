@@ -185,7 +185,6 @@ int iofw_nc_put_vara_float(
 	data_len *= count[i]; 
     }
 
-	fprintf(stderr,"sizeof(start) : %d,data_len %d\n",sizeof(start),data_len);
     pack32_array((uint32_t*)fp, data_len, data_buf);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);

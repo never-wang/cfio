@@ -30,10 +30,14 @@ extern int done;
 
 static int iofw_do_nc_create(int source, int tag, int my_rank,Buf buf); 
 static int iofw_do_nc_end_def(int, int ,int, Buf);
+
 static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf);
 static int iofw_do_nc_def_var(int src, int tag, int my_rank,Buf buf);
+
 static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
 static inline int iofw_client_done(int client_rank);
+
+static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf);
 static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf);
@@ -57,8 +61,6 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	case FUNC_NC_ENDDEF:
 		iofw_do_nc_end_def(source, tag, my_rank, buf);
 	    break;
-	case FUNC_NC_CLOSE:
-	    break;
 	case FUNC_NC_DEF_DIM:
 	    iofw_do_nc_def_dim(source, tag, my_rank, buf);
 	    debug("server %d done nc_def_dim for client %d\n",my_rank,source);
@@ -77,8 +79,7 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	    iofw_unpack_msg_extra_data_size(buf,data_len);
 	    break;
 	default:
-	    debug("unknow operation code is %d @%s %s %d",code,FFL);
-	    ret = -1;
+	    ret = ENQUEUE_MSG;
 	    break;
     }	
 	free(buf);
@@ -95,14 +96,21 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 	}
 
 	iofw_buf_t * h_buf = create_buf(op->head, op->head_len);
-	iofw_buf_t * d_buf = create_buf(op->body, op->body_len);
+	iofw_buf_t * d_buf = NULL; 
 
     int code = iofw_unpack_msg_func_code(h_buf);
 	switch(code)
 	{
 		case FUNC_NC_PUT_VARA_FLOAT:
+			d_buf = create_buf(op->body, op->body_len);
+
 			ret = iofw_do_nc_put_vara_float(source, tag,
 				   	my_rank, h_buf, d_buf);
+
+			free(d_buf);
+			break;
+		case FUNC_NC_CLOSE:
+			ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
 			break;
 
 		default:
@@ -111,7 +119,6 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 			break;
 	}
 	free(h_buf);
-	free(d_buf);
 	return ret;
 
 }
@@ -308,7 +315,7 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	uint32_t data_len;
 	ret = unpack32_array(&data,&data_len, d_buf);
 	debug("real get len: %u\n",data_len);
-	for( i = 0; i< data_len; i++)
+	for( i = 0; i< 25; i++)
 	{
 		data[i] = 1.0;
 	}
@@ -320,15 +327,20 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 		return -1;
 	}
 
-	size_t _start[dim],_count[dim];
-	memcpy(_start,start,sizeof(_start));
-	memcpy(_count,count,sizeof(_count));
-
+	size_t _start[dim] ,_count[dim];
+	_start[0] = 0;
+	_start[1] = 0;
+	
+	_count[0] = 5;
+	_count[1] = 5;
+//	memcpy(_start,start,sizeof(_start));
+//	memcpy(_count,count,sizeof(_count));
+	
 
 	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)data);
 	if( ret != NC_NOERR )
 	{
-		debug("write nc(%d) var (%d) failure(%s) @%s %s %d",ncid,varid,nc_strerror(ret),FFL);
+		debug("write nc(%d) var (%d) failure(%s) @%s %s %d\n",ncid,varid,nc_strerror(ret),FFL);
 		return -1;
 	}else{
 		debug("sucess\n");
@@ -336,6 +348,33 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 
 	return 0;	
 
+}
+/**
+ * @brief iofw_do_nc_close 
+ *
+ * @param src
+ * @param tag
+ * @param my_rank
+ * @param buf
+ *
+ * @return 
+ */
+static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
+{
+	int ncid, ret;
+	ret = iofw_unpack_msg_close(buf, &ncid);
+	if( ret < 0 )
+	{
+		debug("[%s %s %d]: unpack close error\n",FFL);
+		return ret;
+	}
+	ret = nc_close(ncid);
+	if( ret != NC_NOERR )
+	{
+		debug("[%s %s %d]: close nc file failure\n",FFL);
+		ret = -1;
+	}
+	return 0;
 }
 
 /**
