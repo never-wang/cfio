@@ -1,4 +1,5 @@
 /****************************************************************************\
+	debug("%d", data_len);
  *  pack.h - definitions for lowest level un/pack functions. all functions
  *	utilize a Buf structure. Call init_buf, un/pack, and free_buf
  *****************************************************************************
@@ -96,6 +97,9 @@ int	unpackdata(void *data, size_t size, Buf buffer);
 
 void	packdata_array(const void *valp, uint32_t len, size_t size, Buf buffer);
 int	unpackdata_array(void **valp, uint32_t *len, size_t size, Buf buffer);
+
+void	pack64_array(const uint64_t *valp, uint64_t size_val, Buf buffer);
+int	unpack64_array(uint64_t **valp, uint64_t* size_val, Buf buffer);
 
 void	packmem(const char *valp, uint32_t size_val, Buf buffer);
 int	unpackmem(char *valp, uint32_t *size_valp, Buf buffer);

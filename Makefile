@@ -21,7 +21,9 @@ NONEXEOBJECTS := $(patsubst %.c, %.o, $(NONEXESOURCES))
 HEADERS := $(shell ls | grep '\.h$$' )
 CFLAGS += $(INCLUDEDIR)
 CFLAGS += $(LIBDIR) 
-CFLAGS += -Wall -DDEBUG=1
+CFLAGS += -DDEBUG=1
+CFLAGS += -Wall
+DEBUG =
 define GenExeCmd
 $(CC) $(CFLAGS) -o $@ $^ $@.o $(LIB)
 endef
@@ -34,7 +36,7 @@ all:$(ALLOBJECTS) $(EXEFILES)
 #Generate execuable file
 rmcmd := rm $(EXEFILES)2>/dev/null
 %.o:%.c $(HEADERS)
-	$(CC) -O2 $(INCLUDEDIR) -c -Wall $< -fPIC
+	$(CC) -O2 $(INCLUDEDIR) -c -Wall $(DEBUG) $< -fPIC
 	$(shell $(rmcmd))
 $(EXEFILES):$(NONEXEOBJECTS)
 	$(GenExeCmd)

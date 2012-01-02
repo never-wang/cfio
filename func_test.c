@@ -22,10 +22,12 @@
 int main(int argc, char** argv)
 {
     int rank, size;
-    char *path = "./output/test.nc";
+    char *path = "./output/test";
     int ncidp;
+	int dim1,var1,i;
     int is_server;
 
+	size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
     
     MPI_Init(&argc, &argv);
@@ -37,14 +39,33 @@ int main(int argc, char** argv)
     debug_mark(DEBUG_USER);
     
     iofw_init(size / 3, &is_server);
-
-    debug_mark(DEBUG_USER);
-
+	char fileName[100];
+	sprintf(fileName,"%s_%d.nc",path,rank);
     if(!is_server)
     {
-	iofw_nc_create(rank, path, 0, &ncidp);
-    }
+		int dimids[2];
+		iofw_nc_create(rank, fileName, 0, &ncidp);
+		iofw_nc_def_dim(rank, ncidp, "lat", 5,&dimids[0]);
+		iofw_nc_def_dim(rank, ncidp, "kon", 5,&dimids[1]);
 
+		dimids[0] = dim1;
+		iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);
+		iofw_nc_enddef(rank,ncidp);
+		size_t start[2],count[2];
+		float *fp = malloc(25*sizeof(float));
+		start[0] = 0;
+		start[1] = 0;
+		count[0] = 5;
+		count[1] = 5;
+
+		for( i = 0; i< len; i++)
+		{
+			fp[i]=i*1.0;
+		}
+		fprintf(stderr,"sizeof(start):%d, sizeof(size)",sizeof(start));
+		iofw_nc_put_vara_float(rank,ncidp,var1, start, count,fp); 
+		iofw_nc_close(rank,ncidp);
+	}
     iofw_finalize();
     MPI_Finalize();
     return 0;

@@ -13,6 +13,7 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include <assert.h>
+#include <stdio.h>
 
 #include "io.h"
 #include "pack.h"
@@ -182,6 +183,8 @@ int iofw_nc_put_vara_float(
 	data_len *= count[i]; 
     }
     packdata_array(fp, data_len, sizeof(float), data_buf);
+
+    fprintf(stderr,"sizeof(start) : %d,data_len %d\n",sizeof(start),data_len);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, head_buf);

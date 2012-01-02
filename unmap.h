@@ -21,8 +21,7 @@
 #include "pomme_buffer.h"
 
 #define FFL __FILE__,__func__,__LINE__
-#define DEBUG 1
-
+#define DEBUG
 #ifdef DEBUG
 #define debug(msg,argc...) fprintf(stderr,msg,##argc)
 #else 
@@ -41,8 +40,10 @@ typedef struct io_op
 	int src;
 	int tag;
 	void *head;
-	int head_len;
 	void *body;
+	int head_start;
+	int head_len;
+	int body_start;
 	int body_len;
 	queue_body_t next_head;
 }io_op_t;
