@@ -143,8 +143,8 @@ void packdata_array(const void *valp, uint32_t len, size_t size, Buf buffer)
 		break;
 	    case 4 :
 		pack32(*((uint32_t*)valp + i), buffer);
-		//debug(DEBUG_PACK, "valp[%d] = %f", 
-		//	*((float *)((uint32_t*)valp + i)));
+//		debug(DEBUG_PACK, "valp[%d] = %f", 
+//				*((float *)((uint32_t*)valp + i)));
 		break;
 	    case 8 :
 		pack64(*((uint64_t*)valp + i), buffer);
@@ -168,7 +168,8 @@ int unpackdata_array(void **valp, uint32_t *len, size_t size, Buf buffer)
 	*valp = NULL;
     }else
     {
-	*valp = &buffer->head[buffer->processed];
+//	*valp = &buffer->head[buffer->processed];
+	*valp = f_p;
 	buffer->processed += (*len) * size;
     }
 

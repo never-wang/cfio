@@ -78,15 +78,18 @@ int iofw_pack_msg_def_dim(
 int iofw_pack_msg_def_var(
 	iofw_buf_t *buf,
 	int ncid, const char *name, nc_type xtype,
-	int ndims, const int dimids[])
+	int ndims, const int *dimids)
 {
     uint32_t code = FUNC_NC_DEF_VAR;
     
     packdata(&code , sizeof(uint32_t), buf);
-    packdata(ncid, sizeof(int), buf);
+    packdata(&ncid, sizeof(int), buf);
+
     packstr(name, buf);
-    packdata(xtype, sizeof(nc_type), buf);
-    packdata_array((uint32_t*)dimids, ndims, sizeof(int), buf);
+    packdata(&xtype, sizeof(nc_type), buf);
+	
+    packdata_array(dimids, ndims, sizeof(int), buf);
+
 
     return 0;
 }
@@ -98,7 +101,7 @@ int iofw_pack_msg_enddef(
     uint32_t code = FUNC_NC_ENDDEF;
 
     packdata(&code, sizeof(uint32_t), buf);
-    packdata(ncid, sizeof(int), buf);
+    packdata(&ncid, sizeof(int), buf);
 
     return 0;
 }

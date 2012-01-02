@@ -65,25 +65,20 @@ static void * iofw_writer(void *argv)
 		do
 		{
 			pos = queue_get_front(queue);
-			if(done){
-				fprintf(stderr,"in here %p\n",pos);
-			}
 			if( pos == NULL){
 				if( done == 1 )
 				{
 					goto msg_over;
 				}
-				fprintf(stderr,"sleep %d\n",done);
-				sleep(1);
+//				fprintf(stderr,"sleep %d\n",done);
+//				sleep(1);
 
 			}
 		}while(pos == NULL);
 
 		io_op_t *entry = queue_entry(pos, io_op_t,next_head);  
-
-		fprintf(stderr,"before io\n");
 		ret = iofw_do_io(entry->src, entry->tag, rank, entry);
-		fprintf(stderr,"after io\n");
+
 		if( ret < 0 )
 		{
 			debug("iofw_writer write fail@%s %s %d\n",FFL);
@@ -103,7 +98,6 @@ static void * iofw_writer(void *argv)
 
 	}
 msg_over:
-	fprintf(stderr,"witer over\n");
 	write_done = 1;
 	return NULL;	
 }
@@ -164,7 +158,6 @@ int iofw_server()
 
 					op->body = NULL;
 					queue_push_back(queue,&op->next_head);
-		//			ret = iofw_do_io(op->src, op->tag, rank, op);
 
 					break;
 				default:
@@ -174,7 +167,6 @@ int iofw_server()
 		}
 		else if( len > 0 )
 		{
-			fprintf(stderr,"receive le %d\n",len);
 			pomme_buffer_take(buffer, count);
 
 			io_op_t * op = malloc(sizeof(io_op_t));
@@ -254,7 +246,6 @@ int iofw_init(int iofw_servers, int *is_server)
 		app_rank = rank;
 	}
 
-	printf("rank %d size %d is server %d\n",rank,size,*is_server);
 	if( *is_server )
 	{
 		int ret = 0;
@@ -288,9 +279,7 @@ int iofw_finalize()
 	if( i_am_server )
 	{
 	//	io_op_queue_distroy(server_queue);
-		debug("server %d exit\n",rank);
 	}else{
-		debug("Send over\n");
 		ret = iofw_io_stop(rank);
 	}
 	return 0;

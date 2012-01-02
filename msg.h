@@ -96,7 +96,7 @@ int iofw_pack_msg_def_dim(
  * @param name: variable name
  * @param xtype: one of the set of predefined netCDF external data types
  * @param ndims: number of dimensions for the variable
- * @param dimids[]: vector of ndims dimension IDs corresponding to the 
+ * @param dimids: vector of ndims dimension IDs corresponding to the 
  *	variable dimensions
  *
  * @return: 0 if success
@@ -104,7 +104,7 @@ int iofw_pack_msg_def_dim(
 int iofw_pack_msg_def_var(
 	iofw_buf_t *buf,
 	int ncid, const char *name, nc_type xtype,
-	int ndims, const int dimids[]);
+	int ndims, const int *dimids);
 /**
  * @brief: pack for the iofw_nc_enddef function
  *
@@ -151,7 +151,7 @@ int iofw_pack_msg_put_var1_float(
 int iofw_pack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int ncid, int varid, int dim,
-	const size_t start[], const size_t count[]);
+	const size_t *start, const size_t *count);
 /**
  * @brief: pack for the iofw_nc_close function
  *

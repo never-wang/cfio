@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 
     debug_mark(DEBUG_USER);
     
-    iofw_init(1, &is_server);
+    iofw_init( size / 3 , &is_server);
 	char fileName[100];
 	sprintf(fileName,"%s_%d.nc",path,rank);
     if(!is_server)
@@ -60,15 +60,16 @@ int main(int argc, char** argv)
 
 		for( i = 0; i< 25; i++)
 		{
-			fp[i]=i*1.0;
+			fp[i]=1.0;
 		}
 
-		iofw_nc_put_vara_float(rank,ncidp,var1, start, count,fp); 
+		iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+
 		iofw_nc_close(rank,ncidp);
 		free(fp);
 	}
+
     iofw_finalize();
-	fprintf(stderr,"I am here\n");
     MPI_Finalize();
     return 0;
 }

@@ -41,6 +41,7 @@ static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf);
 static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf);
+
 int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_len)
 {	
     int ret = 0;
@@ -110,9 +111,8 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 			free(d_buf);
 			break;
 		case FUNC_NC_CLOSE:
-			debug("do close\n");
+			
 			ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
-			debug("do close\n");
 			break;
 
 		default:
@@ -169,8 +169,6 @@ static int iofw_do_nc_create(int source, int tag,
 		debug("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
 		ncid = ret;
     }
-//    free(path);
-	debug("ncid for %d is %d",source, ncid);
 ack:
     if( (ret = iofw_send_int1(source,my_rank,ncid) ) < 0 )
     {
@@ -241,22 +239,22 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 	    debug("unpack_msg_def_var failed@%s %s %d\n",FFL);
 	    return ret;
 	}
+
 	int varid;
-	debug("ndims %d\n",ndims);
 	ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
 	if( ret != NC_NOERR )
 	{
 	    debug("nc_def_var failed error@%s %s %d\n", FFL);
 	    return ret;
 	}
+
 	ret = iofw_send_int1(src,my_rank, varid);
 	if( ret < 0 )
 	{
 	    debug("send varible id to client failed@%s %s %d\n",FFL);
 	    return ret;
 	}
-//	free(name);
-//	free(dimids);
+
 	return 0;
 }
 
@@ -302,9 +300,11 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf)
 {
-	debug("begin put vara\n");
 	int i,ret = 0,ncid, varid, dim;
 	size_t *start, *count;
+	size_t data_size;
+
+	ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
 	ret = iofw_unpack_msg_put_vara_float(h_buf, 
 		   &ncid, &varid, &dim, &start, &count);	
 
@@ -314,14 +314,10 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 		return -1;
 	}
 
-	uint32_t *data;
+	float *data;
 	uint32_t data_len;
-	ret = unpack32_array(&data,&data_len, d_buf);
-	for( i = 0; i< 25; i++)
-	{
-		data[i] = 1.0;
-	}
-	debug("\n");
+
+	ret = unpackdata_array(&data,&data_len,sizeof(float),d_buf);
 
 	if( ret < 0 )
 	{
@@ -330,25 +326,18 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	}
 
 	size_t _start[dim] ,_count[dim];
-	_start[0] = 0;
-	_start[1] = 0;
 	
-	_count[0] = 5;
-	_count[1] = 5;
-//	memcpy(_start,start,sizeof(_start));
-//	memcpy(_count,count,sizeof(_count));
+	memcpy(_start,start,sizeof(_start));
+	memcpy(_count,count,sizeof(_count));
+	
 	
 
-	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)data);
+	ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)(uint32_t *)data);
 	if( ret != NC_NOERR )
 	{
 		debug("write nc(%d) var (%d) failure(%s) @%s %s %d\n",ncid,varid,nc_strerror(ret),FFL);
 		return -1;
-	}else{
-		debug("sucess\n");
 	}
-	//nc_close(ncid);
-	debug("end put vara\n");
 
 	return 0;	
 
@@ -367,17 +356,16 @@ static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
 {
 
 	int ncid, ret;
-	fprintf(stderr," %d close before unpack\n",src);
 	ret = iofw_unpack_msg_close(buf, &ncid);
-	fprintf(stderr," %d close after unpack\n",src);
+
 	if( ret < 0 )
 	{
 		debug("[%s %s %d]: unpack close error\n",FFL);
 		return ret;
 	}
-	fprintf(stderr," %d nc_close %d before \n",src, ncid);
+
 	ret = nc_close(ncid);
-	fprintf(stderr," %d nc_close after\n",src, ncid);
+	
 	if( ret != NC_NOERR )
 	{
 		debug("[%s %s %d]: close nc file failure\n",FFL);
