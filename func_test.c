@@ -68,6 +68,7 @@ int main(int argc, char** argv)
 		free(fp);
 	}
     iofw_finalize();
+	fprintf(stderr,"I am here\n");
     MPI_Finalize();
     return 0;
 }

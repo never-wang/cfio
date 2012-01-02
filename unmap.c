@@ -72,8 +72,8 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size,size_t *data_le
 	case FUNC_NC_PUT_VAR1_FLOAT:
 	    break;
 	case CLIENT_END_IO:
-	    debug("server %d done client_end_io for client %d\n",my_rank,source);
 	    iofw_client_done(source);
+	    debug("server %d done client_end_io for client %d\n",my_rank,source);
 	    break;
 	case FUNC_NC_PUT_VARA_FLOAT:
 	    iofw_unpack_msg_extra_data_size(buf,data_len);
@@ -110,7 +110,9 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 			free(d_buf);
 			break;
 		case FUNC_NC_CLOSE:
+			debug("do close\n");
 			ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
+			debug("do close\n");
 			break;
 
 		default:
@@ -300,6 +302,7 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	   	iofw_buf_t *h_buf,
 		iofw_buf_t *d_buf)
 {
+	debug("begin put vara\n");
 	int i,ret = 0,ncid, varid, dim;
 	size_t *start, *count;
 	ret = iofw_unpack_msg_put_vara_float(h_buf, 
@@ -314,7 +317,6 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	uint32_t *data;
 	uint32_t data_len;
 	ret = unpack32_array(&data,&data_len, d_buf);
-	debug("real get len: %u\n",data_len);
 	for( i = 0; i< 25; i++)
 	{
 		data[i] = 1.0;
@@ -345,6 +347,8 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 	}else{
 		debug("sucess\n");
 	}
+	//nc_close(ncid);
+	debug("end put vara\n");
 
 	return 0;	
 
@@ -361,14 +365,19 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
  */
 static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
 {
+
 	int ncid, ret;
+	fprintf(stderr," %d close before unpack\n",src);
 	ret = iofw_unpack_msg_close(buf, &ncid);
+	fprintf(stderr," %d close after unpack\n",src);
 	if( ret < 0 )
 	{
 		debug("[%s %s %d]: unpack close error\n",FFL);
 		return ret;
 	}
+	fprintf(stderr," %d nc_close %d before \n",src, ncid);
 	ret = nc_close(ncid);
+	fprintf(stderr," %d nc_close after\n",src, ncid);
 	if( ret != NC_NOERR )
 	{
 		debug("[%s %s %d]: close nc file failure\n",FFL);

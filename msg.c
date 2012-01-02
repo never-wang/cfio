@@ -48,9 +48,11 @@ int iofw_pack_msg_create(
 	iofw_buf_t *buf,
 	const char *path, int cmode)
 {
-    pack32(FUNC_NC_CREATE, buf);
+    uint32_t code = FUNC_NC_CREATE;
+
+    packdata(&code, sizeof(uint32_t), buf);
     packstr(path, buf);
-    pack32(cmode, buf);
+    packdata(&cmode, sizeof(int), buf);
 
     return 0;
 }
@@ -62,12 +64,13 @@ int iofw_pack_msg_def_dim(
 	iofw_buf_t *buf,
 	int ncid, const char *name, size_t len)
 {
-    pack32(FUNC_NC_DEF_DIM, buf);
-    pack32(ncid, buf);
+    uint32_t code = FUNC_NC_DEF_DIM;
+
+    packdata(&code, sizeof(uint32_t), buf);
+    packdata(&ncid, sizeof(int), buf);
     packstr(name, buf);
     
-    //TODO when pack size_t , how
-    pack64(len, buf);
+    packdata(&len, sizeof(size_t), buf);
 
     return 0;
 }
@@ -77,12 +80,13 @@ int iofw_pack_msg_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int dimids[])
 {
-    pack32(FUNC_NC_DEF_VAR, buf);
-    pack32(ncid, buf);
+    uint32_t code = FUNC_NC_DEF_VAR;
+    
+    packdata(&code , sizeof(uint32_t), buf);
+    packdata(ncid, sizeof(int), buf);
     packstr(name, buf);
-    //TODO xtype is 32-byte?
-    pack32(xtype, buf);
-    pack32_array((uint32_t*)dimids, ndims, buf);
+    packdata(xtype, sizeof(nc_type), buf);
+    packdata_array((uint32_t*)dimids, ndims, sizeof(int), buf);
 
     return 0;
 }
@@ -91,56 +95,58 @@ int iofw_pack_msg_enddef(
 	iofw_buf_t *buf,
 	int ncid)
 {
-    pack32(FUNC_NC_ENDDEF, buf);
-    pack32(ncid, buf);
+    uint32_t code = FUNC_NC_ENDDEF;
+
+    packdata(&code, sizeof(uint32_t), buf);
+    packdata(ncid, sizeof(int), buf);
 
     return 0;
 }
 
 int iofw_pack_msg_put_var1_float(
 	iofw_buf_t *buf,
-	int ncid, int varid, const size_t index[],
-	const float *fp)
+	int ncid, int varid, int dim,
+	const size_t *index, const float *fp)
 {
-    pack32(FUNC_NC_PUT_VAR1_FLOAT, buf);
-    pack32(ncid, buf);
-    pack32(varid, buf);
-    //TODO pack size_t
-    pack32_array((uint32_t*)index, sizeof(index)/sizeof(size_t), buf);
-    pack32(*fp, buf);
+    uint32_t code = FUNC_NC_PUT_VAR1_FLOAT;
+    
+    packdata(&code, sizeof(uint32_t), buf);
+    packdata(&ncid, sizeof(int), buf);
+    packdata(&varid, sizeof(int), buf);
+    packdata_array(index, dim, sizeof(size_t), buf);
+    packdata(fp, sizeof(float), buf);
 
     return 0;
 }
 
 int iofw_pack_msg_put_vara_float(
 	iofw_buf_t *buf,
-	int ncid, int varid, const size_t start[],
-	const size_t count[])
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count)
 {
     int i;
-    int dim, data_size;
+    size_t data_size;
+    uint32_t code = FUNC_NC_PUT_VARA_FLOAT;
     
-    if((dim = sizeof(start) / sizeof(size_t)) != 
-	    sizeof(count) / sizeof(size_t))
-    {
-	//TODO DEBUG
-	return IOFW_UNEQUAL_DIM;
-    }
-
     data_size = 1;
     for(i = 0; i < dim; i ++)
     {
 	data_size *= count[i]; 
     }
     data_size *= sizeof(float);
+    /**
+     *+4 for the extra data which store the len of array
+     **/
+    data_size += 4;
 
-    pack32(FUNC_NC_PUT_VARA_FLOAT, buf);
-    pack32(data_size, buf);
-    pack32(ncid, buf);
-    pack32(varid, buf);
+    packdata(&code, sizeof(uint32_t), buf);
+    packdata(&data_size, sizeof(size_t), buf);
+
+    packdata(&ncid, sizeof(int), buf);
+    packdata(&varid, sizeof(int), buf);
     
-    pack64_array((uint64_t*)start, dim, buf);
-    pack64_array((uint64_t*)count, dim, buf);
+    packdata_array(start, dim, sizeof(size_t), buf);
+    packdata_array(count, dim, sizeof(size_t), buf);
 
     return 0;
 }
@@ -149,8 +155,10 @@ int iofw_pack_msg_close(
 	iofw_buf_t *buf,
 	int ncid)
 {
-    pack32(FUNC_NC_CLOSE, buf);
-    pack32(ncid, buf);
+    uint32_t code = FUNC_NC_CLOSE;
+    
+    packdata(&code, sizeof(uint32_t), buf);
+    packdata(&ncid, sizeof(int), buf);
 
     return 0;
 }
@@ -158,18 +166,20 @@ int iofw_pack_msg_close(
 int iofw_pack_msg_io_stop(
 	iofw_buf_t *buf)
 {
-    pack32(CLIENT_END_IO, buf);
+    uint32_t code = CLIENT_END_IO;
+    
+    packdata(&code, sizeof(uint32_t), buf);
     return 0;
 }
 /**
  *unpack msg function
  **/
-int iofw_unpack_msg_func_code(
+uint32_t iofw_unpack_msg_func_code(
 	iofw_buf_t *buf)
 {
-    int func_code;
+    uint32_t func_code;
 
-    unpack32((uint32_t*)&func_code, buf);
+    unpackdata(&func_code, sizeof(uint32_t), buf);
 
     return func_code;
 }
@@ -180,8 +190,8 @@ int iofw_unpack_msg_create(
 {
     uint32_t len;
 
-    unpackstr_malloc(path, &len, buf);
-    unpack32((uint32_t*)cmode, buf);
+    unpackstr_ptr(path, &len, buf);
+    unpackdata(cmode, sizeof(int), buf);
 
     return 0;
 }
@@ -192,9 +202,9 @@ int iofw_unpack_msg_def_dim(
 {
     uint32_t len_t;
 
-    unpack32((uint32_t*)ncid, buf);
-    unpackstr_malloc(name, &len_t, buf);
-    unpack64((uint32_t*)len, buf);
+    unpackdata(ncid, sizeof(int), buf);
+    unpackstr_ptr(name, &len_t, buf);
+    unpackdata(len, sizeof(size_t), buf);
 
     return 0;
 }
@@ -206,12 +216,11 @@ int iofw_unpack_msg_def_var(
 {
     uint32_t len;
 
-    unpack32((uint32_t*)ncid, buf);
+    unpackdata(ncid, sizeof(int), buf);
     unpackstr_malloc(name, &len, buf);
-    unpack32((uint32_t*)xtype, buf);
-   // unpack32((uint32_t*)ndims, buf);
+    unpackdata(xtype, sizeof(nc_type), buf);
     
-    unpack32_array((uint32_t**)dimids, (uint32_t*)ndims, buf);
+    unpackdata_array(dimids, ndims, sizeof(int), buf);
 
     return 0;
 }
@@ -220,7 +229,7 @@ int iofw_unpack_msg_enddef(
 	iofw_buf_t *buf,
 	int *ncid)
 {
-    unpack32((uint32_t*)ncid, buf);
+    unpackdata(ncid, sizeof(int), buf);
 
     return 0;
 }
@@ -229,9 +238,9 @@ int iofw_unpack_msg_put_var1_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *indexdim, size_t **index)
 {
-    unpack32((uint32_t*)ncid, buf);
-    unpack32((uint32_t*)varid, buf);
-    unpack32_array((uint32_t**)index, (uint32_t*)indexdim, buf);
+    unpackdata(ncid, sizeof(int), buf);
+    unpackdata(varid, sizeof(int), buf);
+    unpackdata_array(index, indexdim, sizeof(int), buf);
 
     return 0;
 }
@@ -240,13 +249,11 @@ int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
 {
-	uint32_t data_len;
-	unpack32(&data_len, buf);
-    unpack32((uint32_t*)ncid, buf);
-    unpack32((uint32_t*)varid, buf);
+    unpackdata(ncid, sizeof(int), buf);
+    unpackdata(varid, sizeof(int), buf);
     
-    unpack64_array((uint64_t**)start, (uint64_t*)dim, buf);
-    unpack64_array((uint64_t**)count, (uint64_t*)dim, buf);
+    unpackdata_array(start, dim, sizeof(size_t), buf);
+    unpackdata_array(count, dim, sizeof(size_t), buf);
     
     return 0;
 }
@@ -255,7 +262,7 @@ int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid)
 {
-    unpack32((uint32_t*)ncid, buf);
+    unpackdata(ncid, sizeof(int), buf);
 
     return 0;
 
@@ -265,8 +272,8 @@ int iofw_unpack_msg_extra_data_size(
 	iofw_buf_t  *buf,
 	size_t *data_size)
 {
-    unpack32((uint32_t*)data_size, buf);
-	*data_size +=4;
+    unpackdata(data_size, sizeof(size_t), buf);
+    
     return 0;
 }
 

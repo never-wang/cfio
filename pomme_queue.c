@@ -140,7 +140,6 @@ static struct queue_body * __del_queue(struct queue_head *queue)
 	if( queue->head == NULL )
 	{
 		printf("%d\n",queue->curLength);
-		printf("Shit!\n");
 	}
 	queue->head = queue->head->next;
 	if(queue->head == QUEUE_TAIL_NULL)
