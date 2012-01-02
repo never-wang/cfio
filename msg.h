@@ -25,13 +25,13 @@
 /**
  *define for nc function code
  **/
-#define FUNC_NC_CREATE 1
-#define FUNC_NC_ENDDEF 2
-#define FUNC_NC_CLOSE 3
-#define FUNC_NC_DEF_DIM 10
-#define FUNC_NC_DEF_VAR 20
-#define FUNC_NC_PUT_VAR1_FLOAT 100
-#define FUNC_NC_PUT_VARA_FLOAT 110
+#define FUNC_NC_CREATE		((uint32_t)1)
+#define FUNC_NC_ENDDEF		((uint32_t)2)
+#define FUNC_NC_CLOSE  ((uint32_t) 3)
+#define FUNC_NC_DEF_DIM ((uint32_t)10)
+#define FUNC_NC_DEF_VAR ((uint32_t)20)
+#define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)
+#define FUNC_NC_PUT_VARA_FLOAT ((uint32_t)110)
 
 /**
  * @brief: send msg to othre proc by mpi
@@ -124,33 +124,34 @@ int iofw_pack_msg_enddef(
  *	stored
  * @param ncid: netCDF ID
  * @param varid: variable ID
- * @param index[]: the index of the data value to be written
+ * @param dim: the dimensionality fo variable
+ * @param index: the index of the data value to be written
  * @param fp: pinter to the data value to be written
  *
  * @return: 0 if success
  */
 int iofw_pack_msg_put_var1_float(
 	iofw_buf_t *buf,
-	int ncid, int varid, const size_t index[],
-	const float *fp);
+	int ncid, int varid, int dim, 
+	const size_t *index, const float *fp);
 /**
  * @brief: pack for function: iofw_pack_msg_put_vara_float
  *
- * @param buf: 
  * @param buf: pointer to the struct buf where the packed function is stored
  * @param ncid: netCDF ID
  * @param varid: variable ID
- * @param start[]: a vector of size_t intergers specifying the index in the variable
+ * @param dim: the dimensionality fo variable
+ * @param start: a vector of size_t intergers specifying the index in the variable
  *	where the first of the data values will be written
- * @param count[]: a vector of size_t intergers specifying the edge lengths along 
+ * @param count: a vector of size_t intergers specifying the edge lengths along 
  *	each dimension of the block of data values to be written
  *
  * @return: 0 if success, IOFW_UNEQUAL_DIM if the size of start and count is noequal
  */
 int iofw_pack_msg_put_vara_float(
 	iofw_buf_t *buf,
-	int ncid, int varid, const size_t start[],
-	const size_t count[]);
+	int ncid, int varid, int dim,
+	const size_t start[], const size_t count[]);
 /**
  * @brief: pack for the iofw_nc_close function
  *

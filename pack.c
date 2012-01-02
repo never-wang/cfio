@@ -1,57 +1,10 @@
-/****************************************************************************\
- *  pack.c - lowest level un/pack functions
- *  NOTE: The memory buffer will expand as needed using realloc()
- *****************************************************************************
- *  Copyright (C) 2002-2007 The Regents of the University of California.
- *  Copyright (C) 2008 Lawrence Livermore National Security.
- *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
- *  Written by Jim Garlick <garlick@llnl.gov>,
- *             Morris Jette <jette1@llnl.gov>, et. al.
- *  CODE-OCEC-09-009. All rights reserved.
- *
- *  This file is part of SLURM, a resource management program.
- *  For details, see <https://computing.llnl.gov/linux/slurm/>.
- *  Please also read the included file: DISCLAIMER.
- *
- *  SLURM is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *
- *  In addition, as a special exception, the copyright holders give permission
- *  to link the code of portions of this program with the OpenSSL library under
- *  certain conditions as described in each individual source file, and
- *  distribute linked combinations including the two. You must obey the GNU
- *  General Public License in all respects for all of the code used other than
- *  OpenSSL. If you modify file(s) with this exception, you may extend this
- *  exception to your version of the file(s), but you are not obligated to do
- *  so. If you do not wish to do so, delete this exception statement from your
- *  version.  If you delete this exception statement from all source files in
- *  the program, then also delete it here.
- *
- *  SLURM is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- *  details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with SLURM; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA.
-\****************************************************************************/
-
-#if HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <netinet/in.h>
 #include <string.h>
-#include <time.h>
-#include <inttypes.h>
 
 #include "pack.h"
+#include "debug.h"
 
 /* If we unpack a buffer that contains bad data, we want to avoid
  * memory allocation error due to array or buffer sizes that are
@@ -128,101 +81,102 @@ Buf init_buf(int size)
 	return my_buf;
 }
 
-/* xfer_buf_data - return a pointer to the buffer's data and release the
- * buffer's structure */
-void *xfer_buf_data(Buf my_buf)
+void packdata(void *data, size_t size, Buf buffer)
 {
-	void *data_ptr;
+    debug(DEBUG_PACK, "%lu", *((uint64_t*)data));
 
-	assert(my_buf->magic == BUF_MAGIC);
-	data_ptr = (void *) my_buf->head;
-	free(my_buf);
-	return data_ptr;
+    switch(size)
+    {
+	case 1 :
+	    pack8(*(uint8_t*)data, buffer);
+	    break;
+	case 2 :
+	    pack16(*(uint16_t*)data, buffer);
+	    break;
+	case 4 :
+	    pack32(*(uint32_t*)data, buffer);
+	    break;
+	case 8 :
+	    pack64(*(uint64_t*)data, buffer);
+	    break;
+	default :
+	    error("Unsupport data size, size = %ld", size);
+    }
+}
+int unpackdata(void *data, size_t size, Buf buffer)
+{
+    switch(size)
+    {
+	case 1 :
+	    unpack8((uint8_t*)data, buffer);
+	    break;
+	case 2 :
+	    unpack16((uint16_t*)data, buffer);
+	    break;
+	case 4 :
+	    unpack32((uint32_t*)data, buffer);
+	    break;
+	case 8 :
+	    unpack64((uint64_t*)data, buffer);
+	    break;
+	default :
+	    error("Unsupport data size, size = %ld", size);
+    }
+    return 0;
 }
 
-/*
- * Given a time_t in host byte order, promote it to int64_t, convert to
- * network byte order, store in buffer and adjust buffer acc'd'ngly
- */
-void pack_time(time_t val, Buf buffer)
+void packdata_array(const void *valp, uint32_t len, size_t size, Buf buffer)
 {
-	int64_t n64 = HTON_int64((int64_t) val);
+    uint32_t i = 0;
 
-	if (remaining_buf(buffer) < sizeof(n64)) {
-		if (buffer->size > (MAX_BUF_SIZE - BUF_SIZE)) {
-			_error("pack_time: buffer size too large");
-			return;
-		}
-		buffer->size += BUF_SIZE;
-		buffer->head = realloc(buffer->head, buffer->size);
+    pack32(len, buffer);
+	
+    for(i = 0; i < len; i ++)
+    {
+	switch(size)
+	{
+	    case 1 :
+		pack8(*((uint8_t*)valp + i), buffer);
+		break;
+	    case 2 :
+		pack16(*((uint16_t*)valp + i), buffer);
+		break;
+	    case 4 :
+		pack32(*((uint32_t*)valp + i), buffer);
+		//debug(DEBUG_PACK, "valp[%d] = %f", 
+		//	*((float *)((uint32_t*)valp + i)));
+		break;
+	    case 8 :
+		pack64(*((uint64_t*)valp + i), buffer);
+		break;
+	    default :
+		error("Unsupport data size, size = %ld", size);
 	}
-
-	memcpy(&buffer->head[buffer->processed], &n64, sizeof(n64));
-	buffer->processed += sizeof(n64);
+    }
 }
-
-int unpack_time(time_t * valp, Buf buffer)
+int unpackdata_array(void **valp, uint32_t *len, size_t size, Buf buffer)
 {
-	int64_t n64;
+    uint32_t i = 0;
+    float *f_p;
 
-	if (remaining_buf(buffer) < sizeof(n64))
-		return _ERROR;
+    unpack32(len, buffer);
 
-	memcpy(&n64, &buffer->head[buffer->processed], sizeof(n64));
-	buffer->processed += sizeof(n64);
-	*valp = (time_t) NTOH_int64(n64);
-	return _SUCCESS;
+    f_p = (float*)&buffer->head[buffer->processed];
+    debug(DEBUG_PACK, "valp[0] = %f", f_p[0]);
+    if(0 == *len)
+    {
+	*valp = NULL;
+    }else
+    {
+	*valp = &buffer->head[buffer->processed];
+	buffer->processed += (*len) * size;
+    }
+
+    debug(DEBUG_PACK, "address of valp = %d", *valp);
+
+    return _SUCCESS;
 }
 
-
-/*
- * Given a double, multiple by FLOAT_MULT and then
- * typecast to a uint64_t in host byte order, convert to network byte order
- * store in buffer, and adjust buffer counters.
- */
-void packdouble(double val, Buf buffer)
-{
-	double nl1 =  (val * FLOAT_MULT) + .5; /* the .5 is here to
-						  round off.  We have
-						  found on systems
-						  going out more than
-						  15 decimals will
-						  mess things up so
-						  this is here to
-						  correct it. */
-	uint64_t nl =  HTON_uint64(nl1);
-
-	if (remaining_buf(buffer) < sizeof(nl)) {
-		if (buffer->size > (MAX_BUF_SIZE - BUF_SIZE)) {
-			_error("pack64: buffer size too large");
-			return;
-		}
-		buffer->size += BUF_SIZE;
-		buffer->head = realloc(buffer->head, buffer->size);
-	}
-
-	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
-	buffer->processed += sizeof(nl);
-
-}
-
-/*
- * Given a buffer containing a network byte order 64-bit integer,
- * typecast as double, and  divide by FLOAT_MULT
- * store a host double at 'valp', and adjust buffer counters.
- */
-int	unpackdouble(double *valp, Buf buffer)
-{
-	uint64_t nl;
-	if (remaining_buf(buffer) < sizeof(nl))
-		return _ERROR;
-
-	memcpy(&nl, &buffer->head[buffer->processed], sizeof(nl));
-
-	*valp = (double)NTOH_uint64(nl) / (double)FLOAT_MULT;
-	buffer->processed += sizeof(nl);
-	return _SUCCESS;
-}
 
 /*
  * Given a 64-bit integer in host byte order, convert to network byte order
@@ -230,7 +184,9 @@ int	unpackdouble(double *valp, Buf buffer)
  */
 void pack64(uint64_t val, Buf buffer)
 {
-	uint64_t nl =  HTON_uint64(val);
+	uint64_t nl =  val;
+	    
+	debug(DEBUG_PACK, "%lu", val);
 
 	if (remaining_buf(buffer) < sizeof(nl)) {
 		if (buffer->size > (MAX_BUF_SIZE - BUF_SIZE)) {
@@ -256,7 +212,7 @@ int unpack64(uint64_t * valp, Buf buffer)
 		return _ERROR;
 
 	memcpy(&nl, &buffer->head[buffer->processed], sizeof(nl));
-	*valp = NTOH_uint64(nl);
+	*valp = nl;
 	buffer->processed += sizeof(nl);
 	return _SUCCESS;
 }
@@ -267,7 +223,7 @@ int unpack64(uint64_t * valp, Buf buffer)
  */
 void pack32(uint32_t val, Buf buffer)
 {
-	uint32_t nl = htonl(val);
+	uint32_t nl = val;
 
 	if (remaining_buf(buffer) < sizeof(nl)) {
 		if (buffer->size > (MAX_BUF_SIZE - BUF_SIZE)) {
@@ -293,66 +249,8 @@ int unpack32(uint32_t * valp, Buf buffer)
 		return _ERROR;
 
 	memcpy(&nl, &buffer->head[buffer->processed], sizeof(nl));
-	*valp = ntohl(nl);
+	*valp = nl;
 	buffer->processed += sizeof(nl);
-	return _SUCCESS;
-}
-
-/* Given a *uint16_t, it will pack an array of size_val */
-void pack16_array(const uint16_t * valp, uint32_t size_val, Buf buffer)
-{
-	uint32_t i = 0;
-
-	pack32(size_val, buffer);
-
-	for (i = 0; i < size_val; i++) {
-		pack16(*(valp + i), buffer);
-	}
-}
-
-/* Given a int ptr, it will unpack an array of size_val
- */
-int unpack16_array(uint16_t ** valp, uint32_t * size_val, Buf buffer)
-{
-	uint32_t i = 0;
-
-	if (unpack32(size_val, buffer))
-		return _ERROR;
-
-	*valp = malloc((*size_val) * sizeof(uint16_t));
-	for (i = 0; i < *size_val; i++) {
-		if (unpack16((*valp) + i, buffer))
-			return _ERROR;
-	}
-	return _SUCCESS;
-}
-
-/* Given a *uint32_t, it will pack an array of size_val */
-void pack32_array(const uint32_t * valp, uint32_t size_val, Buf buffer)
-{
-	uint32_t i = 0;
-
-	pack32(size_val, buffer);
-
-	for (i = 0; i < size_val; i++) {
-		pack32(*(valp + i), buffer);
-	}
-}
-
-/* Given a int ptr, it will unpack an array of size_val
- */
-int unpack32_array(uint32_t ** valp, uint32_t * size_val, Buf buffer)
-{
-	uint32_t i = 0;
-
-	if (unpack32(size_val, buffer))
-		return _ERROR;
-
-	*valp = malloc((*size_val) * sizeof(uint32_t));
-	for (i = 0; i < *size_val; i++) {
-		if (unpack32((*valp) + i, buffer))
-			return _ERROR;
-	}
 	return _SUCCESS;
 }
 
@@ -362,7 +260,7 @@ int unpack32_array(uint32_t ** valp, uint32_t * size_val, Buf buffer)
  */
 void pack16(uint16_t val, Buf buffer)
 {
-	uint16_t ns = htons(val);
+	uint16_t ns = val;
 
 	if (remaining_buf(buffer) < sizeof(ns)) {
 		if (buffer->size > (MAX_BUF_SIZE - BUF_SIZE)) {
@@ -389,7 +287,7 @@ int unpack16(uint16_t * valp, Buf buffer)
 		return _ERROR;
 
 	memcpy(&ns, &buffer->head[buffer->processed], sizeof(ns));
-	*valp = ntohs(ns);
+	*valp = ns;
 	buffer->processed += sizeof(ns);
 	return _SUCCESS;
 }

@@ -147,14 +147,14 @@ int iofw_nc_enddef(
 
 int iofw_nc_put_var1_float(
 	int io_proc_id,
-	int ncid, int varid, const size_t index[],
-	const float *fp)
+	int ncid, int varid, int dim,  
+	const size_t *index, const float *fp)
 {
     iofw_buf_t *buf;
     int dst_proc_id;
 
     buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_put_var1_float(buf, ncid, varid, index, fp);
+    iofw_pack_msg_put_var1_float(buf, ncid, varid, dim, index, fp);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, buf);
@@ -165,24 +165,23 @@ int iofw_nc_put_var1_float(
 
 int iofw_nc_put_vara_float(
 	int io_proc_id,
-	int ncid, int varid, const size_t start[],
-	const size_t count[], const float *fp)
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count, const float *fp)
 {
     iofw_buf_t *head_buf, *data_buf;
     int dst_proc_id;
-    int data_len, i, dim;
+    int data_len, i;
 
     head_buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_put_vara_float(head_buf, ncid, varid, start, count);
+    iofw_pack_msg_put_vara_float(head_buf, ncid, varid, dim, start, count);
     
     data_buf = init_buf(BUF_SIZE);
-    dim = sizeof(start) / sizeof(size_t);
     data_len = 1;
     for(i = 0; i < dim; i ++)
     {
 	data_len *= count[i]; 
     }
-    pack32_array((uint32_t*)fp, data_len, data_buf);
+    packdata_array(fp, data_len, sizeof(float), data_buf);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, head_buf);

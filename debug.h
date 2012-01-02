@@ -15,11 +15,14 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#include <stdio.h>
+
 #define ENABLE_DEBUG
 
 #define DEBUG_NONE ((uint32_t)0)
 #define DEBUG_USER ((uint32_t)1 << 0)
 #define DEBUG_IO ((uint32_t)1 << 1)
+#define DEBUG_PACK ((uint32_t)1 << 2)
 
 extern int debug_mask;
 
@@ -28,7 +31,7 @@ extern int debug_mask;
 #define debug(mask, format, f...)                  \
     if (debug_mask & mask)                         \
     {                                                     \
-        printf("[%s, %d]: " format, __FILE__ , __LINE__ , ##f); \
+        printf("[%s, %d]: " format "\n", __FILE__ , __LINE__ , ##f); \
     }                                                     
 #else
 #define debug(mask, format, f...) \
@@ -39,5 +42,8 @@ extern int debug_mask;
 #define add_debug_mask(mask) debug_mask |= mask
 
 #define debug_mark(mask) debug(mask, "MARK\n")
+
+#define error(format, f...) \
+    printf("[%s, %d]: "format "\n", __FILE__, __LINE__, ##f);
 
 #endif

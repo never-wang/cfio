@@ -80,15 +80,34 @@ int iofw_nc_enddef(
  * @param io_proc_id: id of IO proc
  * @param ncid: netCDF ID
  * @param varid: variable ID
- * @param index[]: the index of the data value to be written
+ * @param index: the index of the data value to be written
  * @param fp: pinter to the data value to be written
  *
  * @return: 0 if success
  */
 int iofw_nc_put_var1_float(
 	int io_proc_id,
-	int ncid, int varid, const size_t index[],
-	const float *fp);
+	int ncid, int varid, int dim,
+	const size_t index, const float *fp);
+/**
+ * @brief: nc_put_vara_float
+ *
+ * @param io_proc_id: id of IO proc
+ * @param ncid: netCDF ID
+ * @param varid: variable ID
+ * @param dim: the dimensionality fo variable
+ * @param start: a vector of size_t intergers specifying the index in the variable
+ *	where the first of the data values will be written
+ * @param count: a vector of size_t intergers specifying the edge lengths along 
+ *	each dimension of the block of data values to be written
+ * @param fp: pinter to the data value to be written
+ *
+ * @return: 
+ */
+int iofw_nc_put_vara_float(
+	int io_proc_id,
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count, const float *fp);
 /**
  * @brief: nc_close
  *
