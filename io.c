@@ -19,6 +19,7 @@
 #include "pack.h"
 #include "map.h"
 #include "msg.h"
+#include "debug.h"
 
 /**
  * @brief: nc_create
@@ -100,10 +101,10 @@ int iofw_nc_def_dim(
 int iofw_nc_def_var(
 	int io_proc_id,
 	int ncid, const char *name, nc_type xtype,
-	int ndims, const int dimids[], int *varidp)
+	int ndims, const int *dimids, int *varidp)
 {
+    debug_mark(DEBUG_IOFW);
     assert(name != NULL);
-    assert(dimids != NULL);
     assert(varidp != NULL);
 
     iofw_buf_t *buf;

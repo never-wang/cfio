@@ -21,8 +21,9 @@
 
 #define DEBUG_NONE ((uint32_t)0)
 #define DEBUG_USER ((uint32_t)1 << 0)
-#define DEBUG_IO ((uint32_t)1 << 1)
+#define DEBUG_IOFW ((uint32_t)1 << 1)
 #define DEBUG_PACK ((uint32_t)1 << 2)
+#define DEBUG_TIME ((uint32_t)1 << 3)
 
 extern int debug_mask;
 

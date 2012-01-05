@@ -182,7 +182,7 @@ int iofw_pack_msg_io_stop(
  *
  * @return: the code of function
  */
-int iofw_unpack_msg_func_code(
+uint32_t iofw_unpack_msg_func_code(
 	iofw_buf_t *buf);
 /**
  * @brief: unpack arguments for ifow_nc_create function

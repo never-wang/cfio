@@ -117,7 +117,7 @@ int iofw_pack_msg_put_var1_float(
     packdata(&ncid, sizeof(int), buf);
     packdata(&varid, sizeof(int), buf);
     packdata_array(index, dim, sizeof(size_t), buf);
-    packdata(fp, sizeof(float), buf);
+    packdata((void*)fp, sizeof(float), buf);
 
     return 0;
 }
@@ -223,7 +223,7 @@ int iofw_unpack_msg_def_var(
     unpackstr_malloc(name, &len, buf);
     unpackdata(xtype, sizeof(nc_type), buf);
     
-    unpackdata_array(dimids, ndims, sizeof(int), buf);
+    unpackdata_array((void **)dimids, ndims, sizeof(int), buf);
 
     return 0;
 }
@@ -243,7 +243,7 @@ int iofw_unpack_msg_put_var1_float(
 {
     unpackdata(ncid, sizeof(int), buf);
     unpackdata(varid, sizeof(int), buf);
-    unpackdata_array(index, indexdim, sizeof(int), buf);
+    unpackdata_array((void **)index, indexdim, sizeof(int), buf);
 
     return 0;
 }
@@ -255,8 +255,8 @@ int iofw_unpack_msg_put_vara_float(
     unpackdata(ncid, sizeof(int), buf);
     unpackdata(varid, sizeof(int), buf);
     
-    unpackdata_array(start, dim, sizeof(size_t), buf);
-    unpackdata_array(count, dim, sizeof(size_t), buf);
+    unpackdata_array((void**)start, dim, sizeof(size_t), buf);
+    unpackdata_array((void**)count, dim, sizeof(size_t), buf);
     
     return 0;
 }

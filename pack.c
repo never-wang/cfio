@@ -81,104 +81,6 @@ Buf init_buf(int size)
 	return my_buf;
 }
 
-void packdata(void *data, size_t size, Buf buffer)
-{
-    debug(DEBUG_PACK, "%lu", *((uint64_t*)data));
-
-    switch(size)
-    {
-	case 1 :
-	    pack8(*(uint8_t*)data, buffer);
-	    break;
-	case 2 :
-	    pack16(*(uint16_t*)data, buffer);
-	    break;
-	case 4 :
-	    pack32(*(uint32_t*)data, buffer);
-	    break;
-	case 8 :
-	    pack64(*(uint64_t*)data, buffer);
-	    break;
-	default :
-	    error("Unsupport data size, size = %ld", size);
-    }
-}
-int unpackdata(void *data, size_t size, Buf buffer)
-{
-    switch(size)
-    {
-	case 1 :
-	    unpack8((uint8_t*)data, buffer);
-	    break;
-	case 2 :
-	    unpack16((uint16_t*)data, buffer);
-	    break;
-	case 4 :
-	    unpack32((uint32_t*)data, buffer);
-	    break;
-	case 8 :
-	    unpack64((uint64_t*)data, buffer);
-	    break;
-	default :
-	    error("Unsupport data size, size = %ld", size);
-    }
-    return 0;
-}
-
-void packdata_array(const void *valp, uint32_t len, size_t size, Buf buffer)
-{
-    uint32_t i = 0;
-
-    pack32(len, buffer);
-	
-    for(i = 0; i < len; i ++)
-    {
-	switch(size)
-	{
-	    case 1 :
-		pack8(*((uint8_t*)valp + i), buffer);
-		break;
-	    case 2 :
-		pack16(*((uint16_t*)valp + i), buffer);
-		break;
-	    case 4 :
-		pack32(*((uint32_t*)valp + i), buffer);
-//		debug(DEBUG_PACK, "valp[%d] = %f", 
-//				*((float *)((uint32_t*)valp + i)));
-		break;
-	    case 8 :
-		pack64(*((uint64_t*)valp + i), buffer);
-		break;
-	    default :
-		error("Unsupport data size, size = %ld", size);
-	}
-    }
-}
-int unpackdata_array(void **valp, uint32_t *len, size_t size, Buf buffer)
-{
-    uint32_t i = 0;
-    float *f_p;
-
-    unpack32(len, buffer);
-
-    f_p = (float*)&buffer->head[buffer->processed];
-    debug(DEBUG_PACK, "valp[0] = %f", f_p[0]);
-    if(0 == *len)
-    {
-	*valp = NULL;
-    }else
-    {
-//	*valp = &buffer->head[buffer->processed];
-	*valp = f_p;
-	buffer->processed += (*len) * size;
-    }
-
-    debug(DEBUG_PACK, "address of valp = %d", *valp);
-
-    return _SUCCESS;
-}
-
-
 /*
  * Given a 64-bit integer in host byte order, convert to network byte order
  * store in buffer, and adjust buffer counters.
@@ -326,6 +228,100 @@ int unpack8(uint8_t * valp, Buf buffer)
 	return _SUCCESS;
 }
 
+void packdata(void *data, size_t size, Buf buffer)
+{
+    debug(DEBUG_PACK, "%lu", *((uint64_t*)data));
+
+    switch(size)
+    {
+	case 1 :
+	    pack8(*(uint8_t*)data, buffer);
+	    break;
+	case 2 :
+	    pack16(*(uint16_t*)data, buffer);
+	    break;
+	case 4 :
+	    pack32(*(uint32_t*)data, buffer);
+	    break;
+	case 8 :
+	    pack64(*(uint64_t*)data, buffer);
+	    break;
+	default :
+	    error("Unsupport data size, size = %ld", size);
+    }
+}
+int unpackdata(void *data, size_t size, Buf buffer)
+{
+    switch(size)
+    {
+	case 1 :
+	    unpack8((uint8_t*)data, buffer);
+	    break;
+	case 2 :
+	    unpack16((uint16_t*)data, buffer);
+	    break;
+	case 4 :
+	    unpack32((uint32_t*)data, buffer);
+	    break;
+	case 8 :
+	    unpack64((uint64_t*)data, buffer);
+	    break;
+	default :
+	    error("Unsupport data size, size = %ld", size);
+    }
+    return 0;
+}
+
+void packdata_array(const void *valp, int len, size_t size, Buf buffer)
+{
+    int i = 0;
+
+    packdata(&len, sizeof(int), buffer);
+	
+    for(i = 0; i < len; i ++)
+    {
+	switch(size)
+	{
+	    case 1 :
+		pack8(*((uint8_t*)valp + i), buffer);
+		break;
+	    case 2 :
+		pack16(*((uint16_t*)valp + i), buffer);
+		break;
+	    case 4 :
+		pack32(*((uint32_t*)valp + i), buffer);
+//		debug(DEBUG_PACK, "valp[%d] = %f", 
+//				*((float *)((uint32_t*)valp + i)));
+		break;
+	    case 8 :
+		pack64(*((uint64_t*)valp + i), buffer);
+		break;
+	    default :
+		error("Unsupport data size, size = %ld", size);
+	}
+    }
+}
+int unpackdata_array(void **valp, int *len, size_t size, Buf buffer)
+{
+    int i = 0;
+    float *f_p;
+
+    unpackdata((void*)len, sizeof(int), buffer);
+
+    f_p = (float*)&buffer->head[buffer->processed];
+    debug(DEBUG_PACK, "valp[0] = %f", f_p[0]);
+    if(0 == *len)
+    {
+	*valp = NULL;
+    }else
+    {
+//	*valp = &buffer->head[buffer->processed];
+	*valp = f_p;
+	buffer->processed += (*len) * size;
+    }
+
+    return _SUCCESS;
+}
 /*
  * Given a pointer to memory (valp) and a size (size_val), convert
  * size_val to network byte order and store at buffer followed by
