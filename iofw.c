@@ -183,7 +183,7 @@ int iofw_server()
 
 	    do
 	    {
-		offset = pomme_buffer_next(buffer,ret);
+			offset = pomme_buffer_next(buffer,ret);
 	    }while( offset < 0 );
 
 	    p_buffer = buffer->buffer + offset;
@@ -195,8 +195,9 @@ int iofw_server()
 	    int src = status.MPI_SOURCE;
 	    int tag = status.MPI_TAG;
 	    int tlen = 0;
+
 	    do{
-		ret = MPI_Recv(p_buffer, len, MPI_BYTE, src, tag, MPI_COMM_WORLD,&status);
+		ret = MPI_Recv(p_buffer, len - recv_len , MPI_BYTE, src, tag, MPI_COMM_WORLD,&status);
 		MPI_Get_count(&status, MPI_BYTE, &tlen);
 
 		recv_len += tlen;

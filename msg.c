@@ -141,7 +141,7 @@ int iofw_pack_msg_put_vara_float(
     /**
      *+4 for the extra data which store the len of array
      **/
-    data_size += 4;
+    data_size += sizeof(size_t);
 
     packdata(&code, sizeof(uint32_t), buf);
     packdata(&data_size, sizeof(size_t), buf);
@@ -280,7 +280,6 @@ int iofw_unpack_msg_extra_data_size(
 	size_t *data_size)
 {
     unpackdata(data_size, sizeof(size_t), buf);
-    
     return 0;
 }
 
