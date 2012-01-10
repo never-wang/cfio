@@ -172,7 +172,7 @@ int nc_hist_add_field(int loop, int nc_id, float *data)
 
 int nc_hist_close(int ncid)
 {
-    nc_close(ncid);
+    iofw_nc_close(rank, ncid);
     return 0;
 }
 
@@ -298,7 +298,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME);// | DEBUG_IOFW);
+    set_debug_mask(DEBUG_TIME | DEBUG_MSG);// | DEBUG_IOFW);
 
     iofw_init( size / 2 , &is_server);
 
@@ -316,7 +316,7 @@ int main(int argc, char** argv)
 	    debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
 		    rank, end_time - start_time);
 	    write_hist_data(idate, prefix);
-	    MPI_Barrier(comm);
+	    //MPI_Barrier(comm);
 	    idate[1] ++;
 	}
     }

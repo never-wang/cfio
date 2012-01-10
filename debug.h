@@ -24,6 +24,7 @@
 #define DEBUG_IOFW ((uint32_t)1 << 1)
 #define DEBUG_PACK ((uint32_t)1 << 2)
 #define DEBUG_TIME ((uint32_t)1 << 3)
+#define DEBUG_MSG  ((uint32_t)1 << 4)
 
 extern int debug_mask;
 
@@ -32,7 +33,7 @@ extern int debug_mask;
 #define debug(mask, format, f...)                  \
     if (debug_mask & mask)                         \
     {                                                     \
-        printf("[%s, %d]: " format "\n", __FILE__ , __LINE__ , ##f); \
+        printf("[%s, %s, %d]: " format "\n", __FILE__ , __func__, __LINE__ , ##f); \
     }                                                     
 #else
 #define debug(mask, format, f...) \
@@ -45,6 +46,6 @@ extern int debug_mask;
 #define debug_mark(mask) debug(mask, "MARK\n")
 
 #define error(format, f...) \
-    printf("[%s, %d]: "format "\n", __FILE__, __LINE__, ##f);
+    printf("[%s, %s, %d]: "format "\n", __FILE__, __func__, __LINE__, ##f);
 
 #endif

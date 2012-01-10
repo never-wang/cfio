@@ -173,6 +173,7 @@ int iofw_nc_put_vara_float(
     iofw_buf_t *head_buf, *data_buf;
     int dst_proc_id;
     int data_len, i;
+    float *u;
 
     head_buf = init_buf(BUF_SIZE);
     iofw_pack_msg_put_vara_float(head_buf, ncid, varid, dim, start, count);
@@ -184,7 +185,7 @@ int iofw_nc_put_vara_float(
 	data_len *= count[i]; 
     }
     packdata_array(fp, data_len, sizeof(float), data_buf);
-
+    unpackdata_array(&u, &data_len, sizeof(size_t), data_buf);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, head_buf);
@@ -210,10 +211,12 @@ int iofw_nc_close(
     iofw_buf_t *buf;
     int dst_proc_id;
 
+    debug_mark(DEBUG_IOFW);
     buf = init_buf(BUF_SIZE);
     iofw_pack_msg_close(buf, ncid);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
+    debug_mark(DEBUG_IOFW);
     iofw_send_msg(dst_proc_id, buf);
 
     free_buf(buf);

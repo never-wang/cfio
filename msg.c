@@ -16,13 +16,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "error.h"
+#include "debug.h"
 
 int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
 {
     int tag = 1;
 
     MPI_Send(buf->head, buf->processed, MPI_BYTE, dst_proc_id, tag, MPI_COMM_WORLD);
- 
+    
     return 0;
 }
 
@@ -252,6 +253,8 @@ int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
 {
+    int i;
+
     unpackdata(ncid, sizeof(int), buf);
     unpackdata(varid, sizeof(int), buf);
     
@@ -265,6 +268,7 @@ int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid)
 {
+    debug_mark(DEBUG_MSG);
     unpackdata(ncid, sizeof(int), buf);
 
     return 0;
