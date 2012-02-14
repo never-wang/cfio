@@ -16,8 +16,7 @@
 #include <sys/time.h>
 #include <error.h>
 
-#include "io.h"
-#include "iofw.h"
+#include "netcdf.h"
 #include "debug.h"
 
 #define ENABLE_DEBUG
@@ -70,28 +69,28 @@ int nc_hist_create(const char *path, int *nc_id, int *idate)
     int vid_year, vid_day, vid_second;
     int vid_lon, vid_lat, vid_soilz, vid_time, vid_longxy, vid_latixy;
 
-    iofw_nc_create(rank, path, NC_CLOBBER, &ncid);
-    iofw_nc_def_dim(rank, ncid, "lon", lon_points, &dim_lon);
-    iofw_nc_def_dim(rank, ncid, "lat", lat_points, &dim_lat);
-    iofw_nc_def_dim(rank, ncid, "soilz", nl_soil, &dim_soilz);
-    iofw_nc_def_dim(rank, ncid, "time", ntime, &dim_time);
+    nc_create(path, NC_CLOBBER, &ncid);
+    nc_def_dim(ncid, "lon", lon_points, &dim_lon);
+    nc_def_dim(ncid, "lat", lat_points, &dim_lat);
+    nc_def_dim(ncid, "soilz", nl_soil, &dim_soilz);
+    nc_def_dim(ncid, "time", ntime, &dim_time);
 
-    iofw_nc_def_var(rank, ncid, "origin_year", NC_INT, 0, NULL, &vid_year);
-    iofw_nc_def_var(rank, ncid, "origin_day", NC_INT, 0, NULL, &vid_day);
-    iofw_nc_def_var(rank, ncid, "origin_second", NC_INT, 0, NULL, &vid_second);
+    nc_def_var(ncid, "origin_year", NC_INT, 0, NULL, &vid_year);
+    nc_def_var(ncid, "origin_day", NC_INT, 0, NULL, &vid_day);
+    nc_def_var(ncid, "origin_second", NC_INT, 0, NULL, &vid_second);
 
     dimids1[0] = dim_lon;
-    iofw_nc_def_var(rank, ncid, "lon", NC_DOUBLE, 1, dimids1, &vid_lon);
+    nc_def_var(ncid, "lon", NC_DOUBLE, 1, dimids1, &vid_lon);
     dimids1[0] = dim_lat;
-    iofw_nc_def_var(rank, ncid, "lat", NC_DOUBLE, 1, dimids1, &vid_lat);
+    nc_def_var(ncid, "lat", NC_DOUBLE, 1, dimids1, &vid_lat);
     dimids1[0] = dim_soilz;
-    iofw_nc_def_var(rank, ncid, "soilz", NC_DOUBLE, 1, dimids1, &vid_soilz);
+    nc_def_var(ncid, "soilz", NC_DOUBLE, 1, dimids1, &vid_soilz);
     dimids1[0] = dim_time;
-    iofw_nc_def_var(rank, ncid, "time", NC_DOUBLE, 1, dimids1, &vid_time);
+    nc_def_var(ncid, "time", NC_DOUBLE, 1, dimids1, &vid_time);
     dimids2[0] = dim_lon;
     dimids2[1] = dim_lat;
-    iofw_nc_def_var(rank, ncid, "longxy", NC_DOUBLE, 2, dimids2, &vid_longxy);
-    iofw_nc_def_var(rank, ncid, "latixy", NC_DOUBLE, 2, dimids2, &vid_latixy);
+    nc_def_var(ncid, "longxy", NC_DOUBLE, 2, dimids2, &vid_longxy);
+    nc_def_var(ncid, "latixy", NC_DOUBLE, 2, dimids2, &vid_latixy);
     
     dimids3[0] = dim_lon;
     dimids3[1] = dim_lat;
@@ -104,27 +103,27 @@ int nc_hist_create(const char *path, int *nc_id, int *idate)
     {
 	if(2 == flxdims[i])
 	{
-	    iofw_nc_def_var(rank, ncid, flxname[i], NC_FLOAT, 3 ,dimids3, &flxvid[i]);
+	    nc_def_var(ncid, flxname[i], NC_FLOAT, 3 ,dimids3, &flxvid[i]);
 	}else if(3 == flxdims[i])
 	{
-	    iofw_nc_def_var(rank, ncid, flxname[i], NC_FLOAT, 4, dimids4, &flxvid[i]);
+	    nc_def_var(ncid, flxname[i], NC_FLOAT, 4, dimids4, &flxvid[i]);
 	}
     }
 
     /**
      *Just no attr TODO
      **/
-    iofw_nc_enddef(rank, ncid);
+    nc_enddef(ncid);
     
-    //iofw_nc_put_var(rank, ncid, vid_lon, lon);
-    //iofw_nc_put_var(rank, ncid, vid_lat, lat);
-    //iofw_nc_put_var(rank, ncid, vid_time, timeval);
-    //iofw_nc_put_var(rank, ncid, vid_soilz, soilz);
-    //iofw_nc_put_var(rank, ncid, vid_year, &idate[0]);
-    //iofw_nc_put_var(rank, ncid, vid_day, &idate[1]);
-    //iofw_nc_put_var(rank, ncid, vid_second, &idate[2]);
-    //iofw_nc_put_var(rank, ncid, vid_longxy, longxy);
-    //iofw_nc_put_var(rank, ncid, vid_latixy, latixy);
+    nc_put_var(ncid, vid_lon, lon);
+    nc_put_var(ncid, vid_lat, lat);
+    nc_put_var(ncid, vid_time, timeval);
+    nc_put_var(ncid, vid_soilz, soilz);
+    nc_put_var(ncid, vid_year, &idate[0]);
+    nc_put_var(ncid, vid_day, &idate[1]);
+    nc_put_var(ncid, vid_second, &idate[2]);
+    nc_put_var(ncid, vid_longxy, longxy);
+    nc_put_var(ncid, vid_latixy, latixy);
 
     *nc_id = ncid;
     return 0;
@@ -149,8 +148,8 @@ int nc_hist_add_field(int loop, int nc_id, float *data)
 	count_3d[0] = lon_points;
 	count_3d[1] = lat_points;
 	count_3d[2] = 1;
-	iofw_nc_put_vara_float(rank, 
-		nc_id, flxvid[field_id], 3, start_3d, count_3d, data);
+	int status = nc_put_vara_float(nc_id, flxvid[field_id], start_3d, count_3d, data);
+	debug(DEBUG_USER, "%s", nc_strerror(status));
     }else if(3 == ndim)
     {
 	zlev = loop - flxbeg[field_id];
@@ -162,8 +161,7 @@ int nc_hist_add_field(int loop, int nc_id, float *data)
 	count_4d[1] = lat_points;
 	count_4d[2] = 1;
 	count_4d[3] = 1;
-	int status = iofw_nc_put_vara_float(rank, 
-		nc_id, flxvid[field_id], 3, start_4d, count_4d, data);
+	int status = nc_put_vara_float(nc_id, flxvid[field_id], start_4d, count_4d, data);
 	debug(DEBUG_USER, "%s", nc_strerror(status));
     }
 
@@ -172,7 +170,7 @@ int nc_hist_add_field(int loop, int nc_id, float *data)
 
 int nc_hist_close(int ncid)
 {
-    iofw_nc_close(rank, ncid);
+    nc_close(ncid);
     return 0;
 }
 
@@ -292,36 +290,29 @@ int main(int argc, char** argv)
     int i;
     int cycle = 1;
     char *prefix = "output/";
-    int is_server;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME | DEBUG_MSG);// | DEBUG_IOFW);
+    set_debug_mask(DEBUG_TIME);
 
-    iofw_init( size / 2 , &is_server);
-
-    if(!is_server)
+    for(i = 0; i < cycle; i ++)
     {
-	for(i = 0; i < cycle; i ++)
+	if(0 == rank)
 	{
-	    if(0 == rank)
-	    {
-		debug(DEBUG_TIME, "loop %d :", i);
-	    }
-	    start_time = cur_time();
-	    sleep(1);
-	    end_time = cur_time();
-	    debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
-		    rank, end_time - start_time);
-	    write_hist_data(idate, prefix);
-	    //MPI_Barrier(comm);
-	    idate[1] ++;
+	    debug(DEBUG_TIME, "loop %d :", i);
 	}
+	start_time = cur_time();
+	sleep(1);
+	end_time = cur_time();
+	debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
+	    rank, end_time - start_time);
+	write_hist_data(idate, prefix);
+	MPI_Barrier(comm);
+	idate[1] ++;
     }
-    
-    iofw_finalize();
+
     MPI_Finalize();
 
     return 0;
