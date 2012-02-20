@@ -21,7 +21,7 @@ NONEXEOBJECTS := $(patsubst %.c, %.o, $(NONEXESOURCES))
 HEADERS := $(shell ls | grep '\.h$$' )
 CFLAGS += $(INCLUDEDIR)
 CFLAGS += $(LIBDIR) 
-CFLAGS += 
+CFLAGS +=
 CFLAGS += -Wall
 DEBUG =
 define GenExeCmd
