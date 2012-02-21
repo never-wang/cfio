@@ -1,6 +1,6 @@
 CC := mpiicc
-INCLUDEDIR := -I/home/huangxm/esm-soft/include
-LIBDIR := -L/home/huangxm/esm-soft/lib 
+INCLUDEDIR := -I/home/never/usr/include
+LIBDIR := -L/home/never/usr/lib 
 LIB := -lpthread -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lcurl -lsz 
 ALLOBJECTS := $(patsubst %.c, %.o, $(wildcard *.c)) 
 GREPCMD := grep -l 'int main.*(.*)' *.c
@@ -31,7 +31,6 @@ endef
 
 #Must add $(EXEFILES)
 all:$(ALLOBJECTS) $(EXEFILES) 
-	mkdir output
 
 #TODO just ignore #$(SOOBJECTS)
 #Generate execuable file
@@ -46,7 +45,7 @@ $(SOOBJECTS):$(ALLOBJECTS)
 .PHONY:clean run install
 clean:
 	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
-	rm -r output
+	rm output/*
 run:
 	#$(shell ./startserver.sh)
 #install:
