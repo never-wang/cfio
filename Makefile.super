@@ -31,6 +31,7 @@ endef
 
 #Must add $(EXEFILES)
 all:$(ALLOBJECTS) $(EXEFILES) 
+	mkdir output
 
 #TODO just ignore #$(SOOBJECTS)
 #Generate execuable file
@@ -45,7 +46,7 @@ $(SOOBJECTS):$(ALLOBJECTS)
 .PHONY:clean run install
 clean:
 	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
-	rm output/*
+	rm -r output
 run:
 	#$(shell ./startserver.sh)
 #install:
