@@ -18,6 +18,9 @@
 
 #include "netcdf.h"
 #include "debug.h"
+#include "times.h"
+
+#include "mpi.h"
 
 #define ENABLE_DEBUG
 
@@ -47,13 +50,6 @@ int rank, size;
 MPI_Comm comm = MPI_COMM_WORLD;
 
 double start_time, end_time;
-
-double cur_time()
-{
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    return time.tv_sec * 1000.0 + time.tv_usec / 1000.0;
-}
 
 int nc_hist_create(const char *path, int *nc_id, int *idate)
 {

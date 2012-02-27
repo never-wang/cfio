@@ -19,6 +19,9 @@
 #include "io.h"
 #include "iofw.h"
 #include "debug.h"
+#include "times.h"
+
+#include "mpi.h"
 
 #define ENABLE_DEBUG
 
@@ -48,13 +51,6 @@ int rank, size;
 MPI_Comm comm = MPI_COMM_WORLD;
 
 double start_time, end_time;
-
-double cur_time()
-{
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    return time.tv_sec * 1000.0 + time.tv_usec / 1000.0;
-}
 
 int nc_hist_create(const char *path, int *nc_id, int *idate)
 {
@@ -298,7 +294,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME | DEBUG_MSG);// | DEBUG_IOFW);
+    set_debug_mask(DEBUG_TIME | DEBUG_MSG | DEBUG_IOFW);
 
     iofw_init( size / 2 , &is_server);
 
