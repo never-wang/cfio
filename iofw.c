@@ -119,7 +119,7 @@ int iofw_server()
     {
 	int offset = 0;
 	/*
-	 * wait for any mesg header
+	 * wait for any msg header
 	 */
 	do{
 	    offset = pomme_buffer_next(buffer,buffer->chunk_size);
@@ -275,7 +275,7 @@ int iofw_finalize()
     ret = MPI_Finalized(&flag);
     if(flag)
     {
-	debug("***You should not call MPI_Finalize before iofw_Finalized");
+	debug("***You should not call MPI_Finalize before iofw_Finalized*****\n");
     }
     if( i_am_server )
     {

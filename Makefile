@@ -44,8 +44,8 @@ $(SOOBJECTS):$(ALLOBJECTS)
 	$(CC) -O2 -shared -fPIC $(INCLUDEDIR) $(LIBDIR) $(NONEXEOBJECTS) -o $@ $(LIB)
 .PHONY:clean run install
 clean:
-	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
-	rm output/*
+	-rm -f $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
+	rm -f output/*
 run:
 	#$(shell ./startserver.sh)
 #install:
