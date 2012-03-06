@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include <netcdf.h>
+#include "mpi.h"
 /**
  * @brief: nc_create
  *

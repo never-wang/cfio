@@ -20,6 +20,7 @@
 #include "map.h"
 #include "msg.h"
 #include "debug.h"
+#include "times.h"
 
 /**
  * @brief: nc_create
@@ -174,7 +175,10 @@ int iofw_nc_put_vara_float(
     int dst_proc_id;
     int data_len, i;
     float *u;
+    double start_time, end_time;
 
+
+    start_time = cur_time();
     head_buf = init_buf(BUF_SIZE);
     iofw_pack_msg_put_vara_float(head_buf, ncid, varid, dim, start, count);
     
@@ -185,11 +189,20 @@ int iofw_nc_put_vara_float(
 	data_len *= count[i]; 
     }
     packdata_array(fp, data_len, sizeof(float), data_buf);
-    unpackdata_array(&u, &data_len, sizeof(size_t), data_buf);
+    unpackdata_array(&u, &data_len, sizeof(float), data_buf);
+    end_time = cur_time();
 
+    debug(DEBUG_IOFW, "Proc %03d : write file - pack time : %f\n", 
+           io_proc_id, end_time - start_time);
+
+    start_time = cur_time();
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, head_buf);
     iofw_send_msg(dst_proc_id, data_buf);
+    end_time = cur_time();
+
+    debug(DEBUG_IOFW, "Proc %03d : write file - send to Proc(%03d) time : %f\n",
+            io_proc_id, dst_proc_id, end_time - start_time);
 
     free_buf(head_buf);
     free_buf(data_buf);
