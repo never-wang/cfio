@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_UNMAP); 
+    set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_UNMAP | DEBUG_PACK); 
 
     debug_mark(DEBUG_USER);
 
@@ -50,13 +50,13 @@ int main(int argc, char** argv)
     iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);
     iofw_nc_enddef(rank,ncidp);
     size_t start[2],count[2];
-    float *fp = malloc(25*sizeof(float));
+    float *fp = malloc(64*64*sizeof(float));
     start[0] = 0;
     start[1] = 0;
-    count[0] = 5;
-    count[1] = 5;
+    count[0] = 64;
+    count[1] = 64;
 
-    for( i = 0; i< 25; i++)
+    for( i = 0; i< 64 * 64; i++)
     {
 	fp[i]=1.0;
     }

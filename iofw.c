@@ -258,6 +258,8 @@ static int _nc_put_vara_float(
     int i;
     int dst_proc_id;
 
+    debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
+
     cur_start = malloc(dim * sizeof(size_t));
     cur_count = malloc(dim *sizeof(size_t));
     memcpy(cur_start, start, dim * sizeof(size_t));
@@ -298,12 +300,14 @@ static int _nc_put_vara_float(
 	for(i = 0; i < count[div_dim]; i += div)
 	{
 	    buf = init_buf(BUF_SIZE);
+	    debug_mark(DEBUG_IOFW);
+	    free(buf->head);
+	    debug_mark(DEBUG_IOFW);
 	    iofw_pack_msg_put_vara_float(buf, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
+	    debug_mark(DEBUG_IOFW);
 	    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
 	    //   iofw_isend_msg(dst_proc_id, io_proc_id, head_buf, inter_comm);
-	    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-	    //   iofw_isend_msg(dst_proc_id, io_proc_id, data_buf, inter_comm);
 	    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
