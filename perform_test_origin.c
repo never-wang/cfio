@@ -291,7 +291,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME);
+    set_debug_mask(DEBUG_TIME | DEBUG_USER);
 
     for(i = 0; i < cycle; i ++)
     {

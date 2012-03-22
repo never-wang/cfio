@@ -20,12 +20,6 @@
 #include "utils.h"
 #include "pomme_buffer.h"
 
-#define FFL __FILE__,__func__,__LINE__
-#ifdef DEBUG
-#define debug(msg,argc...) fprintf(stderr,msg,##argc)
-#else 
-#define debug(msg,argc...) 0
-#endif
 /* return codes */
 #define	ALL_CLINET_REPORT_DONE 1
 /* the msg is delt, the buffer could be reused inmmediately */

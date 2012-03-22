@@ -19,12 +19,13 @@
 
 #define ENABLE_DEBUG
 
-#define DEBUG_NONE ((uint32_t)0)
-#define DEBUG_USER ((uint32_t)1 << 0)
-#define DEBUG_IOFW ((uint32_t)1 << 1)
-#define DEBUG_PACK ((uint32_t)1 << 2)
-#define DEBUG_TIME ((uint32_t)1 << 3)
-#define DEBUG_MSG  ((uint32_t)1 << 4)
+#define DEBUG_NONE  ((uint32_t)0)
+#define DEBUG_USER  ((uint32_t)1 << 0)
+#define DEBUG_IOFW  ((uint32_t)1 << 1)
+#define DEBUG_PACK  ((uint32_t)1 << 2)
+#define DEBUG_TIME  ((uint32_t)1 << 3)
+#define DEBUG_MSG   ((uint32_t)1 << 4)
+#define DEBUG_UNMAP ((uint32_t)1 << 4)
 
 extern int debug_mask;
 
@@ -43,7 +44,7 @@ extern int debug_mask;
 #define set_debug_mask(mask) debug_mask = mask
 #define add_debug_mask(mask) debug_mask |= mask
 
-#define debug_mark(mask) debug(mask, "MARK\n")
+#define debug_mark(mask) debug(mask, "MARK")
 
 #define error(format, f...) \
     printf("[%s, %s, %d]: "format "\n", __FILE__, __func__, __LINE__, ##f);

@@ -26,7 +26,7 @@ extern int server_proc_num;
 int iofw_map_forwarding_proc(
 	int io_proc_id, int *forwarding_proc_id)
 {
-    *forwarding_proc_id =  app_proc_num + io_proc_id%server_proc_num;
+    *forwarding_proc_id =  io_proc_id;
 
     return 0;
 }
@@ -42,7 +42,7 @@ int iofw_map_client_num(
 	int rank, int *client_num)
 {
     *client_num = app_proc_num / server_proc_num;
-    if( rank <= app_proc_num + app_proc_num%server_proc_num )
+    if( rank <= app_proc_num%server_proc_num )
     {
 	*client_num++;
     }

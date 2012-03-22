@@ -16,7 +16,6 @@
 #include <sys/time.h>
 #include <error.h>
 
-#include "io.h"
 #include "iofw.h"
 #include "debug.h"
 #include "times.h"
@@ -159,7 +158,7 @@ int nc_hist_add_field(int loop, int nc_id, float *data)
 	count_4d[2] = 1;
 	count_4d[3] = 1;
 	int status = iofw_nc_put_vara_float(rank, 
-		nc_id, flxvid[field_id], 3, start_4d, count_4d, data);
+		nc_id, flxvid[field_id], 4, start_4d, count_4d, data);
 	debug(DEBUG_USER, "%s", nc_strerror(status));
     }
 
@@ -265,6 +264,7 @@ int write_hist_data(int *idate, char* prefix)
     start_time = cur_time();
     for(i = 0; i < nfldv; i ++)
     {
+	debug(DEBUG_USER, "add field loop : %d", i);
 	nc_hist_add_field(i, nc_id, fldxy);
     }
     end_time = cur_time();
@@ -272,9 +272,11 @@ int write_hist_data(int *idate, char* prefix)
     debug(DEBUG_TIME, "Porc %03d : write file time : %f", 
 	    rank, end_time - start_time);
 
+    debug_mark(DEBUG_USER);
     start_time = cur_time();
     nc_hist_close(nc_id);
     end_time = cur_time();
+    debug_mark(DEBUG_USER);
     
     debug(DEBUG_TIME, "Porc %03d : close file time : %f", 
 	    rank, end_time - start_time);
@@ -294,30 +296,29 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME | DEBUG_MSG | DEBUG_IOFW);
+    set_debug_mask(DEBUG_MSG);// | DEBUG_IOFW | DEBUG_USER);
+    //set_debug_mask(DEBUG_TIME);
 
-    iofw_init( size / 2 , &is_server);
+    iofw_init(size);
 
-    if(!is_server)
+    for(i = 0; i < cycle; i ++)
     {
-	for(i = 0; i < cycle; i ++)
+	if(0 == rank)
 	{
-	    if(0 == rank)
-	    {
-		debug(DEBUG_TIME, "loop %d :", i);
-	    }
-	    start_time = cur_time();
-	    sleep(1);
-	    end_time = cur_time();
-	    debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
-		    rank, end_time - start_time);
-	    write_hist_data(idate, prefix);
-	    //MPI_Barrier(comm);
-	    idate[1] ++;
+	    debug(DEBUG_TIME, "loop %d :", i);
 	}
+	start_time = cur_time();
+	sleep(1);
+	end_time = cur_time();
+	debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
+		rank, end_time - start_time);
+	write_hist_data(idate, prefix);
+	//MPI_Barrier(comm);
+	idate[1] ++;
     }
-    
+
     iofw_finalize();
+	
     MPI_Finalize();
 
     return 0;

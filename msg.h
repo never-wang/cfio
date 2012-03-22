@@ -19,6 +19,8 @@
 #include "mpi.h"
 #include "netcdf.h"
 #include "pack.h"
+
+#define MSG_MAX_SIZE 32768
 /* define for control messge */
 #define CLIENT_END_IO 201
 
@@ -37,28 +39,45 @@
  * @brief: send msg to othre proc by mpi
  *
  * @param dst_proc_id: the destination proc id 
+ * @param src_proc_id: the source proc id 
  * @param buf: pointer to the struct buf which store the data of send msg
+ * @param comm: MPI communicator
  *
  * @return: 0 if success
  */
-int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf);
+int iofw_send_msg(
+	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm);
+/**
+ * @brief: async send msg to othre proc by mpi
+ *
+ * @param dst_proc_id: the destination proc id 
+ * @param src_proc_id: the source proc id 
+ * @param buf: pointer to the struct buf which store the data of send msg
+ * @param comm: MPI communicator
+ *
+ * @return: 0 if success
+ */
+int iofw_isend_msg(
+	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm);
 /**
  * @brief: recieve an interger from other proc
  *
  * @param src_por_id: source proc id
  * @param data: pointer to location where received data is to be stored
+ * @param comm: MPI communicator
  *
  * @return: 0 if success
  */
-int iofw_recv_int1(int src_por_id, int *data);
+int iofw_recv_int1(int src_proc_id, int *data, MPI_Comm comm);
 /**
  * @brief: send an interter to other proc
  * @param des_por_id: destination
- * @param my_rank: self rank
+ * @param src_proc_id: the source proc id 
  * @param data: the data to send
+ * @param comm: MPI communicator
  * @return: 0 if success
  */
-int iofw_send_int1(int des_por_id, int my_rank, int data);
+int iofw_send_int1(int des_por_id, int src_proc_id, int data, MPI_Comm comm);
 
 /**
  * @brief: pack for ifow_nc_create function
@@ -145,13 +164,14 @@ int iofw_pack_msg_put_var1_float(
  *	where the first of the data values will be written
  * @param count: a vector of size_t intergers specifying the edge lengths along 
  *	each dimension of the block of data values to be written
+ * @param fp : pointer to where data is stored
  *
  * @return: 0 if success, IOFW_UNEQUAL_DIM if the size of start and count is noequal
  */
 int iofw_pack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count);
+	const size_t *start, const size_t *count, const float *fp);
 /**
  * @brief: pack for the iofw_nc_close function
  *

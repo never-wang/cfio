@@ -18,31 +18,49 @@
 #include "error.h"
 #include "debug.h"
 
-int iofw_send_msg(int dst_proc_id, iofw_buf_t *buf)
+int iofw_send_msg(
+	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
 {
-    int tag = 1;
+    int tag = src_proc_id;
 
-    MPI_Send(buf->head, buf->processed, MPI_BYTE, dst_proc_id, tag, MPI_COMM_WORLD);
+    debug(DEBUG_MSG, "send: src=%d; dst=%d; comm = %d; size = %d", 
+	    src_proc_id, dst_proc_id, comm, buf->processed);
+    MPI_Send(buf->head, buf->processed, MPI_BYTE, dst_proc_id, tag, comm);
     
     return 0;
 }
 
-int iofw_recv_int1(int src_proc_id, int *data)
+int iofw_isend_msg(
+	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
 {
-/*
- * why set tag == 1 ?
- */
-//    int tag = 1;
-    MPI_Status status;
+    int tag = src_proc_id;
+    MPI_Request request;
+    
+    debug(DEBUG_MSG, "isend: src=%d; dst=%d; comm = %d; size = %d", 
+	    src_proc_id, dst_proc_id, comm, buf->processed);
 
-    MPI_Recv(data, 1, MPI_INT, src_proc_id, src_proc_id, MPI_COMM_WORLD, &status);
-
+    MPI_Isend(buf->head, buf->processed, MPI_BYTE, 
+	    dst_proc_id, tag, comm, &request);
+    
     return 0;
 }
-int iofw_send_int1(int des_por_id, int my_rank,int data)
+
+int iofw_send_int1(int dst_proc_id, int src_proc_id, int data, MPI_Comm comm)
 {
-    MPI_Send(&data, 1 , MPI_INT, des_por_id, my_rank, MPI_COMM_WORLD);
+    debug(DEBUG_MSG, "send: src=%d; dst=%d; comm = %d", 
+	    src_proc_id, dst_proc_id, comm);
+    
+    MPI_Send(&data, 1 , MPI_INT, dst_proc_id, src_proc_id, comm);
     return 0;	
+}
+
+int iofw_recv_int1(int src_proc_id, int *data, MPI_Comm comm)
+{
+    MPI_Status status;
+
+    MPI_Recv(data, 1, MPI_INT, src_proc_id, src_proc_id, comm, &status);
+
+    return 0;
 }
 
 int iofw_pack_msg_create(
@@ -126,31 +144,27 @@ int iofw_pack_msg_put_var1_float(
 int iofw_pack_msg_put_vara_float(
 	iofw_buf_t *buf,
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count)
+	const size_t *start, const size_t *count, const float *fp)
 {
     int i;
-    size_t data_size;
+    size_t data_len;
     uint32_t code = FUNC_NC_PUT_VARA_FLOAT;
     
-    data_size = 1;
+    data_len = 1;
     for(i = 0; i < dim; i ++)
     {
-	data_size *= count[i]; 
+	data_len *= count[i]; 
     }
-    data_size *= sizeof(float);
-    /**
-     *+4 for the extra data which store the len of array
-     **/
-    data_size += sizeof(size_t);
 
     packdata(&code, sizeof(uint32_t), buf);
-    packdata(&data_size, sizeof(size_t), buf);
 
     packdata(&ncid, sizeof(int), buf);
     packdata(&varid, sizeof(int), buf);
     
     packdata_array(start, dim, sizeof(size_t), buf);
     packdata_array(count, dim, sizeof(size_t), buf);
+    
+    packdata_array(fp, data_len, sizeof(float), buf);
 
     return 0;
 }
@@ -268,9 +282,9 @@ int iofw_unpack_msg_close(
 	    iofw_buf_t *buf,
 	    int *ncid)
 {
-    debug_mark(DEBUG_MSG);
     unpackdata(ncid, sizeof(int), buf);
 
+    debug_mark(DEBUG_MSG);
     return 0;
 
 }
