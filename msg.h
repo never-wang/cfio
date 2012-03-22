@@ -292,14 +292,18 @@ int iofw_unpack_msg_put_var1_float(
  *	 is to be stored 
  * @param start: pointer to where the start index of to be written data value 
  *	to be stored
- * @param count: pointer to where the size of to be written data value 
- *	to be stored
+ * @param count: pointer to where the size of to be written data dimension len
+ * value to be stored
+ * @param data_len: pointer to the size of data 
+ * @param fp: where the data is stored
  *
  * @return: 0 if success
  */
 int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
-	int *ncid, int *varid, int *dim, size_t **start, size_t **count);
+	int *ncid, int *varid, int *dim, 
+	size_t **start, size_t **count,
+	int *data_len, float **fp);
 /**
  * @brief: unpack arguments for the iofw_nc_close function
  *

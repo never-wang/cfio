@@ -265,7 +265,8 @@ int iofw_unpack_msg_put_var1_float(
 
 int iofw_unpack_msg_put_vara_float(
 	iofw_buf_t *buf,
-	int *ncid, int *varid, int *dim, size_t **start, size_t **count)
+	int *ncid, int *varid, int *dim, size_t **start, size_t **count,
+	int *data_len, float **fp)
 {
     int i;
 
@@ -274,6 +275,8 @@ int iofw_unpack_msg_put_vara_float(
     
     unpackdata_array((void**)start, dim, sizeof(size_t), buf);
     unpackdata_array((void**)count, dim, sizeof(size_t), buf);
+
+    unpackdata_array((void**)fp, data_len, sizeof(float), buf);
     
     return 0;
 }
