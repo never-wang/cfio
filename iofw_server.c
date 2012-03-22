@@ -14,11 +14,12 @@
  ***************************************************************************/
 #include <pthread.h>
 
-#include "unmap.h"
 #include "map.h"
+#include "unmap.h"
 #include "pomme_queue.h"
 #include "mpi.h"
 #include "debug.h"
+#include "msg.h"
 
 #define BUFFER_SIZE  1024*1024*1024
 #define CHUNK_SIZE  32*1024
@@ -158,54 +159,54 @@ int iofw_server()
 	    }
 	    continue;
 	}
-	else if( len > 0 )
-	{
-	    pomme_buffer_take(buffer, count);
-
-	    io_op_t * op = malloc(sizeof(io_op_t));
-	    memset(op, 0, sizeof(io_op_t));
-
-	    op->head = p_buffer;
-	    op->head_start = offset;
-	    op->head_len = count;
-
-	    op->src = status.MPI_SOURCE;
-	    op->tag = status.MPI_TAG;
-
-	    recv_len = 0;
-
-	    do
-	    {
-			offset = pomme_buffer_next(buffer,len);
-	    }while( offset < 0 );
-
-	    p_buffer = buffer->buffer + offset;
-
-	    op->body = p_buffer;
-	    op->body_start = offset;
-
-
-	    int src = status.MPI_SOURCE;
-	    int tag = status.MPI_TAG;
-	    int tlen = 0;
-
-	    do{
-		ret = MPI_Recv(p_buffer, len - recv_len , MPI_BYTE, 
-			src, tag, inter_comm,&status);
-		MPI_Get_count(&status, MPI_BYTE, &tlen);
-
-		recv_len += tlen;
-		p_buffer += tlen;
-		debug(DEBUG_USER, "recv_len = %d", recv_len);
-
-	    }while(recv_len < len );
-
-	    op->body_len = len;
-	    pomme_buffer_take(buffer,len);
-	    //ret = iofw_do_io(op->src, op->tag, rank, op);
-
-	    queue_push_back(queue,&op->next_head);
-	}
+//	else if( len > 0 )
+//	{
+//	    pomme_buffer_take(buffer, count);
+//
+//	    io_op_t * op = malloc(sizeof(io_op_t));
+//	    memset(op, 0, sizeof(io_op_t));
+//
+//	    op->head = p_buffer;
+//	    op->head_start = offset;
+//	    op->head_len = count;
+//
+//	    op->src = status.MPI_SOURCE;
+//	    op->tag = status.MPI_TAG;
+//
+//	    recv_len = 0;
+//
+//	    do
+//	    {
+//			offset = pomme_buffer_next(buffer,len);
+//	    }while( offset < 0 );
+//
+//	    p_buffer = buffer->buffer + offset;
+//
+//	    op->body = p_buffer;
+//	    op->body_start = offset;
+//
+//
+//	    int src = status.MPI_SOURCE;
+//	    int tag = status.MPI_TAG;
+//	    int tlen = 0;
+//
+//	    do{
+//		ret = MPI_Recv(p_buffer, len - recv_len , MPI_BYTE, 
+//			src, tag, inter_comm,&status);
+//		MPI_Get_count(&status, MPI_BYTE, &tlen);
+//
+//		recv_len += tlen;
+//		p_buffer += tlen;
+//		debug(DEBUG_USER, "recv_len = %d", recv_len);
+//
+//	    }while(recv_len < len );
+//
+//	    op->body_len = len;
+//	    pomme_buffer_take(buffer,len);
+//	    //ret = iofw_do_io(op->src, op->tag, rank, op);
+//
+//	    queue_push_back(queue,&op->next_head);
+//	}
 	debug(DEBUG_USER, "done = %d", done);
     }
     debug_mark(DEBUG_USER);
@@ -233,7 +234,7 @@ int main(int argc, char** argv)
     iofw_map_client_num(rank, &client_to_serve);
 
     ret = io_op_queue_init(&server_queue, BUFFER_SIZE, 
-	    CHUNK_SIZE, MAX_QUEUE_SIZE, name);
+	    MSG_MAX_SIZE, MAX_QUEUE_SIZE, name);
     if( ret < 0 )
     {
 	error("rank %d init io op queue failure",rank);
