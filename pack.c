@@ -135,6 +135,7 @@ void pack32(uint32_t val, Buf buffer)
 		}
 		buffer->size += BUF_SIZE;
 		buffer->head = realloc(buffer->head, buffer->size);
+		debug(DEBUG_PACK, "realloc, size = %d", buffer->size);
 	}
 
 	memcpy(&buffer->head[buffer->processed], &nl, sizeof(nl));
@@ -310,6 +311,7 @@ int unpackdata_array(void **valp, int *len, size_t size, Buf buffer)
 
     f_p = (float*)&buffer->head[buffer->processed];
     debug(DEBUG_PACK, "valp[0] = %f", f_p[0]);
+    debug(DEBUG_PACK, "len = %d", *len);
     if(0 == *len)
     {
 	*valp = NULL;

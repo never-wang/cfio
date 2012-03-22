@@ -20,7 +20,7 @@
 #include "netcdf.h"
 #include "pack.h"
 
-#define MSG_MAX_SIZE 32768
+#define MSG_MAX_SIZE 4096
 /* define for control messge */
 #define CLIENT_END_IO 201
 

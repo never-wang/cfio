@@ -149,6 +149,7 @@ int iofw_pack_msg_put_vara_float(
     int i;
     size_t data_len;
     uint32_t code = FUNC_NC_PUT_VARA_FLOAT;
+    float *ffp;
     
     debug(DEBUG_MSG, "pack_msg_put_vara_float");
     for(i = 0; i < dim; i ++)
@@ -159,8 +160,6 @@ int iofw_pack_msg_put_vara_float(
     {
 	debug(DEBUG_MSG, "count[%d] = %d", i, count[i]);
     }
-    debug(DEBUG_MSG, "fp[0] = %f", fp[0]);
-
     
     data_len = 1;
     for(i = 0; i < dim; i ++)
@@ -177,6 +176,10 @@ int iofw_pack_msg_put_vara_float(
     packdata_array(count, dim, sizeof(size_t), buf);
 
     packdata_array(fp, data_len, sizeof(float), buf);
+
+    buf->processed -= data_len * sizeof(float);
+    buf->processed -= sizeof(int);
+    unpackdata_array(&ffp, &data_len, sizeof(float), buf);
 
     return 0;
 }

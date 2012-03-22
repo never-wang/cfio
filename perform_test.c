@@ -262,9 +262,9 @@ int write_hist_data(int *idate, char* prefix)
 	    rank, end_time - start_time);
 
     start_time = cur_time();
-    for(i = 0; i < nfldv; i ++)
+    for(i = 0; i < 1; i ++)
     {
-	debug(DEBUG_USER, "add field loop : %d", i);
+	//debug(DEBUG_USER, "add field loop : %d", i);
 	nc_hist_add_field(i, nc_id, fldxy);
     }
     end_time = cur_time();
@@ -296,7 +296,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_MSG);// | DEBUG_IOFW | DEBUG_USER);
+    set_debug_mask(DEBUG_MSG | DEBUG_IOFW | DEBUG_USER);
     //set_debug_mask(DEBUG_TIME);
 
     iofw_init(size);

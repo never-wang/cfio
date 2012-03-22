@@ -238,8 +238,8 @@ int iofw_nc_put_var1_float(
     iofw_pack_msg_put_var1_float(buf, ncid, varid, dim, index, fp);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    //iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    //iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
 
     free_buf(buf);
     return 0;
@@ -267,12 +267,12 @@ static int _nc_put_vara_float(
     cur_fp = fp;
     
     desc_data_size = 1;
-    for(i = 0; i < dim - 1; i ++)
+    for(i = 0; i < div_dim; i ++)
     {
 	desc_data_size *= count[i]; 
     }
     desc_data_size *= sizeof(float);
-    div_data_size = desc_data_size * count[dim - 1];
+    div_data_size = desc_data_size * count[div_dim];
     
     div = count[div_dim];
     while(div_data_size + head_size > MSG_MAX_SIZE)
@@ -280,6 +280,8 @@ static int _nc_put_vara_float(
 	div_data_size -= desc_data_size;
 	div --;
     }
+    debug(DEBUG_IOFW, "desc_data_size = %d, div_data_size = %d, div = %d",
+	    desc_data_size, div_data_size, div);
     if(0 == div_data_size)
     {
 	/**
@@ -291,7 +293,7 @@ static int _nc_put_vara_float(
 	    _nc_put_vara_float(io_proc_id, ncid, varid, dim, cur_start, cur_count,
 		    cur_fp, head_size, div_dim - 1);
 	    cur_start[div_dim] += 1;
-	    cur_fp += desc_data_size;
+	    cur_fp += desc_data_size / sizeof(float);
 	}
     }else
     {
@@ -300,19 +302,17 @@ static int _nc_put_vara_float(
 	for(i = 0; i < count[div_dim]; i += div)
 	{
 	    buf = init_buf(BUF_SIZE);
-	    debug_mark(DEBUG_IOFW);
-	    free(buf->head);
-	    debug_mark(DEBUG_IOFW);
 	    iofw_pack_msg_put_vara_float(buf, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
+	    int len;
 	    debug_mark(DEBUG_IOFW);
 	    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-	    //   iofw_isend_msg(dst_proc_id, io_proc_id, head_buf, inter_comm);
-	    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+	    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+	    //iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
-	    cur_fp += div_data_size;
+	    cur_fp += div_data_size / sizeof(float);
 	    free_buf(buf);
 	}
     }

@@ -18,6 +18,9 @@
 #include "iofw.h"
 #include "debug.h"
 
+#define LAT 64
+#define LON 64
+
 
 int main(int argc, char** argv)
 {
@@ -33,7 +36,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_UNMAP | DEBUG_PACK); 
+    set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_UNMAP); 
 
     debug_mark(DEBUG_USER);
 
@@ -44,19 +47,19 @@ int main(int argc, char** argv)
     debug_mark(DEBUG_USER);
     iofw_nc_create(rank, fileName, 0, &ncidp);
     debug_mark(DEBUG_USER);
-    iofw_nc_def_dim(rank, ncidp, "lat", 5,&dimids[0]);
-    iofw_nc_def_dim(rank, ncidp, "kon", 5,&dimids[1]);
+    iofw_nc_def_dim(rank, ncidp, "lat", LAT,&dimids[0]);
+    iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
 
     iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);
     iofw_nc_enddef(rank,ncidp);
     size_t start[2],count[2];
-    float *fp = malloc(64*64*sizeof(float));
+    float *fp = malloc(LAT * LON *sizeof(float));
     start[0] = 0;
     start[1] = 0;
-    count[0] = 64;
-    count[1] = 64;
+    count[0] = LAT;
+    count[1] = LON;
 
-    for( i = 0; i< 64 * 64; i++)
+    for( i = 0; i< LON * LAT; i++)
     {
 	fp[i]=1.0;
     }
