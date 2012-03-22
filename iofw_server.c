@@ -14,11 +14,12 @@
  ***************************************************************************/
 #include <pthread.h>
 
-#include "unmap.h"
 #include "map.h"
+#include "unmap.h"
 #include "pomme_queue.h"
 #include "mpi.h"
 #include "debug.h"
+#include "msg.h"
 
 #define BUFFER_SIZE  1024*1024*1024
 #define CHUNK_SIZE  32*1024
