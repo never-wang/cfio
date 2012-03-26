@@ -88,6 +88,7 @@ static void * iofw_writer(void *argv)
 	/* here need optimaze*/
 	free(entry);
 
+	pos = NULL;
     }
 msg_over:
     write_done = 1;

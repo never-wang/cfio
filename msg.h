@@ -29,7 +29,7 @@
  **/
 #define FUNC_NC_CREATE		((uint32_t)1)
 #define FUNC_NC_ENDDEF		((uint32_t)2)
-#define FUNC_NC_CLOSE  ((uint32_t) 3)
+#define FUNC_NC_CLOSE  ((uint32_t) 303)
 #define FUNC_NC_DEF_DIM ((uint32_t)10)
 #define FUNC_NC_DEF_VAR ((uint32_t)20)
 #define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)

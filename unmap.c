@@ -84,9 +84,11 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 //	    iofw_unpack_msg_extra_data_size(buf,data_len);
 //	    debug(DEBUG_UNMAP, "server %d done nc_put_vara_float for client %d\n",my_rank,source);
 //	    break;
+	case FUNC_NC_CLOSE:
+	   debug(DEBUG_UNMAP,"received close");	
 	default:
 	    ret = ENQUEUE_MSG;
-	    debug(DEBUG_UNMAP, "server %d recv ENQUEUE_MSG from client\n",my_rank,source);
+	//    debug(DEBUG_UNMAP, "server %d recv ENQUEUE_MSG from client\n",my_rank,source);
 	    break;
     }	
     free(buf);
@@ -117,9 +119,9 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 
 	    ret = iofw_do_nc_put_vara_float(source, tag,
 		    my_rank, h_buf);
+		debug(DEBUG_UNMAP,"put vara");
 	    break;
 	case FUNC_NC_CLOSE:
-
 	    ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
 	    break;
 
@@ -371,7 +373,7 @@ static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
 
     if( ret != NC_NOERR )
     {
-	error("close nc file failure\n");
+	error("%d close nc %d file failure,%s\n",src,ncid,nc_strerror(ret));
 	ret = -1;
     }
     return 0;
