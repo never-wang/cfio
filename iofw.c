@@ -94,6 +94,8 @@ int iofw_finalize()
 
     iofw_map_forwarding_proc(rank, &dst_proc_id);
     iofw_send_msg(dst_proc_id, rank, buf, inter_comm);
+    
+    debug(DEBUG_IOFW, "Finish iofw_finalize");
 
     free_buf(buf);
     return 0;
@@ -313,7 +315,7 @@ static int _nc_put_vara_float(
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
 	    cur_fp += div_data_size / sizeof(float);
-	    free_buf(buf);
+	    //free_buf(buf);
 	}
     }
 
@@ -356,6 +358,8 @@ int iofw_nc_close(
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
     iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+
+    debug(DEBUG_IOFW, "Finish iofw_nc_close");
 
     free_buf(buf);
     return 0;

@@ -262,7 +262,7 @@ int write_hist_data(int *idate, char* prefix)
 	    rank, end_time - start_time);
 
     start_time = cur_time();
-    for(i = 0; i < 1; i ++)
+    for(i = 0; i < nfldv; i ++)
     {
 	//debug(DEBUG_USER, "add field loop : %d", i);
 	nc_hist_add_field(i, nc_id, fldxy);

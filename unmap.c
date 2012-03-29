@@ -80,10 +80,6 @@ int unmap(int source, int tag ,int my_rank,void *buffer,int size)
 	    iofw_client_done(source);
 	    debug(DEBUG_UNMAP, "server %d done client_end_io for client %d\n",my_rank,source);
 	    break;
-//	case FUNC_NC_PUT_VARA_FLOAT:
-//	    iofw_unpack_msg_extra_data_size(buf,data_len);
-//	    debug(DEBUG_UNMAP, "server %d done nc_put_vara_float for client %d\n",my_rank,source);
-//	    break;
 	case FUNC_NC_CLOSE:
 	   debug(DEBUG_UNMAP,"received close");	
 	default:
@@ -123,6 +119,7 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
 	    break;
 	case FUNC_NC_CLOSE:
 	    ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
+		debug(DEBUG_UNMAP,"nc close");
 	    break;
 
 	default:

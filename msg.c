@@ -35,12 +35,15 @@ int iofw_isend_msg(
 {
     int tag = src_proc_id;
     MPI_Request request;
+    MPI_Status status;
     
-    debug(DEBUG_MSG, "isend: src=%d; dst=%d; comm = %d; size = %d", 
+    debug(DEBUG_MSG, "issend: src=%d; dst=%d; comm = %d; size = %d", 
 	    src_proc_id, dst_proc_id, comm, buf->processed);
 
-    MPI_Isend(buf->head, buf->processed, MPI_BYTE, 
+    MPI_Issend(buf->head, buf->processed, MPI_BYTE, 
 	    dst_proc_id, tag, comm, &request);
+
+    //MPI_Wait(&request, &status);
     
     return 0;
 }

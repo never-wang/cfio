@@ -18,8 +18,8 @@
 #include "iofw.h"
 #include "debug.h"
 
-#define LAT 64
-#define LON 64
+#define LAT 360
+#define LON 180
 
 
 int main(int argc, char** argv)
