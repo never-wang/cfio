@@ -96,7 +96,7 @@ void pack64(uint64_t val, Buf buffer)
 			_error("pack64: buffer size too large");
 			return;
 		}
-		buffer->size += BUF_SIZE;
+		buffer->size *= 2;
 		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
@@ -133,7 +133,7 @@ void pack32(uint32_t val, Buf buffer)
 			_error("pack32: buffer size too large");
 			return;
 		}
-		buffer->size += BUF_SIZE;
+		buffer->size *= 2;
 		buffer->head = realloc(buffer->head, buffer->size);
 		debug(DEBUG_PACK, "realloc, size = %d", buffer->size);
 	}
@@ -171,7 +171,7 @@ void pack16(uint16_t val, Buf buffer)
 			_error("pack16: buffer size too large");
 			return;
 		}
-		buffer->size += BUF_SIZE;
+		buffer->size *= 2;
 		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
@@ -207,7 +207,7 @@ void pack8(uint8_t val, Buf buffer)
 			_error("pack8: buffer size too large");
 			return;
 		}
-		buffer->size += BUF_SIZE;
+		buffer->size *= 2;
 		buffer->head = realloc(buffer->head, buffer->size);
 	}
 
@@ -497,7 +497,7 @@ void packstr_array(char **valp, uint32_t size_val, Buf buffer)
 			_error("packstr_array: buffer size too large");
 			return;
 		}
-		buffer->size += BUF_SIZE;
+		buffer->size *= 2;
 		buffer->head = realloc(buffer->head, buffer->size);
 	}
 

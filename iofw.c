@@ -260,9 +260,11 @@ static int _nc_put_vara_float(
     int i;
     int dst_proc_id;
 
-    debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
+   	//times_start();
 
-    cur_start = malloc(dim * sizeof(size_t));
+	debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
+
+	cur_start = malloc(dim * sizeof(size_t));
     cur_count = malloc(dim *sizeof(size_t));
     memcpy(cur_start, start, dim * sizeof(size_t));
     memcpy(cur_count, count, dim * sizeof(size_t));
@@ -284,6 +286,7 @@ static int _nc_put_vara_float(
     }
     debug(DEBUG_IOFW, "desc_data_size = %d, div_data_size = %d, div = %d",
 	    desc_data_size, div_data_size, div);
+
     if(0 == div_data_size)
     {
 	/**
@@ -319,6 +322,8 @@ static int _nc_put_vara_float(
 	}
     }
 
+	//debug(DEBUG_TIME, "%f ms", times_end());
+
     return 0;
 }
 
@@ -329,11 +334,16 @@ int iofw_nc_put_vara_float(
 {
     size_t head_size;
 
+	//times_start();
+
     head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
     
     _nc_put_vara_float(io_proc_id, ncid, varid, dim,
 	    start, count, fp, head_size, dim - 1);
+
     debug_mark(DEBUG_IOFW);
+
+	//debug(DEBUG_TIME, "%f ms", times_end());
 
     return 0;
 }
@@ -353,15 +363,20 @@ int iofw_nc_close(
     iofw_buf_t *buf;
     int dst_proc_id;
 
+	//times_start();
+
     buf = init_buf(BUF_SIZE);
     iofw_pack_msg_close(buf, ncid);
 
     iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
 
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
 
-    free_buf(buf);
+    //free_buf(buf);
+	
+	//debug(DEBUG_TIME, "%f", times_end());
+
     return 0;
 }
 

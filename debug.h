@@ -16,6 +16,7 @@
 #define _DEBUG_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 #define ENABLE_DEBUG
 

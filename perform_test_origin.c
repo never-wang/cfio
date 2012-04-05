@@ -51,6 +51,9 @@ MPI_Comm comm = MPI_COMM_WORLD;
 
 double start_time, end_time;
 
+char *file_name="perform_test_origin.csv";
+FILE* file;
+
 int nc_hist_create(const char *path, int *nc_id, int *idate)
 {
     int dimids1[1];
@@ -111,15 +114,15 @@ int nc_hist_create(const char *path, int *nc_id, int *idate)
      **/
     nc_enddef(ncid);
     
-    nc_put_var(ncid, vid_lon, lon);
-    nc_put_var(ncid, vid_lat, lat);
-    nc_put_var(ncid, vid_time, timeval);
-    nc_put_var(ncid, vid_soilz, soilz);
-    nc_put_var(ncid, vid_year, &idate[0]);
-    nc_put_var(ncid, vid_day, &idate[1]);
-    nc_put_var(ncid, vid_second, &idate[2]);
-    nc_put_var(ncid, vid_longxy, longxy);
-    nc_put_var(ncid, vid_latixy, latixy);
+    //nc_put_var(ncid, vid_lon, lon);
+    //nc_put_var(ncid, vid_lat, lat);
+    //nc_put_var(ncid, vid_time, timeval);
+    //nc_put_var(ncid, vid_soilz, soilz);
+    //nc_put_var(ncid, vid_year, &idate[0]);
+    //nc_put_var(ncid, vid_day, &idate[1]);
+    //nc_put_var(ncid, vid_second, &idate[2]);
+    //nc_put_var(ncid, vid_longxy, longxy);
+    //nc_put_var(ncid, vid_latixy, latixy);
 
     *nc_id = ncid;
     return 0;
@@ -253,29 +256,42 @@ int write_hist_data(int *idate, char* prefix)
 
     debug(DEBUG_USER, "file : %s", path);
 
-    start_time = cur_time();
+    start_time = times_cur();
     nc_hist_create(path, &nc_id, idate);
-    end_time = cur_time();
+    end_time = times_cur();
     
     debug(DEBUG_TIME, "Porc %03d : create file time : %f", 
 	    rank, end_time - start_time);
+	if(0 == rank)
+	{
+		fprintf(file, "%f, ", end_time - start_time);
+	}
 
-    start_time = cur_time();
+    start_time = times_cur();
     for(i = 0; i < nfldv; i ++)
     {
 	nc_hist_add_field(i, nc_id, fldxy);
     }
-    end_time = cur_time();
+    end_time = times_cur();
     
     debug(DEBUG_TIME, "Porc %03d : write file time : %f", 
 	    rank, end_time - start_time);
+	if(0 == rank)
+	{
+		fprintf(file, "%f, ", end_time - start_time);
+	}
 
-    start_time = cur_time();
+    start_time = times_cur();
     nc_hist_close(nc_id);
-    end_time = cur_time();
+    end_time = times_cur();
     
     debug(DEBUG_TIME, "Porc %03d : close file time : %f", 
 	    rank, end_time - start_time);
+	
+	if(0 == rank)
+	{
+		fprintf(file, "%f\n", end_time - start_time);
+	}
 
     return 0;
 }
@@ -284,24 +300,29 @@ int main(int argc, char** argv)
 {
     int idate[3] = {1990, 1, 1};
     int i;
-    int cycle = 1;
+    int cycle = 5;
     char *prefix = "output/";
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_TIME | DEBUG_USER);
+    //set_debug_mask(DEBUG_TIME | DEBUG_USER);
+    set_debug_mask(DEBUG_TIME);
+
+	file = fopen(file_name, "w");
+	fprintf(file, "loop, create, write, close\n");
 
     for(i = 0; i < cycle; i ++)
     {
 	if(0 == rank)
 	{
 	    debug(DEBUG_TIME, "loop %d :", i);
+		fprintf(file, "%d, ", i);
 	}
-	start_time = cur_time();
+	start_time = times_cur();
 	sleep(1);
-	end_time = cur_time();
+	end_time = times_cur();
 	debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
 	    rank, end_time - start_time);
 	write_hist_data(idate, prefix);
@@ -309,6 +330,7 @@ int main(int argc, char** argv)
 	idate[1] ++;
     }
 
+	fclose(file);
     MPI_Finalize();
 
     return 0;

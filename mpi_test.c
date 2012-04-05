@@ -44,12 +44,12 @@ int sync_test(char *dir, int send_proc, int recv_proc)
 	{
 	    buf = malloc(i);
 	    memset(buf, 10, i);
-	    start_time = cur_time();
+	    start_time = times_cur();
 	    for(j = 0; j < loop; j ++)
 	    {
 		MPI_Send(buf, i, MPI_BYTE, recv_proc, 0, comm);
 	    }
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%d,%f,%f\n", i / 1024 , (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, "send size : %d KB; time : %f ms; speed : %f MB/s", 
@@ -95,19 +95,19 @@ int async_test(char *dir, int send_proc, int recv_proc)
 	{
 	    buf = malloc(i);
 	    memset(buf, 10, i);
-	    start_time = cur_time();
+	    start_time = times_cur();
 	    for(j = 0; j < loop; j ++)
 	    {
 		MPI_Isend(buf, i, MPI_BYTE, recv_proc, 0, comm, &send_array[j]);
 	    }
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%d,%f,%f,", i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, "send size : %d KB; time : %f ms; speed : %f MB/s", 
 		    i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    MPI_Waitall(loop, send_array, status_array);
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%f,%f\n", (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, 
@@ -164,12 +164,12 @@ int remote_test(char *dir, int local_proc, int remote_proc)
 	{
 	    memset(buf, 10, i);
 	    
-	    start_time = cur_time();
+	    start_time = times_cur();
 	    for(j = 0; j < loop; j ++)
 	    {
 		MPI_Put(buf, i, MPI_BYTE, remote_proc, 0, i, MPI_BYTE, win);
 	    }
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%d,%f,%f,", i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, "send size : %d KB; time : %f ms; speed : %f MB/s", 
@@ -179,7 +179,7 @@ int remote_test(char *dir, int local_proc, int remote_proc)
 	MPI_Win_fence(0, win);
 	if(rank == local_proc)
 	{
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%f,%f\n", (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, 
@@ -257,12 +257,12 @@ int spawn_sync_test(char *dir, int root_proc)
 	{
 	    buf = malloc(i);
 	    memset(buf, 10, i);
-	    start_time = cur_time();
+	    start_time = times_cur();
 	    for(j = 0; j < loop; j ++)
 	    {
 		MPI_Send(buf, i, MPI_BYTE, 0, 0, inter_comm);
 	    }
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%d,%f,%f\n", i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, "send size : %d KB; time : %f ms; speed : %f MB/s", 
@@ -341,20 +341,20 @@ int spawn_async_test(char *dir, int root_proc)
 	{
 	    buf = malloc(i);
 	    memset(buf, 10, i);
-	    start_time = cur_time();
+	    start_time = times_cur();
 	    for(j = 0; j < loop; j ++)
 	    {
 		MPI_Isend(buf, i, MPI_BYTE, 0, 0, inter_comm, 
 			&send_array[j]);
 	    }
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%d,%f,%f,", i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, "send size : %d KB; time : %f ms; speed : %f MB/s", 
 		    i / 1024, (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    MPI_Waitall(loop, send_array, status_array);
-	    end_time = cur_time();
+	    end_time = times_cur();
 	    fprintf(file, "%f,%f\n", (end_time - start_time) / loop,
 		    i / (end_time - start_time) / 1024 / 1024 * loop * 1000);
 	    debug(DEBUG_TIME, 
@@ -395,16 +395,16 @@ int main(int argc, char** argv)
     recv_proc = atoi(argv[2]);
     root_proc = atoi(argv[3]);
 
-    set_debug_mask(DEBUG_TIME);
-    //set_debug_mask(DEBUG_TIME | DEBUG_USER);
+    //set_debug_mask(DEBUG_TIME);
+    set_debug_mask(DEBUG_TIME | DEBUG_USER);
     if(rank == 0)
     {
 	mkdir(dir, 0700);
     }
 
-    sync_test(dir, send_proc, recv_proc);
-    async_test(dir, send_proc ,recv_proc);
-    remote_test(dir, send_proc, recv_proc);
+    //sync_test(dir, send_proc, recv_proc);
+    //async_test(dir, send_proc ,recv_proc);
+    //remote_test(dir, send_proc, recv_proc);
     spawn_sync_test(dir, root_proc);
     spawn_async_test(dir, root_proc);
 

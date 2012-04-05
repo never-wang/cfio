@@ -17,16 +17,21 @@
 #include <stdio.h>
 #include "error.h"
 #include "debug.h"
+#include "times.h"
 
 int iofw_send_msg(
 	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
 {
     int tag = src_proc_id;
 
+	//times_start();
+
     debug(DEBUG_MSG, "send: src=%d; dst=%d; comm = %d; size = %d", 
 	    src_proc_id, dst_proc_id, comm, buf->processed);
     MPI_Send(buf->head, buf->processed, MPI_BYTE, dst_proc_id, tag, comm);
     
+	//debug(DEBUG_TIME, "%f", times_end());
+
     return 0;
 }
 
@@ -36,15 +41,17 @@ int iofw_isend_msg(
     int tag = src_proc_id;
     MPI_Request request;
     MPI_Status status;
-    
-    debug(DEBUG_MSG, "issend: src=%d; dst=%d; comm = %d; size = %d", 
+ 
+	//times_start();
+
+    debug(DEBUG_MSG, "isend: src=%d; dst=%d; comm = %d; size = %d", 
 	    src_proc_id, dst_proc_id, comm, buf->processed);
 
-    MPI_Issend(buf->head, buf->processed, MPI_BYTE, 
+    MPI_Isend(buf->head, buf->processed, MPI_BYTE, 
 	    dst_proc_id, tag, comm, &request);
 
-    //MPI_Wait(&request, &status);
-    
+    //debug(DEBUG_TIME, "%f ms", times_end());
+
     return 0;
 }
 
@@ -153,7 +160,11 @@ int iofw_pack_msg_put_vara_float(
     size_t data_len;
     uint32_t code = FUNC_NC_PUT_VARA_FLOAT;
     float *ffp;
-    
+ 
+	double start_time, end_time;
+
+	//times_start();
+
     debug(DEBUG_MSG, "pack_msg_put_vara_float");
     for(i = 0; i < dim; i ++)
     {
@@ -180,9 +191,7 @@ int iofw_pack_msg_put_vara_float(
 
     packdata_array(fp, data_len, sizeof(float), buf);
 
-    buf->processed -= data_len * sizeof(float);
-    buf->processed -= sizeof(int);
-    unpackdata_array(&ffp, &data_len, sizeof(float), buf);
+	//debug(DEBUG_TIME, "%f ms", times_end());
 
     return 0;
 }
@@ -193,8 +202,12 @@ int iofw_pack_msg_close(
 {
     uint32_t code = FUNC_NC_CLOSE;
     
+	//times_start();
+
     packdata(&code, sizeof(uint32_t), buf);
     packdata(&ncid, sizeof(int), buf);
+
+	//debug(DEBUG_TIME, "%f", times_end());
 
     return 0;
 }
