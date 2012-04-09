@@ -304,34 +304,44 @@ int main(int argc, char** argv)
     char *prefix = "output/";
 
     MPI_Init(&argc, &argv);
+    
+    times_init();
+
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
     //set_debug_mask(DEBUG_TIME | DEBUG_USER);
     set_debug_mask(DEBUG_TIME);
 
-	file = fopen(file_name, "w");
-	fprintf(file, "loop, create, write, close\n");
+    file = fopen(file_name, "w");
+    fprintf(file, "loop, create, write, close\n");
+
+    times_start();
 
     for(i = 0; i < cycle; i ++)
     {
 	if(0 == rank)
 	{
 	    debug(DEBUG_TIME, "loop %d :", i);
-		fprintf(file, "%d, ", i);
+	    fprintf(file, "%d, ", i);
 	}
 	start_time = times_cur();
 	sleep(1);
 	end_time = times_cur();
 	debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
-	    rank, end_time - start_time);
+		rank, end_time - start_time);
 	write_hist_data(idate, prefix);
-	MPI_Barrier(comm);
+	//MPI_Barrier(comm);
 	idate[1] ++;
     }
 
-	fclose(file);
+    fclose(file);
+
+
     MPI_Finalize();
+
+    debug(DEBUG_TIME, "total time : %f ms", times_end());
+    times_final();
 
     return 0;
 }

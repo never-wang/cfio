@@ -15,6 +15,16 @@
 #ifndef _MAP_H
 #define _MAP_H
 /**
+ * @brief: iofw map variable init, only be called in iofw_init and 
+ *	iofw_server's main function
+ *
+ * @param init_app_proc_num: init value of app_proc_num
+ * @param init_server_proc_num: init value of server_proc_num
+ *
+ * @return: 0
+ */
+int iofw_map_init(int init_app_proc_num, int init_server_proc_num);
+/**
  * @brief: map from IO proc to IO Forwarding Proc
  *
  * @param io_proc_id: the id of IO Proc
@@ -27,7 +37,7 @@ int iofw_map_forwarding_proc(
 /**
  * @brief iofw_map_client_num 
  *
- * @param rank: the runk of the server
+ * @param rank: the rank of the server
  * @param clien_num: return of the number of client assigned to this server
  *
  * @return : < 0 for error, 0 for succss

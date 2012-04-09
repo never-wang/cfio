@@ -303,7 +303,7 @@ int main(int argc, char** argv)
 {
     int idate[3] = {1990, 1, 1};
     int i;
-    int cycle = 5;
+    int cycle = 1;
     char *prefix = "output/";
     int is_server;
 
@@ -312,35 +312,42 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //set_debug_mask(DEBUG_MSG | DEBUG_IOFW | DEBUG_USER);
-    set_debug_mask(DEBUG_TIME);
+    //set_debug_mask(DEBUG_TIME);
 
-    iofw_init(size);
-	times_init();
+    iofw_init(size / 2 > 0 ? size /2 : 1);
+    times_init();
 
-	file = fopen(file_name, "w");
-	fprintf(file, "loop, create, write, close\n");
+    file = fopen(file_name, "w");
+    fprintf(file, "loop, create, write, close\n");
+
+    times_start();
 
     for(i = 0; i < cycle; i ++)
     {
 	if(0 == rank)
 	{
 	    debug(DEBUG_TIME, "loop %d :", i);
-		fprintf(file, "%d, ", i);
+	    fprintf(file, "%d, ", i);
 	}
 	start_time = times_cur();
-	sleep(1);
+	//sleep(1);
 	end_time = times_cur();
-	debug(DEBUG_TIME, "Porc %03d : sleep time : %f", 
+	debug(DEBUG_TIME, "Proc %03d : sleep time : %f", 
 		rank, end_time - start_time);
 	write_hist_data(idate, prefix);
 	//MPI_Barrier(comm);
 	idate[1] ++;
     }
 
-	times_final();
+    times_start();
     iofw_finalize();
-	
+    debug(DEBUG_TIME, "Proc %03d : iofw_finalize time : %f ms", 
+	    rank, times_end());
+
     MPI_Finalize();
+    
+    debug(DEBUG_TIME, "Proc %03d : total time : %f ms", rank, times_end());  
+    times_final();
 
     return 0;
 }

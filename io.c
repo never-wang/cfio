@@ -18,80 +18,23 @@
  */
 #include <netcdf.h>
 
+#include "io.h"
 #include "msg.h"
-#include "unmap.h"
 #include "pack.h"
 #include "pomme_queue.h"
 #include "pomme_buffer.h"
 #include "debug.h"
+#include "mpi.h"
 
-int done = 0;
+static MPI_Comm inter_comm;
 
-int client_to_serve;
-
-extern MPI_Comm inter_comm;
-
-static int client_served = 0;
-
-static int iofw_do_nc_create(int source, int tag, int my_rank,Buf buf); 
-static int iofw_do_nc_end_def(int, int ,int, Buf);
-
-static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf);
-static int iofw_do_nc_def_var(int src, int tag, int my_rank,Buf buf);
-
-static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf);
-static inline int iofw_client_done(int client_rank);
-
-static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf);
-static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
-	iofw_buf_t *buf);
-
-int unmap(int source, int tag ,int my_rank,void *buffer,int size)
-{	
-    int ret = 0;
-    Buf buf = create_buf(buffer, size);
-    if( buf == NULL )
-    {
-	error("create buf failure");
-	return -1;
-    }
-    int code = iofw_unpack_msg_func_code(buf);
-    switch(code)
-    {
-	case FUNC_NC_CREATE: 
-	    iofw_do_nc_create(source, tag, my_rank, buf);
-	    debug(DEBUG_UNMAP, "server %d done nc_create for client %d\n",my_rank,source);
-	    break;
-	case FUNC_NC_ENDDEF:
-	    iofw_do_nc_end_def(source, tag, my_rank, buf);
-	    debug(DEBUG_UNMAP, "server %d done nc_end_def for client %d\n",my_rank,source);
-	    break;
-	case FUNC_NC_DEF_DIM:
-	    iofw_do_nc_def_dim(source, tag, my_rank, buf);
-	    debug(DEBUG_UNMAP, "server %d done nc_def_dim for client %d\n",my_rank,source);
-	    break;
-	case FUNC_NC_DEF_VAR:
-	    iofw_do_nc_def_var(source, tag, my_rank, buf);
-	    debug(DEBUG_UNMAP, "server %d done nc_def_var for client %d\n",my_rank,source);
-	    break;
-	case FUNC_NC_PUT_VAR1_FLOAT:
-	    break;
-	case CLIENT_END_IO:
-	    iofw_client_done(source);
-	    debug(DEBUG_UNMAP, "server %d done client_end_io for client %d\n",my_rank,source);
-	    break;
-	case FUNC_NC_CLOSE:
-	   debug(DEBUG_UNMAP,"received close");	
-	default:
-	    ret = ENQUEUE_MSG;
-	//    debug(DEBUG_UNMAP, "server %d recv ENQUEUE_MSG from client\n",my_rank,source);
-	    break;
-    }	
-    free(buf);
-    return ret;
+int iofw_io_init(MPI_Comm init_inter_comm)
+{
+    inter_comm = init_inter_comm;
+    return 0;
 }
 
-int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
+int iofw_io_dequeue(int source, int my_rank, io_op_t *op)
 {
     int ret = 0;
 
@@ -108,18 +51,13 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
     switch(code)
     {
 	case FUNC_NC_PUT_VARA_FLOAT:
-	   // d_buf = create_buf(op->body, op->body_len);
 
-//	    ret = iofw_do_nc_put_vara_float(source, tag,
-//		    my_rank, h_buf, d_buf);
-
-	    ret = iofw_do_nc_put_vara_float(source, tag,
-		    my_rank, h_buf);
-		debug(DEBUG_UNMAP,"put vara");
+	    ret = iofw_io_nc_put_vara_float(source, my_rank, h_buf);
+		//debug(DEBUG_UNMAP,"put vara");
 	    break;
 	case FUNC_NC_CLOSE:
-	    ret = iofw_do_nc_close( source, tag, my_rank, h_buf); 
-		debug(DEBUG_UNMAP,"nc close");
+	    ret = iofw_io_nc_close( source, my_rank, h_buf); 
+		//debug(DEBUG_UNMAP,"nc close");
 	    break;
 
 	default:
@@ -129,39 +67,25 @@ int iofw_do_io(int source,int tag, int my_rank, io_op_t *op)
     }
     free(h_buf);
     return ret;
-
 }
 
-
-/**
- * @brief iofw_client_done : report the finish of
- * 			     client
- * @param client_rank
- *
- * @return 
- */
-static inline int iofw_client_done(int client_rank)
+int iofw_io_client_done(int *client_done, int *server_done,
+	int client_to_serve)
 {
-    client_served++;
+    
+    (*client_done)++;
 
-    debug(DEBUG_UNMAP, "client_served = %d; client_to_serve = %d", 
-	    client_served, client_to_serve);
-    if( client_served == client_to_serve)
+    debug(DEBUG_UNMAP, "client_done = %d; client_to_serve = %d", 
+	    *client_done, client_to_serve);
+    if((*client_done) == client_to_serve)
     {
-	done = 1;
+	*server_done = 1;
     }
 
     return 0;	
 }
-/*
- * @brief: do the real nc create, 
- * @param source : where the msg is from
- * @param tag: the tag of the msg , unused
- * @param my_rank: self rank
- * @Buf buf: pack bufer
- */
-static int iofw_do_nc_create(int source, int tag, 
-	int my_rank, Buf buf)
+
+int iofw_io_nc_create(int source, int my_rank, iofw_buf_t * buf)
 {
     int ret, cmode;
     char *path;
@@ -190,13 +114,7 @@ ack:
     debug_mark(DEBUG_UNMAP);
     return 0;
 }
-/*@brief: nc define dim 
- *@param source: where the msg is from 
- *@param tag: the tag of the msg
- *@param my_rank: self rank
- *@param buf: msg content 
- * */
-static int iofw_do_nc_def_dim(int source, int tag, int my_rank,Buf buf)
+int iofw_io_nc_def_dim(int source, int my_rank,iofw_buf_t * buf)
 {
     int ret = 0;
     int ncid,dimid;
@@ -228,17 +146,7 @@ ack:
     return 0;
 }
 
-/**
- * @brief iofw_nc_def_var : define a varible in an ncfile
- *
- * @param src: the rank of the client
- * @param tag: the tag of the msg
- * @param my_rank: self rank
- * @param buf: data content
- *
- * @return : o for success ,< for error
- */
-static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
+int iofw_io_nc_def_var(int src, int my_rank, iofw_buf_t * buf)
 {
     int ret = 0;
     int ncid, ndims;
@@ -270,18 +178,7 @@ static int iofw_do_nc_def_var(int src, int tag, int my_rank, Buf buf)
 
     return 0;
 }
-
-/**
- * @brief iofw_do_nc_end_def 
- *
- * @param src
- * @param tag
- * @param my_rank
- * @param buf
- *
- * @return 
- */
-static int iofw_do_nc_end_def( int src, int tag, int my_rank, iofw_buf_t *buf)
+int iofw_io_nc_end_def(int src, int my_rank, iofw_buf_t *buf)
 {
     int ncid, ret ;
     ret = iofw_unpack_msg_enddef(buf, &ncid);
@@ -297,26 +194,13 @@ static int iofw_do_nc_end_def( int src, int tag, int my_rank, iofw_buf_t *buf)
     }
     return ret;
 }
-
-/**
- * @brief iofw_nc_put_vara_float : write an array to an varible
- *
- * @param src: where the msg com from 
- * @param tag: the tag of the msg
- * @param my_rank: the rank of the server
- * @param h_buf: the buf head to header  
- * @param d_buf: the buf to the data
- *
- * @return 
- */
-static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank, 
-	iofw_buf_t *h_buf)
+int iofw_io_nc_put_vara_float(int src, int my_rank, iofw_buf_t *h_buf)
 {
     int i,ret = 0,ncid, varid, dim;
     size_t *start, *count;
     size_t data_size;
     float *data;
-    uint32_t data_len;
+    int data_len;
 
 //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
     ret = iofw_unpack_msg_put_vara_float(h_buf, 
@@ -345,16 +229,15 @@ static int iofw_do_nc_put_vara_float(int src, int tag, int my_rank,
 
 }
 /**
- * @brief iofw_do_nc_close 
+ * @brief iofw_io_nc_close 
  *
  * @param src
- * @param tag
  * @param my_rank
  * @param buf
  *
  * @return 
  */
-static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
+int iofw_io_nc_close(int src, int my_rank,iofw_buf_t * buf)
 {
 
     int ncid, ret;
@@ -380,13 +263,12 @@ static int iofw_do_nc_close(int src, int tag, int my_rank,Buf buf)
  * @brief iofw_nc_put_var1_float : 
  *
  * @param src: the rank of the client
- * @param tag: the tag of the msg
  * @param my_rank: 
  * @param buf
  *
  * @return 
  */
-static int iofw_do_nc_put_var1_float(int src, int tag, int my_rank,Buf buf)
+int iofw_io_nc_put_var1_float(int src, int my_rank,iofw_buf_t * buf)
 {
     return 0;	
 }

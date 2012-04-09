@@ -13,8 +13,17 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include "map.h"
-extern int app_proc_num;
-extern int server_proc_num;
+#include "debug.h"
+
+int app_proc_num;
+int server_proc_num;
+
+int iofw_map_init(int init_app_proc_num, int init_server_proc_num)
+{
+    app_proc_num = init_app_proc_num;
+    server_proc_num = init_server_proc_num;
+    return 0;
+}
 /**
  * @brief: map from IO proc to IO Forwarding Proc
  *
@@ -26,8 +35,10 @@ extern int server_proc_num;
 int iofw_map_forwarding_proc(
 	int io_proc_id, int *forwarding_proc_id)
 {
-    *forwarding_proc_id =  io_proc_id;
+    *forwarding_proc_id =  io_proc_id * server_proc_num / app_proc_num;
 
+    debug(DEBUG_MAP, "io_proc : %d; server_proc : %d", io_proc_id, 
+	    *forwarding_proc_id);
     return 0;
 }
 /**
@@ -42,7 +53,9 @@ int iofw_map_client_num(
 	int rank, int *client_num)
 {
     *client_num = app_proc_num / server_proc_num;
-    if( rank <= app_proc_num%server_proc_num )
+    debug(DEBUG_USER, "app = %d; server = %d", 
+	    app_proc_num, server_proc_num);
+    if( rank <= app_proc_num % server_proc_num )
     {
 	*client_num++;
     }

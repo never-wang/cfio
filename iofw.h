@@ -23,7 +23,6 @@
 
 #include "pomme_buffer.h"
 #include "pomme_queue.h"
-#include "unmap.h"
 #include "pack.h"
 #include "mpi.h"
 

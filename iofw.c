@@ -19,7 +19,6 @@
 #include <pthread.h>
 
 #include "iofw.h"
-#include "unmap.h"
 #include "map.h"
 #include "pomme_buffer.h"
 #include "pomme_queue.h"
@@ -33,8 +32,6 @@
 static pthread_t writer;
 /* the thread listen to the mpi message and put data into buffer */
 static pthread_t reader;
-/* global head queue */
-ioop_queue_t server_queue;
 /* my real rank in mpi_comm_world */
 static int rank = -1;
 /*  the number of the app proc*/
@@ -51,6 +48,8 @@ int iofw_init(int iofw_servers)
     int root = 0;
     int error, ret;
 
+    char **argv;
+
     rc = MPI_Initialized(&i); 
     if( !i )
     {
@@ -63,8 +62,17 @@ int iofw_init(int iofw_servers)
 
     /* now with "./", TODO delete */
     debug(DEBUG_IOFW, "server_proc_num = %d", server_proc_num);
-    ret = MPI_Comm_spawn("./iofw_server", NULL, server_proc_num, MPI_INFO_NULL, 
+    
+    iofw_map_init(app_proc_num, server_proc_num);
+
+    argv = malloc(2 * sizeof(char*));
+    argv[0] = malloc(128);
+    sprintf(argv[0], "%d", app_proc_num);
+    argv[1] = NULL;
+    ret = MPI_Comm_spawn("./iofw_server", argv, server_proc_num, MPI_INFO_NULL, 
 	    root, MPI_COMM_WORLD, &inter_comm, &error);
+    free(argv[0]);
+    free(argv);
     if(ret != MPI_SUCCESS)
     {
 	error("Spwan iofw server fail.");
@@ -254,7 +262,7 @@ static int _nc_put_vara_float(
 {
     size_t *cur_start, *cur_count;
     int div, left_dim;
-    float *cur_fp;
+    const float *cur_fp;
     size_t desc_data_size, div_data_size;
     iofw_buf_t *buf;
     int i;
@@ -284,7 +292,7 @@ static int _nc_put_vara_float(
 	div_data_size -= desc_data_size;
 	div --;
     }
-    debug(DEBUG_IOFW, "desc_data_size = %d, div_data_size = %d, div = %d",
+    debug(DEBUG_IOFW, "desc_data_size = %lu, div_data_size = %lu, div = %d",
 	    desc_data_size, div_data_size, div);
 
     if(0 == div_data_size)
