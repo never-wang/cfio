@@ -17,59 +17,7 @@
 #include "debug.h"
 #include "buffer.h"
 
-/**
- * @brief: increase a buffer's used_addr or free_addr
- *
- * @param buf_p: pointer to the buffer
- * @param addr: pointer to the addr which is to be increased
- * @param size: the size to increase
- */
-static void inc_buf_addr(iofw_buf_t *buf_p, char **addr, size_t size)
-{
-    (*addr) += size;
-    if((*addr) >= (((char *)buf_p->start_addr) + buf_p->size))
-    {
-	(*addr) -= buf_p->size;
-    }
-}
-
-/**
- * @brief: get the free space size in a buffer
- *
- * @param buf_p: pointer to the buffer
- *
- * @return: free space size of the buffer
- */
-static size_t free_buf_size(iofw_buf_t *buf_p)
-{
-    if(buf_p->free_addr < buf_p->used_addr)
-    {
-	return buf_p->used_addr - buf_p ->free_addr - 1;
-    }else
-    {
-	return buf_p->size + buf_p->used_addr - buf_p->free_addr - 1;
-    }
-}
-
-/**
- * @brief: get the used space size in a buffer
- *
- * @param buf_p: pointer to the buffer
- *
- * @return: used space size of the buffer
- */
-static size_t used_buf_size(iofw_buf_t *buf_p)
-{
-    if(buf_p->free_addr >= buf_p->usd_addr)
-    {
-	return buf_p->free_addr - buf_p->used_addr;
-    }else
-    {
-	return buf_p->size + buf_p->free_addr - buf_p->used_addr;
-    }
-}
-
-iofw_buf_t *iofw_buf_open(size_t size, int *error)
+iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
 {
     iofw_buf_t *buf_p;
     
@@ -85,6 +33,7 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error)
     buf_p->size = size;
     buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
+    buf_p->free = free();
     buf_p->magic2 = IOFW_BUF_MAGIC;
 
     return addr;
@@ -114,10 +63,7 @@ int iofw_buf_pack_data(
 	return -IOFW_BUF_ERROR_OVER;
     }
 
-    if(free_buf_size(buf_p) < size)
-    {
-	return -IOFW_BUF_ERROR_NO_MEM;
-    }
+    ensure_free_space(buf_p, size);
 
     memcpy(buf_p->free_addr, data, size);
     inc_buf_addr(buf, buf->free_addr, size);
@@ -159,10 +105,7 @@ int iofw_buf_pack_data_array(
 	return -IOFW_BUF_ERROR_OVER;
     }
 
-    if(free_buf_size(buf_p) < data_size + sizeof(unsigned int))
-    {
-	return -IOFW_BUF_ERROR_NO_MEM;
-    }
+    ensure_free_space(buf_p, data_size + sizeof(unsigned int));
 
     memcpy(buf_p->free_addr, &len, sizeof(unsigned int));
     memcpy(buf_p->free_addr + sizeof(unsigned int), data, data_size);

@@ -25,6 +25,8 @@
 /* define for control messge */
 #define CLIENT_END_IO 201
 
+#define CLIENT_BUF_SIZE 1024*1024*1024
+
 /**
  *define for nc function code
  **/
@@ -36,17 +38,37 @@
 #define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)
 #define FUNC_NC_PUT_VARA_FLOAT ((uint32_t)110)
 
+#define IOFW_MSG_ERROR_NONE	1
+#define IOFW_MSG_ERROR_BUFFER	2   /* buffer error */
+
 typedef struct
 {
     size_t size;	/* size of the msg */
     void *addr;		/* pointer to the data buffer of the msg */   
     int src;		/* id of sending msg proc */
     int dst;		/* id of dst porc */  
+    MPI_Request req	/* MPI request of the send msg */
     qlist_head link;	/* quicklist head */
 }iofw_msg_t;
 
+static inline iofw_msg_t *create_msg(int client_proc_id)
+{
+    iofw_msg_t *msg;
+    msg = malloc(sizeof(iofw_msg_t));
+    if(NULL == msg)
+    {
+	return NULL;
+    }
+    msg->addr = buffer->free_addr;
+    msg->size = 0;
+    msg->src = client_proc_id;
+
+    return msg;
+}
+
 int iofw_msg_init();
 int ifow_msg_final();
+int ifow_msg_buf_free();
 /**
  * @brief: send msg to othre proc by mpi
  *

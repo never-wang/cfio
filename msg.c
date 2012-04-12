@@ -20,11 +20,19 @@
 #include "times.h"
 
 static iofw_msg_t *msg_head;
+iofw_buf_t *buffer;
 
 int iofw_msg_init()
 {
     msg_head = malloc(sizeof(iofw_msg_t));
     INIT_QLIST_HEAD(msg_head);
+
+    buffer = iofw_buf_open(CLIENT_BUF_SIZE, iofw_msg_buf_free, NULL);
+
+    if(NULL == buffer)
+    {
+	return IOFW_MSG_ERROR_BUFFER;
+    }
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -41,24 +49,26 @@ int ifow_msg_final()
     return IOFW_MSG_ERROR_NONE;
 }
 
-int iofw_send_msg(
-	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
+int ifow_msg_buf_free()
 {
-    int tag = src_proc_id;
-
-	//times_start();
-
-    debug(DEBUG_MSG, "send: src=%d; dst=%d; comm = %d; size = %d", 
-	    src_proc_id, dst_proc_id, comm, buf->processed);
-    MPI_Send(buf->head, buf->processed, MPI_BYTE, dst_proc_id, tag, comm);
-    
-	//debug(DEBUG_TIME, "%f", times_end());
-
-    return 0;
+    iofw_msg_t *msg; *next;
+    qlist_for_each_entry_safe(msg, next, msg_head->link, link)
+    {
+	if(MPI_test(&msg->req, NULL))
+	{
+	    assert(msg->addr == buffer->used_addr);
+	    inc_buf_addr(buffrer, &(buffer->used_addr), msg->size);
+	    qlist_del(&(msg->link));
+	    free(msg);
+	}else
+	{
+	    break;
+	}
+    }
 }
 
 int iofw_isend_msg(
-	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
+	iofw_msg_t *msg, MPI_Comm comm)
 {
     int tag = src_proc_id;
     MPI_Request request;
@@ -72,38 +82,29 @@ int iofw_isend_msg(
     MPI_Isend(buf->head, buf->processed, MPI_BYTE, 
 	    dst_proc_id, tag, comm, &request);
 
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+
     //debug(DEBUG_TIME, "%f ms", times_end());
 
     return 0;
 }
 
-int iofw_send_int1(int dst_proc_id, int src_proc_id, int data, MPI_Comm comm)
-{
-    debug(DEBUG_MSG, "send: src=%d; dst=%d; comm = %d", 
-	    src_proc_id, dst_proc_id, comm);
-    
-    MPI_Send(&data, 1 , MPI_INT, dst_proc_id, src_proc_id, comm);
-    return 0;	
-}
-
-int iofw_recv_int1(int src_proc_id, int *data, MPI_Comm comm)
-{
-    MPI_Status status;
-
-    MPI_Recv(data, 1, MPI_INT, src_proc_id, src_proc_id, comm, &status);
-
-    return 0;
-}
-
-int iofw_pack_msg_create(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_create(
+	iofw_msg_t **_msg, int client_proc_id, 
 	const char *path, int cmode)
 {
     uint32_t code = FUNC_NC_CREATE;
+    iofw_msg_t *msg;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buf);
-    packstr(path, buf);
-    packdata(&cmode, sizeof(int), buf);
+    msg = create_msg(client_proc_id);
+
+    iofw_buf_pack_data(&code, sizeof(uint32_t), &(msg->size), buffer);
+    iofw_buf_pack_data_array(path, strlen(path), sizeof(char), 
+	    &(msg->size), buffer);
+    iofw_buf_pack_data(&cmode, sizeof(int), &(msg->size), buffer);
+
+    iofw_map_forward_proc(msg->src, &(msg->dst));
+    *_msg = msg;
 
     return 0;
 }
@@ -112,17 +113,23 @@ int iofw_pack_msg_create(
  *pack msg function
  **/
 int iofw_pack_msg_def_dim(
-	iofw_buf_t *buf,
+	iofw_msg_t **_msg,
 	int ncid, const char *name, size_t len)
 {
     uint32_t code = FUNC_NC_DEF_DIM;
+    iofw_msg_t *msg;
 
-    packdata(&code, sizeof(uint32_t), buf);
-    packdata(&ncid, sizeof(int), buf);
-    packstr(name, buf);
+    msg = create_msg(client_proc_id);
+
+    iofw_buf_pack_data(&code, sizeof(uint32_t), &(msg->size), buffer);
+    iofw_buf_pack_data(&ncid, sizeof(int), &(msg->size), buffer);
+    iofw_buf_pack_data_array(name, strlen(name), sizeof(char), 
+	    &(msg->size), buffer);
+    iofw_buf_pack_data(&len, sizeof(size_t), &(msg->size), buffer);
+
+    iofw_map_forward_proc(msg->src, &(msg->dst));
+    *_msg = msg;
     
-    packdata(&len, sizeof(size_t), buf);
-
     return 0;
 }
 
@@ -132,6 +139,9 @@ int iofw_pack_msg_def_var(
 	int ndims, const int *dimids)
 {
     uint32_t code = FUNC_NC_DEF_VAR;
+    iofw_msg_t *msg;
+
+    msg = create_msg(client_proc_id);
     
     packdata(&code , sizeof(uint32_t), buf);
     packdata(&ncid, sizeof(int), buf);

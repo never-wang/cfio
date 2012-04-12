@@ -79,6 +79,11 @@ int iofw_init(int iofw_servers)
 	return -1;
     }
 
+    if(iofw_msg_init() < 0)
+    {
+	return -1;
+    }
+
     return 0;
 }
     
@@ -93,6 +98,7 @@ int iofw_finalize()
     if(flag)
     {
 	error("***You should not call MPI_Finalize before iofw_Finalized*****\n");
+	return -1;
     }
     
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -106,6 +112,9 @@ int iofw_finalize()
     debug(DEBUG_IOFW, "Finish iofw_finalize");
 
     free_buf(buf);
+    
+    iofw_msg_final();
+
     return 0;
 }
 
@@ -126,19 +135,11 @@ int iofw_nc_create(
     assert(path != NULL);
     assert(ncidp != NULL);
 
-    iofw_buf_t *buf;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_create(buf, path, cmode);
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    iofw_msg_pack_nc_create(msg, path, cmode);
+    iofw_msg_isend(msg, inter_comm);
 
-    debug_mark(DEBUG_IOFW);
-    iofw_recv_int1(dst_proc_id, ncidp, inter_comm);
-    debug_mark(DEBUG_IOFW);
-
-    free_buf(buf);
     return 0;
 }
 /**
@@ -159,18 +160,11 @@ int iofw_nc_def_dim(
     assert(name != NULL);
     assert(idp != NULL);
 
-    iofw_buf_t *buf;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_def_dim(buf, ncid, name, len);
+    iofw_msg_pack_nc_def_dim(msg, ncid, name, len);
+    iofw_msg_isend(msg, inter_comm);
 
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-
-    iofw_recv_int1(dst_proc_id, idp, inter_comm);
-
-    free_buf(buf);
     return 0;
 }
 /**
