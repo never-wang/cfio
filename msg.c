@@ -19,6 +19,28 @@
 #include "debug.h"
 #include "times.h"
 
+static iofw_msg_t *msg_head;
+
+int iofw_msg_init()
+{
+    msg_head = malloc(sizeof(iofw_msg_t));
+    INIT_QLIST_HEAD(msg_head);
+
+    return IOFW_MSG_ERROR_NONE;
+}
+
+int ifow_msg_final()
+{
+    iofw_msg_t *msg, *next;
+    qlist_for_each_entry_safe(msg, next, msg_head->link, link)
+    {
+	free(msg);
+    }
+    free(msg_head);
+
+    return IOFW_MSG_ERROR_NONE;
+}
+
 int iofw_send_msg(
 	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm)
 {
@@ -79,7 +101,7 @@ int iofw_pack_msg_create(
 {
     uint32_t code = FUNC_NC_CREATE;
 
-    packdata(&code, sizeof(uint32_t), buf);
+    iofw_buf_pack_data(&code, sizeof(uint32_t), buf);
     packstr(path, buf);
     packdata(&cmode, sizeof(int), buf);
 

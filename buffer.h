@@ -37,7 +37,7 @@ typedef struct
     void *free_addr;	/* start address of free buffer */
     void *used_addr;	/* start address of used buffer */
     uint16_t magic2;	/* upper magic of the buffer */
-}iofw_buf_t
+}iofw_buf_t;
 
 /**
  * @brief: create a new buffer , and init

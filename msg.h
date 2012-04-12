@@ -19,6 +19,7 @@
 #include "mpi.h"
 #include "netcdf.h"
 #include "pack.h"
+#include "quicklist.h"
 
 #define MSG_MAX_SIZE 1048576
 /* define for control messge */
@@ -35,6 +36,17 @@
 #define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)
 #define FUNC_NC_PUT_VARA_FLOAT ((uint32_t)110)
 
+typedef struct
+{
+    size_t size;	/* size of the msg */
+    void *addr;		/* pointer to the data buffer of the msg */   
+    int src;		/* id of sending msg proc */
+    int dst;		/* id of dst porc */  
+    qlist_head link;	/* quicklist head */
+}iofw_msg_t;
+
+int iofw_msg_init();
+int ifow_msg_final();
 /**
  * @brief: send msg to othre proc by mpi
  *
