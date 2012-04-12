@@ -28,10 +28,6 @@
 #include "debug.h"
 #include "times.h"
 
-/* the thread read the buffer and write to the real io node */
-static pthread_t writer;
-/* the thread listen to the mpi message and put data into buffer */
-static pthread_t reader;
 /* my real rank in mpi_comm_world */
 static int rank = -1;
 /*  the number of the app proc*/
@@ -58,6 +54,7 @@ int iofw_init(int iofw_servers)
     }
 
     MPI_Comm_size(MPI_COMM_WORLD, &app_proc_num);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
     server_proc_num = iofw_servers;
 
     /* now with "./", TODO delete */
@@ -90,9 +87,7 @@ int iofw_init(int iofw_servers)
 int iofw_finalize()
 {
     int ret,flag;
-    iofw_buf_t *buf;
-    int dst_proc_id, rank;
-
+    iofw_msg_t *msg;
 
     ret = MPI_Finalized(&flag);
     if(flag)
@@ -100,19 +95,12 @@ int iofw_finalize()
 	error("***You should not call MPI_Finalize before iofw_Finalized*****\n");
 	return -1;
     }
-    
-    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_io_stop(buf);
-
-    iofw_map_forwarding_proc(rank, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, rank, buf, inter_comm);
+    iofw_msg_pack_io_done(&msg, rank);
+    iofw_msg_isend(msg, inter_comm);
     
     debug(DEBUG_IOFW, "Finish iofw_finalize");
 
-    free_buf(buf);
-    
     iofw_msg_final();
 
     return 0;
@@ -129,7 +117,6 @@ int iofw_finalize()
  * @return: 0 if success
  */
 int iofw_nc_create(
-	int io_proc_id,
 	const char *path, int cmode, int *ncidp)
 {
     assert(path != NULL);
@@ -137,7 +124,7 @@ int iofw_nc_create(
 
     iofw_msg_t *msg;
 
-    iofw_msg_pack_nc_create(msg, path, cmode);
+    iofw_msg_pack_nc_create(&msg, rank, path, cmode);
     iofw_msg_isend(msg, inter_comm);
 
     return 0;
@@ -162,7 +149,7 @@ int iofw_nc_def_dim(
 
     iofw_msg_t *msg;
 
-    iofw_msg_pack_nc_def_dim(msg, ncid, name, len);
+    iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len);
     iofw_msg_isend(msg, inter_comm);
 
     return 0;
@@ -186,22 +173,15 @@ int iofw_nc_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, int *varidp)
 {
-    debug_mark(DEBUG_IOFW);
     assert(name != NULL);
     assert(varidp != NULL);
 
-    iofw_buf_t *buf;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_def_var(buf, ncid, name, xtype, ndims, dimids);
-
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-
-    iofw_recv_int1(dst_proc_id, varidp, inter_comm);
-
-    free_buf(buf);
+    iofw_msg_pack_nc_def_var(&msg, rank, 
+	    ncid, name, xtype, ndims, dimids);
+    iofw_msg_isend(msg, inter_comm);
+    
     return 0;
 }
 
@@ -217,16 +197,11 @@ int iofw_nc_enddef(
 	int io_proc_id,
 	int ncid)
 {
-    iofw_buf_t *buf;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_enddef(buf, ncid);
+    iofw_msg_pack_nc_enddef(&msg, rank, ncid);
+    iofw_msg_isend(msg, inter_comm);
 
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-
-    free_buf(buf);
     return 0;
 }
 
@@ -235,15 +210,11 @@ int iofw_nc_put_var1_float(
 	int ncid, int varid, int dim,  
 	const size_t *index, const float *fp)
 {
-    iofw_buf_t *buf;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_put_var1_float(buf, ncid, varid, dim, index, fp);
-
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-    //iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    iofw_msg_pack_nc_put_var1_float(&msg, rank, 
+	    ncid, varid, dim, index, fp);
+    iofw_msg_isend(msg, inter_comm);
 
     free_buf(buf);
     return 0;
@@ -258,15 +229,14 @@ static int _nc_put_vara_float(
     int div, left_dim;
     const float *cur_fp;
     size_t desc_data_size, div_data_size;
-    iofw_buf_t *buf;
     int i;
-    int dst_proc_id;
+    iofw_msg_t *msg;
 
-   	//times_start();
+    //times_start();
 
-	debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
+    debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
 
-	cur_start = malloc(dim * sizeof(size_t));
+    cur_start = malloc(dim * sizeof(size_t));
     cur_count = malloc(dim *sizeof(size_t));
     memcpy(cur_start, start, dim * sizeof(size_t));
     memcpy(cur_count, count, dim * sizeof(size_t));
@@ -308,23 +278,18 @@ static int _nc_put_vara_float(
 	left_dim = count[div_dim];
 	for(i = 0; i < count[div_dim]; i += div)
 	{
-	    buf = init_buf(BUF_SIZE);
-	    iofw_pack_msg_put_vara_float(buf, ncid, varid, dim, 
+	    iofw_msg_pack_nc_put_vara_float(&msg, rank, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
-	    int len;
 	    debug_mark(DEBUG_IOFW);
-	    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-	    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
-	    //iofw_send_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+	    iofw_isend_msg(msg, inter_comm);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
 	    cur_fp += div_data_size / sizeof(float);
-	    //free_buf(buf);
 	}
     }
 
-	//debug(DEBUG_TIME, "%f ms", times_end());
+    //debug(DEBUG_TIME, "%f ms", times_end());
 
     return 0;
 }
@@ -362,22 +327,14 @@ int iofw_nc_close(
 	int io_proc_id,
 	int ncid)
 {
-    iofw_buf_t *buf;
-    int dst_proc_id;
 
-	//times_start();
+    iofw_msg_t *msg;
+    //times_start();
 
-    buf = init_buf(BUF_SIZE);
-    iofw_pack_msg_close(buf, ncid);
-
-    iofw_map_forwarding_proc(io_proc_id, &dst_proc_id);
-    iofw_isend_msg(dst_proc_id, io_proc_id, buf, inter_comm);
+    iofw_msg_pack_nc_close(&msg, rank, ncid);
+    iofw_isend_msg(msg, inter_comm);
 
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
-
-    //free_buf(buf);
-	
-	//debug(DEBUG_TIME, "%f", times_end());
 
     return 0;
 }

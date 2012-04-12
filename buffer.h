@@ -41,7 +41,9 @@ typedef struct
 }iofw_buf_t;
 
 /**
- * @brief: increase a buffer's used_addr or free_addr
+ * @brief: increase a buffer's used_addr or free_addr, increase free_addr
+ *	means more buffer space was used, increase used_addr means some
+ *	buffer space was freed
  *
  * @param buf_p: pointer to the buffer
  * @param addr: pointer to the addr which is to be increased
@@ -160,7 +162,8 @@ int iofw_buf_pack_data_array(
 	const size_t size, iofw_buf_t *buf_p);
 
 /**
- * @brief: unpack an array of data from the buffer
+ * @brief: unpack an array of data from the buffer, the func will malloc
+ *	space for the unpacked data
  *
  * @param data: pointer to the unpacked data array
  * @param len: length of the array
@@ -172,6 +175,30 @@ int iofw_buf_pack_data_array(
 int iofw_buf_unpack_data_array(
 	void **data, unsigned int *len, 
 	const size_t size, iofw_buf_t *buf_p);
+
+/**
+ * @brief: unpack an array of data from the buffer, the unpacked data 
+ *	pointer just point to the address in buffer, no memcpy happen
+ *
+ * @param data: pointer to the unpacked data array
+ * @param len: length of the array
+ * @param size: size of one data
+ * @param buf_p: pointer to the buffer
+ *
+ * @return: error code
+ */
+int iofw_buf_unpack_data_array_ptr(
+	void **data, unsigned int *len,
+	const size_t size, iofw_buf_t *buf_p);
+
+#define iofw_buf_pack_str(str, buf) do{ \
+    assert(NULL != (str)); \
+    iofw_buf_pack_data_array((str), strlen(str) + 1, sizeof(char), buf); \
+    } while(0) 
+#define iofw_buf_unpack_str(str, buf) \
+    iofw_buf_unpack_data_array(str, NULL, sizeof(char), buf); 
+#define iofw_buf_unpack_str_ptr(str, buf) \
+    iofw_buf_unpack_data_array_ptr(str, NULL, sizeof(char), buf);
 
 #endif
 

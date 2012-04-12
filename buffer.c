@@ -113,15 +113,16 @@ int iofw_buf_pack_data_array(
 
     return IOFW_BUF_ERROR_NONE;
 }
+
 int iofw_buf_unpack_data_array(
 	void **data, unsigned int *len, 
 	const size_t size, iofw_buf_t *buf_p)
 {
-    size_t data_size;
-    
     assert(NULL == data);
     assert(NULL == buf_p);
 
+    size_t data_size;
+    
     if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
     {
 	return -IOFW_BUF_ERROR_OVER;
@@ -132,7 +133,10 @@ int iofw_buf_unpack_data_array(
 	return -IOFW_BUF_ERROR_NO_DATA;
     }
 
-    memcpy(len, buf_p->used_addr, sizeof(unsigned int));
+    if(NULL != len)
+    {
+	memcpy(len, buf_p->used_addr, sizeof(unsigned int));
+    }
     inc_buf_addr(buf_p, buf_p->used_addr, sizeof(unsigned int));
 
     data_size = (*len) * size;
@@ -144,4 +148,38 @@ int iofw_buf_unpack_data_array(
 
     memcpy(*data, buf_p->used_addr, data_size);
     inc_buf_addr(buf_p, buf_p->used_addr, data_size);
+}
+
+int iofw_buf_unpack_data_array_ptr(
+	void **data, unsigned int *len, 
+	const size_t size, iofw_buf_t *buf_p)
+{
+    assert(NULL == data);
+    assert(NULL == buf_p);
+
+    size_t data_size;
+    
+    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
+    {
+	return -IOFW_BUF_ERROR_OVER;
+    }
+
+    if(used_buf_size(buf_p) < sizeof(unsigned int))
+    {
+	return -IOFW_BUF_ERROR_NO_DATA;
+    }
+
+    if(NULL != len)
+    {
+	memcpy(len, buf_p->used_addr, sizeof(unsigned int));
+    }
+    inc_buf_addr(buf_p, buf_p->used_addr, sizeof(unsigned int));
+
+    data_size = (*len) * size;
+    if(used_buf_size(buf_p) < data_size)
+    {
+	return -IOFW_BUF_ERROR_NO_DATA;
+    }
+
+    (*data) = buffer->used_addr;
 }

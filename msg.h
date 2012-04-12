@@ -38,8 +38,8 @@
 #define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)
 #define FUNC_NC_PUT_VARA_FLOAT ((uint32_t)110)
 
-#define IOFW_MSG_ERROR_NONE	1
-#define IOFW_MSG_ERROR_BUFFER	2   /* buffer error */
+#define IOFW_MSG_ERROR_NONE	0
+#define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
 
 typedef struct
 {
@@ -66,211 +66,196 @@ static inline iofw_msg_t *create_msg(int client_proc_id)
     return msg;
 }
 
+/**
+ * @brief: init the buffer and msg queue
+ *
+ * @return: error code
+ */
 int iofw_msg_init();
+/**
+ * @brief: finalize , free the buffer and msg queue
+ *
+ * @return: error code
+ */
 int ifow_msg_final();
+/**
+ * @brief: free unsed space in buffer, it will be registed in 
+ *	iofw_msg_init func, and be called by buffer's func
+ *
+ * @return: error code
+ */
 int ifow_msg_buf_free();
 /**
- * @brief: send msg to othre proc by mpi
+ * @brief: async send msg to other proc by mpi
  *
- * @param dst_proc_id: the destination proc id 
- * @param src_proc_id: the source proc id 
- * @param buf: pointer to the struct buf which store the data of send msg
+ * @param msg: point to the msg which is to be send
  * @param comm: MPI communicator
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_send_msg(
-	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm);
-/**
- * @brief: async send msg to othre proc by mpi
- *
- * @param dst_proc_id: the destination proc id 
- * @param src_proc_id: the source proc id 
- * @param buf: pointer to the struct buf which store the data of send msg
- * @param comm: MPI communicator
- *
- * @return: 0 if success
- */
-int iofw_isend_msg(
-	int dst_proc_id, int src_proc_id, iofw_buf_t *buf, MPI_Comm comm);
-/**
- * @brief: recieve an interger from other proc
- *
- * @param src_por_id: source proc id
- * @param data: pointer to location where received data is to be stored
- * @param comm: MPI communicator
- *
- * @return: 0 if success
- */
-int iofw_recv_int1(int src_proc_id, int *data, MPI_Comm comm);
-/**
- * @brief: send an interter to other proc
- * @param des_por_id: destination
- * @param src_proc_id: the source proc id 
- * @param data: the data to send
- * @param comm: MPI communicator
- * @return: 0 if success
- */
-int iofw_send_int1(int des_por_id, int src_proc_id, int data, MPI_Comm comm);
+int iofw_msg_isend(
+	iofw_mst_t *msg,  MPI_Comm comm);
 
 /**
- * @brief: pack for ifow_nc_create function
+ * @brief: pack iofw_nc_create function into struct iofw_msg_t
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param path: the file name of the new netCDF dataset
- * @param cmode: the creation mode flag
+ * @param _msg: pointer to the struct iofw_msg_t
+ * @param client_proc_id: id of client proc who call the function
+ * @param path: the file name of the new netCDF dataset, iofw_nc_create's
+ *	arg
+ * @param cmode: the creation mode flag , arg of iofw_nc_create
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_pack_msg_create(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_create(
+	iofw_msg_t **_msg, int client_proc_id, 
 	const char *path, int cmode);
 /**
- * @brief: pack for the iofw_nc_def_dim function
+ * @brief: pack iofw_nc_def_dim into msg
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param ncid: NetCDF group ID
- * @param name: Dimension name
- * @param len: Length of dimension
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: NetCDF group ID, arg of iofw_nc_def_dim
+ * @param name: Dimension name, arg of iofw_nc_def_dim
+ * @param len: Length of dimension, arg of iofw_nc_def_dim
  *
- * @return: 0 if success
+ * @return: error_code
  */
-int iofw_pack_msg_def_dim(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_def_dim(
+	iofw_msg_t **_msg, int client_proc_id, 
 	int ncid, const char *name, size_t len);
 /**
- * @brief: pack for the iofw_nc_def_var function
+ * @brief: pack iofw_nc_def_var into msg
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param ncid: netCDF ID
- * @param name: variable name
- * @param xtype: one of the set of predefined netCDF external data types
- * @param ndims: number of dimensions for the variable
- * @param dimids: vector of ndims dimension IDs corresponding to the 
- *	variable dimensions
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_nc_def_var
+ * @param name: variable name, arg of iofw_nc_def_var
+ * @param xtype: predefined netCDF external data type, arg of 
+ *	iofw_nc_def_var
+ * @param ndims: number of dimensions for the variable, arg of 
+ *	iofw_nc_def_var
+ * @param dimids: vector of ndims dimension IDs corresponding to the
+ *	variable dimensions, arg of iofw_nc_def_var
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_pack_msg_def_var(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_def_var(
+	iofw_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids);
 /**
- * @brief: pack for the iofw_nc_enddef function
+ * @brief: pack iofw_nc_enddef into msg
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param ncid: netCDF ID
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_nc_enddef
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_pack_msg_enddef(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_enddef(
+	iofw_msg_t **_msg, int client_proc_id, 
 	int ncid);
 /**
- * @brief: pack for the iofw_nc_put_var1_float
+ * @brief: pack iofw_nc_put_var1_float into msg
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param ncid: netCDF ID
- * @param varid: variable ID
- * @param dim: the dimensionality fo variable
- * @param index: the index of the data value to be written
- * @param fp: pinter to the data value to be written
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of nc_put_var1_float
+ * @param varid: variable ID, arg of nc_put_var1_float
+ * @param dim: the dimensionality fo variable, arg of nc_put_var1_float
+ * @param index: the index of the data value to be written, arg of 
+ *	nc_put_var1_float
+ * @param fp: pinter to the data value to be written, arg of 
+ *	nc_put_var1_float
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_pack_msg_put_var1_float(
-	iofw_buf_t *buf,
-	int ncid, int varid, int dim, 
+int iofw_msg_pack_nc_put_var1_float(
+	iofw_msg_t **_msg, int client_proc_id,
+	int ncid, int varid, int dim,
 	const size_t *index, const float *fp);
 /**
- * @brief: pack for function: iofw_pack_msg_put_vara_float
+ * @brief: pack iofw_nc_put_vara_float into msg
  *
- * @param buf: pointer to the struct buf where the packed function is stored
- * @param ncid: netCDF ID
- * @param varid: variable ID
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_nc_put_vara_float
+ * @param varid: variable ID, arg of iofw_nc_put_vara_float
  * @param dim: the dimensionality fo variable
- * @param start: a vector of size_t intergers specifying the index in the variable
- *	where the first of the data values will be written
- * @param count: a vector of size_t intergers specifying the edge lengths along 
- *	each dimension of the block of data values to be written
- * @param fp : pointer to where data is stored
+ * @param start: a vector of size_t intergers specifying the index in 
+ *	the variable where the first of the data values will be written,
+ *	arg of iofw_nc_put_vara_float
+ * @param count: a vector of size_t intergers specifying the edge lengths
+ *	along each dimension of the block of data values to be written, 
+ *	arg of iofw_nc_put_vara_float
+ * @param fp : pointer to where data is stored, arg of 
+ *	iofw_nc_put_vara_float
  *
- * @return: 0 if success, IOFW_UNEQUAL_DIM if the size of start and count is noequal
+ * @return: 
  */
-int iofw_pack_msg_put_vara_float(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_put_vara_float(
+	iofw_msg_t **_msg, int client_proc_id,
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp);
 /**
- * @brief: pack for the iofw_nc_close function
+ * @brief: pack iofw_nc_close into msg
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
- * @param ncid: netCDF ID
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_nc_close
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_pack_msg_close(
-	iofw_buf_t *buf,
+int iofw_msg_pack_nc_close(
+	iofw_msg_t **_msg, int client_proc_id,
 	int ncid);
 
 /**
- * @brief iofw_pack_msg_io_stop : tell the server the client
- * is finish
+ * @brief: pack a special msg, the msg will inform the server that one
+ *	client's IO is over
  *
- * @param buf: where the packed function is stored
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
  *
- * @return 0 if success , < 0 for failure 
+ * @return: error code
  */
-int iofw_pack_msg_io_stop(
-	iofw_buf_t *buf);
+int iofw_msg_pack_io_done(
+	iofw_msg_t **_msg, int client_proc_id);
 /**
- * @brief: unpack funciton code from the msg 
+ * @brief: unpack funciton code from the buffer
  *
- * @param buf: pointer the struct buf where the packed function is stored
+ * @param func_code: the code of fucntion
  *
- * @return: the code of function
+ * @return: error code
  */
-uint32_t iofw_unpack_msg_func_code(
-	iofw_buf_t *buf);
+int iofw_msg_unpack_func_code(
+	uint32_t *func_code);
 /**
  * @brief: unpack arguments for ifow_nc_create function
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
  * @param path: poiter to where the file anme of the new netCDF dataset is to be 
  *	stored
  * @param cmode: pointer to where the creation mode flag is to be stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_create(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_create(
 	char **path, int *cmode);
 /**
  * @brief: unpack arguments for ifow_nc_def_dim function
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
  * @param ncid: pointer to where NetCDF group ID is to be stored
  * @param name: pointer to where dimension name is to be stored
  * @param len: pointer to where length of dimension is to be stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_def_dim(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_def_dim(
 	int *ncid, char **name, size_t *len);
 /**
  * @brief: unpack arguments for the iofw_nc_def_var function
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored, the name, and dimids need to be freed by the caller
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param name: pointer to where variable name is to be stored, need to be freed by
  *	the caller
@@ -280,29 +265,23 @@ int iofw_unpack_msg_def_dim(
  * @param dimids: pointer to where vector of ndims dimension IDs corresponding to
  *      the variable dimensions is to be stored, need to be freed by the caller
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_def_var(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids);
 /**
  * @brief: unpack arguments for the iofw_nc_enddef function 
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
  * @param ncid: pointer to where netCDF ID is to be stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_enddef(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_enddef(
 	int *ncid);
 /**
  * @brief: unpack arguments for the iofw_nc_put_var1_float function
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param varid: pointer to where variable ID is to be stored 
  * @param indexdim: pointer to where the dimensionality of the to be written 
@@ -310,16 +289,13 @@ int iofw_unpack_msg_enddef(
  * @param index: pointer to where the index of the to be written data value to be 
  *	stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_put_var1_float(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_put_var1_float(
 	int *ncid, int *varid, int *indexdim, size_t **index);
 /**
- * @brief: unpack arguments for function : iofw_unpack_msg_put_vara_float
+ * @brief: unpack arguments for function : iofw_msg_unpack_put_vara_float
  *
- * @param buf: pointer to the struct buf where the packed function is 
- *	stored
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param varid: pointer to where variable ID is to be stored 
  * @param dim: pointer to where the dimensionality of to be written variable
@@ -331,35 +307,17 @@ int iofw_unpack_msg_put_var1_float(
  * @param data_len: pointer to the size of data 
  * @param fp: where the data is stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_put_vara_float(
-	iofw_buf_t *buf,
+int iofw_msg_unpack_put_vara_float(
 	int *ncid, int *varid, int *dim, 
 	size_t **start, size_t **count,
 	int *data_len, float **fp);
 /**
  * @brief: unpack arguments for the iofw_nc_close function
  *
- * @param buf: pointer to the struct buf where the packed function is stored
  * @param ncid: pointer to where netCDF ID is to be stored
  *
- * @return: 0 if success
+ * @return: error code
  */
-int iofw_unpack_msg_close(
-	    iofw_buf_t *buf,
-	    int *ncid);
-/**
- * @brief iofw_unpack_msg_extra_data_size : get the data len of this operation.you 
- *	should call the func after function iofw_unpack_msg_func_code, and can be
- *	called only once
- *
- * @param buf: pointer to the struct buf where the packed function is stored
- * @param len: the data len will be stored here
- 
- * @return: 0 if success
- */
-int iofw_unpack_msg_extra_data_size(
-	iofw_buf_t  *buf,
-	size_t *data_size);
-#endif
+int iofw_msg_unpack_close(int *ncid);
