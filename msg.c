@@ -89,6 +89,18 @@ int iofw_msg_isend(
     return IOFW_MSG_ERROR_NONE;
 }
 
+int iofw_msg_recv(MPI_comm comm)
+{
+    MPI_Status status;
+
+    while(free_buf_size(buffer) < MSG_MAX_SIZE) {};
+
+    MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_SOURCE_ANY, 
+	    MPI_TAG_ANY, comm, &status);
+
+    return IOFW_MSG_ERROR_NON;
+}
+
 int iofw_msg_pack_nc_create(
 	iofw_msg_t **_msg, int client_proc_id, 
 	const char *path, int cmode)

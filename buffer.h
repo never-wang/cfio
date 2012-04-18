@@ -59,22 +59,11 @@ static inline void inc_buf_addr(iofw_buf_t *buf_p, char **addr, size_t size)
 }
 
 /**
- * @brief: get the free space size in a buffer
- *
- * @param buf_p: pointer to the buffer
- *
- * @return: free space size of the buffer
- */
-static inline size_t free_buf_size(iofw_buf_t *buf_p)
-{
-    if(buf_p->free_addr < buf_p->used_addr)
-    {
-	return buf_p->used_addr - buf_p ->free_addr - 1;
-    }else
-    {
-	return buf_p->size + buf_p->used_addr - buf_p->free_addr - 1;
-    }
-}
+ * get the free space size in a buffer
+ **/
+#define free_buf_size(buf_p) \
+    (((buf_p)->size + (buf_p)->used_addr - (buf_p)->free_addr - 1) \
+     % (buf_p)->size); 
 
 /**
  * @brief: get the used space size in a buffer
@@ -83,16 +72,9 @@ static inline size_t free_buf_size(iofw_buf_t *buf_p)
  *
  * @return: used space size of the buffer
  */
-static inline size_t used_buf_size(iofw_buf_t *buf_p)
-{
-    if(buf_p->free_addr >= buf_p->usd_addr)
-    {
-	return buf_p->free_addr - buf_p->used_addr;
-    }else
-    {
-	return buf_p->size + buf_p->free_addr - buf_p->used_addr;
-    }
-}
+#define used_buf_size(buf_p) \
+    (((buf_p)->size + (buf_p)->free_addr - (buf_p)->used_addr) \
+     % (buf_p)->size);
 
 static inline void ensure_free_space(iofw_buf_t *buf_p, size_t size)
 {

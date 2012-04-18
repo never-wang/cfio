@@ -81,10 +81,9 @@ int iofw_buf_unpack_data(
 	return -IOFW_BUF_ERROR_OVER;
     }
 
-    if(used_buf_size(buf_p) < size)
-    {
-	return -IOFW_BUF_ERROR_NO_DATA;
-    }
+    /* wait for data */
+    while(used_buf_size(buf_p) < size) {}
+
     memcpy(data, buf->used_addr, size);
     inc_buf_addr(buf, buf->used_addr, size);
 
@@ -128,10 +127,8 @@ int iofw_buf_unpack_data_array(
 	return -IOFW_BUF_ERROR_OVER;
     }
 
-    if(used_buf_size(buf_p) < sizeof(unsigned int))
-    {
-	return -IOFW_BUF_ERROR_NO_DATA;
-    }
+    /* wait for data */
+    while(used_buf_size(buf_p) < sizeof(unsigned int)) {}
 
     if(NULL != len)
     {
@@ -164,10 +161,8 @@ int iofw_buf_unpack_data_array_ptr(
 	return -IOFW_BUF_ERROR_OVER;
     }
 
-    if(used_buf_size(buf_p) < sizeof(unsigned int))
-    {
-	return -IOFW_BUF_ERROR_NO_DATA;
-    }
+    /* wait for data */
+    while(used_buf_size(buf_p) < sizeof(unsigned int)) {}
 
     if(NULL != len)
     {

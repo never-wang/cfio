@@ -29,11 +29,11 @@
 #include "times.h"
 
 /* my real rank in mpi_comm_world */
-static int rank = -1;
+static int rank;
 /*  the number of the app proc*/
-int app_proc_num = -1;
+int app_proc_num;
 /* the number of the server proc */
-int server_proc_num = -1;
+int server_proc_num;
 
 MPI_Comm inter_comm;
 
