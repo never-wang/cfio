@@ -18,8 +18,7 @@
 #ifndef _UNMAP_H
 #define _UNMAP_H
 #include "utils.h"
-#include "pomme_buffer.h"
-#include "pack.h"
+#include "buffer.h"
 #include "mpi.h"
 
 /* return codes */

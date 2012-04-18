@@ -21,9 +21,9 @@
 
 #include <stdlib.h>
 
-struct qlist_head {
+typedef struct qlist_head {
     struct qlist_head *next, *prev;
-};
+} qlist_head_t;
 
 #define QLIST_HEAD_INIT(name) { &(name), &(name) }
 

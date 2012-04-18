@@ -21,8 +21,6 @@
 #include "io.h"
 #include "msg.h"
 #include "buffer.h"
-#include "pomme_queue.h"
-#include "pomme_buffer.h"
 #include "debug.h"
 #include "mpi.h"
 

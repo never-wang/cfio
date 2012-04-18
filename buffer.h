@@ -33,37 +33,53 @@ typedef struct
 {
     uint16_t magic;	/* magic of the buffer */
     size_t size;	/* space size of the buffer */
-    void *start_addr;	/* start address of the buffer */
-    void *free_addr;	/* start address of free buffer */
-    void *used_addr;	/* start address of used buffer */
-    int (*free)();	/* free function */
+    char *start_addr;	/* start address of the buffer */
+    char *free_addr;	/* start address of free buffer */
+    char *used_addr;	/* start address of used buffer */
+    void (*free)();	/* free function */
     uint16_t magic2;	/* upper magic of the buffer */
 }iofw_buf_t;
 
 /**
- * @brief: increase a buffer's used_addr or free_addr, increase free_addr
- *	means more buffer space was used, increase used_addr means some
+ * @brief: increase a buffer's free_addr, means more buffer space was used
  *	buffer space was freed
  *
  * @param buf_p: pointer to the buffer
  * @param addr: pointer to the addr which is to be increased
  * @param size: the size to increase
  */
-static inline void inc_buf_addr(iofw_buf_t *buf_p, char **addr, size_t size)
+static inline void alloc_buf(iofw_buf_t *buf_p, char **addr, size_t size)
 {
-    (*addr) += size;
-    if((*addr) >= (((char *)buf_p->start_addr) + buf_p->size))
+    buf_p->free_addr += size;
+    if(buf_p->free_addr >= ((buf_p->start_addr) + buf_p->size))
     {
-	(*addr) -= buf_p->size;
+	buf_p->free_addr -= buf_p->size;
     }
 }
+/**
+ * @brief: increase a buffer's used_addr or free_addr, means some buffer space 
+ *	was freed
+ *
+ * @param buf_p: pointer to the buffer
+ * @param addr: pointer to the addr which is to be increased
+ * @param size: the size to increase
+ */
+static inline void free_buf(iofw_buf_t *buf_p, size_t size)
+{
+    buf_p->used_addr += size;
+    if(buf_p->used_addr >= ((buf_p->start_addr) + buf_p->size))
+    {
+	buf_p->used_addr -= buf_p->size;
+    }
+}
+
 
 /**
  * get the free space size in a buffer
  **/
 #define free_buf_size(buf_p) \
     (((buf_p)->size + (buf_p)->used_addr - (buf_p)->free_addr - 1) \
-     % (buf_p)->size); 
+     % (buf_p)->size)
 
 /**
  * @brief: get the used space size in a buffer
@@ -74,9 +90,9 @@ static inline void inc_buf_addr(iofw_buf_t *buf_p, char **addr, size_t size)
  */
 #define used_buf_size(buf_p) \
     (((buf_p)->size + (buf_p)->free_addr - (buf_p)->used_addr) \
-     % (buf_p)->size);
+     % (buf_p)->size)
 
-static inline void ensure_free_space(iofw_buf_t *buf_p, size_t size)
+static inline void ensure_free_space(iofw_buf_t *buf_p, const size_t size)
 {
     while(free_buf_size(buf_p) < size)
     {
@@ -115,7 +131,7 @@ int iofw_buf_clear(iofw_buf_t *buf_p);
  * @return: error code
  */
 int iofw_buf_pack_data(
-	const void *data, const size_t size, iofw_buf_t *buf_p);
+	void *data, size_t size, iofw_buf_t *buf_p);
 
 /**
  * @brief: unpack one data from the buffer
@@ -140,8 +156,8 @@ int iofw_buf_unpack_data(
  * @return: error code
  */
 int iofw_buf_pack_data_array(
-	const void *data, const unsigned len,
-	const size_t size, iofw_buf_t *buf_p);
+	void *data, unsigned len,
+	size_t size, iofw_buf_t *buf_p);
 
 /**
  * @brief: unpack an array of data from the buffer, the func will malloc
@@ -156,11 +172,12 @@ int iofw_buf_pack_data_array(
  */
 int iofw_buf_unpack_data_array(
 	void **data, unsigned int *len, 
-	const size_t size, iofw_buf_t *buf_p);
+	size_t size, iofw_buf_t *buf_p);
 
 /**
- * @brief: unpack an array of data from the buffer, the unpacked data 
- *	pointer just point to the address in buffer, no memcpy happen
+ * @brief: unpack an array of data from the buffer, the unpacked data pointer 
+ *	just point to the address in buffer, no memcpy happen; the caller should
+ *	free the data when finishing using the data
  *
  * @param data: pointer to the unpacked data array
  * @param len: length of the array

@@ -18,7 +18,7 @@
 
 #include "mpi.h"
 #include "netcdf.h"
-#include "pack.h"
+#include "buffer.h"
 #include "quicklist.h"
 
 #define MSG_MAX_SIZE 1048576
@@ -47,24 +47,9 @@ typedef struct
     void *addr;		/* pointer to the data buffer of the msg */   
     int src;		/* id of sending msg proc */
     int dst;		/* id of dst porc */  
-    MPI_Request req	/* MPI request of the send msg */
-    qlist_head link;	/* quicklist head */
+    MPI_Request req;	/* MPI request of the send msg */
+    qlist_head_t link;	/* quicklist head */
 }iofw_msg_t;
-
-static inline iofw_msg_t *create_msg(int client_proc_id)
-{
-    iofw_msg_t *msg;
-    msg = malloc(sizeof(iofw_msg_t));
-    if(NULL == msg)
-    {
-	return NULL;
-    }
-    msg->addr = buffer->free_addr;
-    msg->size = 0;
-    msg->src = client_proc_id;
-
-    return msg;
-}
 
 /**
  * @brief: init the buffer and msg queue
@@ -94,7 +79,7 @@ int ifow_msg_buf_free();
  * @return: error code
  */
 int iofw_msg_isend(
-	iofw_mst_t *msg,  MPI_Comm comm);
+	iofw_msg_t *msg,  MPI_Comm comm);
 
 /**
  * @brief: pack iofw_nc_create function into struct iofw_msg_t
@@ -321,3 +306,5 @@ int iofw_msg_unpack_put_vara_float(
  * @return: error code
  */
 int iofw_msg_unpack_close(int *ncid);
+
+#endif

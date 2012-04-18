@@ -22,6 +22,21 @@
 static iofw_msg_t *msg_head;
 iofw_buf_t *buffer;
 
+static inline iofw_msg_t *create_msg(int client_proc_id)
+{
+    iofw_msg_t *msg;
+    msg = malloc(sizeof(iofw_msg_t));
+    if(NULL == msg)
+    {
+	return NULL;
+    }
+    msg->addr = buffer->free_addr;
+    msg->size = 0;
+    msg->src = client_proc_id;
+
+    return msg;
+}
+
 int iofw_msg_init()
 {
     msg_head = malloc(sizeof(iofw_msg_t));

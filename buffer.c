@@ -25,7 +25,7 @@ iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
 
     if(NULL == buf_p)
     {
-	SET_ERROR(error, IOFW_BUF_ERROR_SBRK)
+	SET_ERROR(error, IOFW_BUF_ERROR_SBRK);
 	return NULL;
     }
 
@@ -33,10 +33,10 @@ iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
     buf_p->size = size;
     buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
-    buf_p->free = free();
+    buf_p->free = free;
     buf_p->magic2 = IOFW_BUF_MAGIC;
 
-    return addr;
+    return buf_p;
 }
 
 int iofw_buf_clear(iofw_buf_t *buf_p)
@@ -50,10 +50,12 @@ int iofw_buf_clear(iofw_buf_t *buf_p)
 
     buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
+
+    return IOFW_BUF_ERROR_NONE;
 }
 
 int iofw_buf_pack_data(
-	const void *data, const size_t size, iofw_buf_t *buf_p)
+	void *data, size_t size, iofw_buf_t *buf_p)
 {
     assert(NULL == data);
     assert(NULL == buf_p);
@@ -65,8 +67,8 @@ int iofw_buf_pack_data(
 
     ensure_free_space(buf_p, size);
 
+    alloc_buffer(buf_p, size);
     memcpy(buf_p->free_addr, data, size);
-    inc_buf_addr(buf, buf->free_addr, size);
 
     return IOFW_BUF_ERROR_NONE;
 }
@@ -84,15 +86,15 @@ int iofw_buf_unpack_data(
     /* wait for data */
     while(used_buf_size(buf_p) < size) {}
 
-    memcpy(data, buf->used_addr, size);
-    inc_buf_addr(buf, buf->used_addr, size);
+    memcpy(data, buf_p->used_addr, size);
+    free_buffer(buf_p, size);
 
     return IOFW_BUF_ERROR_NONE;
 }
 
 int iofw_buf_pack_data_array(
-	const void *data, const unsigned int len,
-	const size_t size, iofw_buf_t *buf_p)
+	void *data, unsigned int len,
+	size_t size, iofw_buf_t *buf_p)
 {
     size_t data_size = len * size;
 
@@ -106,16 +108,16 @@ int iofw_buf_pack_data_array(
 
     ensure_free_space(buf_p, data_size + sizeof(unsigned int));
 
+    alloc_buffer(buf_p, data_size);
     memcpy(buf_p->free_addr, &len, sizeof(unsigned int));
     memcpy(buf_p->free_addr + sizeof(unsigned int), data, data_size);
-    inc_buf_addr(buf_p, buf_p->free_addr, data_size);
 
     return IOFW_BUF_ERROR_NONE;
 }
 
 int iofw_buf_unpack_data_array(
 	void **data, unsigned int *len, 
-	const size_t size, iofw_buf_t *buf_p)
+	size_t size, iofw_buf_t *buf_p)
 {
     assert(NULL == data);
     assert(NULL == buf_p);
@@ -144,12 +146,14 @@ int iofw_buf_unpack_data_array(
     }
 
     memcpy(*data, buf_p->used_addr, data_size);
-    inc_buf_addr(buf_p, buf_p->used_addr, data_size);
+    free_buffer(buf_p, data_size);
+
+    return IOFW_BUF_ERROR_NONE;
 }
 
 int iofw_buf_unpack_data_array_ptr(
 	void **data, unsigned int *len, 
-	const size_t size, iofw_buf_t *buf_p)
+	size_t size, iofw_buf_t *buf_p)
 {
     assert(NULL == data);
     assert(NULL == buf_p);
@@ -176,5 +180,7 @@ int iofw_buf_unpack_data_array_ptr(
 	return -IOFW_BUF_ERROR_NO_DATA;
     }
 
-    (*data) = buffer->used_addr;
+    (*data) = buf_p->used_addr;
+
+    return IOFW_BUF_ERROR_NONE;
 }

@@ -21,9 +21,7 @@
 #include <stdlib.h>
 #include <netcdf.h>
 
-#include "pomme_buffer.h"
-#include "pomme_queue.h"
-#include "pack.h"
+#include "buffer.h"
 #include "mpi.h"
 
 /**********************************************************

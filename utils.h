@@ -25,7 +25,4 @@
 #include<pthread.h>
 #include<assert.h>
 #include<unistd.h>
-#include"pomme_type.h"
-#include"pomme_blist.h"
-#include"pomme_queue.h"
 #endif
