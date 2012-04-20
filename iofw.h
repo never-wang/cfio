@@ -48,7 +48,7 @@ int iofw_finalize();
  * @return: 0 if success
  */
 int iofw_nc_create(
-	const int io_proc_id,
+	int io_proc_id,
 	const char *path, int cmode, int *ncidp);
 /**
  * @brief: iofw_nc_def_dim
@@ -62,7 +62,7 @@ int iofw_nc_create(
  * @return: 0 if success
  */
 int iofw_nc_def_dim(
-	const int io_proc_id,
+	int io_proc_id,
 	int ncid, const char *name, size_t len, int *idp);
 /**
  * @brief: iofw_nc_def_var

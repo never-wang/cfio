@@ -14,9 +14,9 @@
  ***************************************************************************/
 #include <pthread.h>
 
+#include "iofw_server.h"
 #include "map.h"
 #include "io.h"
-#include "pomme_queue.h"
 #include "mpi.h"
 #include "debug.h"
 #include "msg.h"
@@ -29,7 +29,7 @@ static pthread_t reader;
 /* my real rank in mpi_comm_world */
 static int rank;
 /* all the client report done */
-int server_done;
+int server_done = 0;
 /* Communicator between IO process adn compute process*/   
 MPI_Comm inter_comm;
 
@@ -38,56 +38,74 @@ int client_done = 0;
 /* Num of clients which need to be served by the server */
 int client_to_serve = 0;
 
-static int decode()
+static int decode(iofw_msg_t *msg)
 {	
     int client_proc = 0;
     int ret = 0;
-    int code;
+    uint32_t code;
     /* TODO the buf control here may have some bad thing */
-    iofw_msg_unpack_func_code(&code);
+    iofw_msg_unpack_func_code(msg, &code);
 
     switch(code)
     {
 	case FUNC_NC_CREATE: 
+	    debug(DEBUG_USER,"server %d recv nc_create from client %d",
+		    rank, client_proc);
 	    iofw_io_nc_create(client_proc);
-	    debug(DEBUG_USER, "server %d done nc_create for client %d",
-		    rank,source);
+	    debug(DEBUG_USER, "server %d done nc_create for client %d\n",
+		    rank,client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_DEF_DIM:
+	    debug(DEBUG_USER,"server %d recv nc_def_dim from client %d",
+		    rank, client_proc);
 	    iofw_io_nc_def_dim(client_proc);
-	    debug(DEBUG_USER, "server %d done nc_def_dim for client %d",
-		    rank,source);
+	    debug(DEBUG_USER, "server %d done nc_def_dim for client %d\n",
+		    rank,client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_DEF_VAR:
+	    debug(DEBUG_USER,"server %d recv nc_def_var from client %d",
+		    rank, client_proc);
 	    iofw_io_nc_def_var(client_proc);
-	    debug(DEBUG_USER, "server %d done nc_def_var for client %d",
-		    rank,source);
+	    debug(DEBUG_USER, "server %d done nc_def_var for client %d\n",
+		    rank,client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
-	    iofw_io_nc_end_def(client_proc);
-	    debug(DEBUG_USER, "server %d done nc_end_def for client %d",
-		    rank,source);
+	    debug(DEBUG_USER,"server %d recv nc_enddef from client %d",
+		    rank, client_proc);
+	    iofw_io_nc_enddef(client_proc);
+	    debug(DEBUG_USER, "server %d done nc_enddef for client %d\n",
+		    rank,client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_PUT_VAR1_FLOAT:
+	    debug(DEBUG_USER,"server %d recv nc_put_vara1_float from client %d",
+		    rank, client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_PUT_VARA_FLOAT:
+	    debug(DEBUG_USER,"server %d recv nc_put_vara_float from client %d",
+		    rank, client_proc);
+	    iofw_io_nc_put_vara_float(client_proc);
 	    debug(DEBUG_USER, 
-		    "server %d received nc_put_vara_float from client %d", 
-		    rank, source);
+		    "server %d done nc_put_vara_float from client %d\n", 
+		    rank, client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_CLOSE:
-	    debug(DEBUG_USER,"server %d received nc_close from client %d",
-		    rank, source);
+	    debug(DEBUG_USER,"server %d recv nc_close from client %d",
+		    rank, client_proc);
+	    iofw_io_nc_close(client_proc);
+	    debug(DEBUG_USER,"server %d received nc_close from client %d\n",
+		    rank, client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	case CLIENT_END_IO:
-	    iofw_io_client_done(&client_done, &server_done,
-		    client_to_serve);
-	    debug(DEBUG_USER, "server %d done client_end_io for client %d",
-		    rank,source);
+	    debug(DEBUG_USER,"server %d recv client_end_io from client %d",
+		    rank, client_proc);
+	    //iofw_io_client_done(&client_done, &server_done,
+		    //client_to_serve);
+	    debug(DEBUG_USER, "server %d done client_end_io for client %d\n",
+		    rank,client_proc);
 	    return IOFW_SERVER_ERROR_NONE;
 	default:
 	    error("server %d received unexpected msg from client %d",
-		    rank, source);
+		    rank, client_proc);
 	    return -IOFW_SERVER_ERROR_UNEXPECTED_MSG;
     }	
 }
@@ -95,11 +113,18 @@ static int decode()
 static void * iofw_writer(void *argv)
 {
     int ret = 0;
+    iofw_msg_t *msg;
     int count = 0;
     while(!server_done)
     {
-	decode();
+	msg = iofw_msg_get_first();
+	if(NULL != msg)
+	{
+	    decode(msg);
+	}
     }
+
+    return ((void *)0);
 }
 int iofw_server()
 {
@@ -107,14 +132,15 @@ int iofw_server()
 
     /* main thread is used to do read msg from client */
     reader = pthread_self();
-    if( (ret = pthread_create(&writer,NULL,&iofw_writer,NULL))<0  )
+    if( (ret = pthread_create(&writer,NULL,iofw_writer,NULL))<0  )
     {
 	error("Tread create error()");
 	return ret;
     }
+
     while(!server_done)
     {
-	iofw_msg_recv(inter_comm);
+	iofw_msg_recv(rank, inter_comm);
     }
     pthread_join(writer,NULL);
     return 0;
@@ -128,7 +154,7 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);
     times_init();
     times_start();
-    set_debug_mask(DEBUG_USER | DEBUG_UNMAP);
+    set_debug_mask(DEBUG_USER | DEBUG_MSG);
     //set_debug_mask(DEBUG_TIME);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -152,6 +178,7 @@ int main(int argc, char** argv)
 	return -1;
     }
 
+    iofw_msg_init();
     /**
      * init for client and server num
      **/
@@ -162,10 +189,14 @@ int main(int argc, char** argv)
     client_done = 0;
     debug(DEBUG_USER, "client_to_serve = %d", client_to_serve);
 
+    server_done = 0;
+
     iofw_server();
 
     debug(DEBUG_TIME, "ifow_server total time : %f ms", times_end());
     times_final();
+
+    iofw_msg_final();
 
     MPI_Finalize();
     return 0;

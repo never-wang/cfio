@@ -20,10 +20,8 @@
 
 #include "iofw.h"
 #include "map.h"
-#include "pomme_buffer.h"
-#include "pomme_queue.h"
 #include "mpi.h"
-#include "pack.h"
+#include "buffer.h"
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
@@ -117,6 +115,7 @@ int iofw_finalize()
  * @return: 0 if success
  */
 int iofw_nc_create(
+	int io_proc_id, 
 	const char *path, int cmode, int *ncidp)
 {
     assert(path != NULL);
@@ -126,6 +125,9 @@ int iofw_nc_create(
 
     iofw_msg_pack_nc_create(&msg, rank, path, cmode);
     iofw_msg_isend(msg, inter_comm);
+
+    /* TODO */
+    *ncidp = 1;
 
     return 0;
 }
@@ -152,6 +154,9 @@ int iofw_nc_def_dim(
     iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len);
     iofw_msg_isend(msg, inter_comm);
 
+    /* TODO */
+    *idp = 2;
+    
     return 0;
 }
 /**
@@ -181,6 +186,9 @@ int iofw_nc_def_var(
     iofw_msg_pack_nc_def_var(&msg, rank, 
 	    ncid, name, xtype, ndims, dimids);
     iofw_msg_isend(msg, inter_comm);
+    
+    /* TODO */
+    *varidp = 3;
     
     return 0;
 }
@@ -214,9 +222,9 @@ int iofw_nc_put_var1_float(
 
     iofw_msg_pack_nc_put_var1_float(&msg, rank, 
 	    ncid, varid, dim, index, fp);
+    
     iofw_msg_isend(msg, inter_comm);
 
-    free_buf(buf);
     return 0;
 }
 
@@ -238,8 +246,8 @@ static int _nc_put_vara_float(
 
     cur_start = malloc(dim * sizeof(size_t));
     cur_count = malloc(dim *sizeof(size_t));
-    memcpy(cur_start, start, dim * sizeof(size_t));
-    memcpy(cur_count, count, dim * sizeof(size_t));
+    memcpy(cur_start, (void *)start, dim * sizeof(size_t));
+    memcpy(cur_count, (void *)count, dim * sizeof(size_t));
     cur_fp = fp;
     
     desc_data_size = 1;
@@ -281,7 +289,7 @@ static int _nc_put_vara_float(
 	    iofw_msg_pack_nc_put_vara_float(&msg, rank, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
 	    debug_mark(DEBUG_IOFW);
-	    iofw_isend_msg(msg, inter_comm);
+	    iofw_msg_isend(msg, inter_comm);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
@@ -332,7 +340,7 @@ int iofw_nc_close(
     //times_start();
 
     iofw_msg_pack_nc_close(&msg, rank, ncid);
-    iofw_isend_msg(msg, inter_comm);
+    iofw_msg_isend(msg, inter_comm);
 
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
 

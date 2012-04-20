@@ -26,7 +26,7 @@
 #define DEBUG_PACK  ((uint32_t)1 << 2)
 #define DEBUG_TIME  ((uint32_t)1 << 3)
 #define DEBUG_MSG   ((uint32_t)1 << 4)
-#define DEBUG_UNMAP ((uint32_t)1 << 5)
+#define DEBUG_IO    ((uint32_t)1 << 5)
 #define DEBUG_MAP   ((uint32_t)1 << 6)
 
 extern int debug_mask;

@@ -30,12 +30,17 @@
 #define ENQUEUE_MSG 3
 #define IMM_MSG 4
 
+#define IOFW_IO_ERROR_NONE  0
+#define IOFW_IO_ERROR_NC    1
+
+
+
 int iofw_io_client_done(int *client_done, int *server_done,
 	int client_to_serve);
 int iofw_io_nc_create(int client_proc);
 int iofw_io_nc_def_dim(int client_proc);
 int iofw_io_nc_def_var(int client_proc);
-int iofw_io_nc_end_def(int client_proc);
+int iofw_io_nc_enddef(int client_proc);
 int iofw_io_nc_put_var1_float(int client_proc);
 int iofw_io_nc_put_vara_float(int client_proc);
 int iofw_io_nc_close(int client_proc);

@@ -17,7 +17,28 @@
 #include "debug.h"
 #include "buffer.h"
 
-iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
+/**
+ * @brief: 
+ *
+ * @param buf_p: 
+ * @param data: 
+ * @param size: 
+ */
+static inline void put_buf_data(iofw_buf_t *buf_p, const void *data, size_t size)
+{
+    char *_data = data;
+	
+    memcpy(buf_p->free_addr, _data, size);
+}
+static inline void get_buf_data(iofw_buf_t *buf_p, void *data, size_t size)
+{
+    char *_data = data;
+
+    memcpy(_data, buf_p->used_addr, size);
+}
+
+
+iofw_buf_t *iofw_buf_open(size_t size, int *error)
 {
     iofw_buf_t *buf_p;
     
@@ -33,7 +54,6 @@ iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
     buf_p->size = size;
     buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
-    buf_p->free = free;
     buf_p->magic2 = IOFW_BUF_MAGIC;
 
     return buf_p;
@@ -41,76 +61,77 @@ iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error)
 
 int iofw_buf_clear(iofw_buf_t *buf_p)
 {
-    assert(NULL == buf_p);
+    assert(NULL != buf_p);
 
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
 
-    buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
 
     return IOFW_BUF_ERROR_NONE;
 }
 
-int iofw_buf_pack_data(
-	void *data, size_t size, iofw_buf_t *buf_p)
+size_t iofw_buf_pack_size(
+	const void *data, size_t size)
 {
-    assert(NULL == data);
-    assert(NULL == buf_p);
+    return size;
+}
 
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+int iofw_buf_pack_data(
+	const void *data, size_t size, iofw_buf_t *buf_p)
+{
+    assert(NULL != data);
+    assert(NULL != buf_p);
 
-    ensure_free_space(buf_p, size);
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
 
-    alloc_buffer(buf_p, size);
-    memcpy(buf_p->free_addr, data, size);
+    assert(free_buf_size(buf_p) >= size);
+
+    put_buf_data(buf_p, data, size);
+    use_buf(buf_p, size);
 
     return IOFW_BUF_ERROR_NONE;
 }
 int iofw_buf_unpack_data(
 	void *data, size_t size, iofw_buf_t *buf_p)
 {
-    assert(NULL == data);
-    assert(NULL == buf_p);
+    assert(NULL != data);
+    assert(NULL != buf_p);
+    volatile size_t used_size;
 
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
 
-    /* wait for data */
-    while(used_buf_size(buf_p) < size) {}
+    assert(used_buf_size(buf_p) >= size);
 
-    memcpy(data, buf_p->used_addr, size);
-    free_buffer(buf_p, size);
+    get_buf_data(buf_p, data, size);
+    free_buf(buf_p, size);
 
     return IOFW_BUF_ERROR_NONE;
 }
 
+size_t iofw_buf_pack_array_size(
+	const void *data, unsigned int len, size_t size)
+{
+    return len * (size_t)size + (sizeof(unsigned int));
+}
+
+
 int iofw_buf_pack_data_array(
-	void *data, unsigned int len,
+	const void *data, unsigned int len,
 	size_t size, iofw_buf_t *buf_p)
 {
-    size_t data_size = len * size;
+    size_t data_size = (size_t)len * size;
 
-    assert(NULL == data);
-    assert(NULL == buf_p);
+    assert(NULL != data);
+    assert(NULL != buf_p);
 
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
 
-    ensure_free_space(buf_p, data_size + sizeof(unsigned int));
+    assert((free_buf_size(buf_p) >= (data_size + sizeof(unsigned int))));
 
-    alloc_buffer(buf_p, data_size);
-    memcpy(buf_p->free_addr, &len, sizeof(unsigned int));
-    memcpy(buf_p->free_addr + sizeof(unsigned int), data, data_size);
+    put_buf_data(buf_p, &len, sizeof(unsigned int));
+    use_buf(buf_p, sizeof(unsigned int));
+    put_buf_data(buf_p, data, data_size);
+    use_buf(buf_p, data_size);
 
     return IOFW_BUF_ERROR_NONE;
 }
@@ -119,34 +140,33 @@ int iofw_buf_unpack_data_array(
 	void **data, unsigned int *len, 
 	size_t size, iofw_buf_t *buf_p)
 {
-    assert(NULL == data);
-    assert(NULL == buf_p);
+    assert(NULL != data);
+    assert(NULL != buf_p);
 
     size_t data_size;
+    volatile size_t used_size;
+    unsigned int _len;
     
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
+    
+    assert(used_buf_size(buf_p) >= sizeof(unsigned int));
 
-    /* wait for data */
-    while(used_buf_size(buf_p) < sizeof(unsigned int)) {}
-
+    get_buf_data(buf_p, &_len, sizeof(unsigned int));
+    free_buf(buf_p, sizeof(unsigned int));
     if(NULL != len)
     {
-	memcpy(len, buf_p->used_addr, sizeof(unsigned int));
+	*len = _len;
     }
-    inc_buf_addr(buf_p, buf_p->used_addr, sizeof(unsigned int));
 
-    data_size = (*len) * size;
+    data_size = _len * size;
     (*data) = malloc(data_size);
-    if(used_buf_size(buf_p) < data_size)
-    {
-	return -IOFW_BUF_ERROR_NO_DATA;
-    }
 
-    memcpy(*data, buf_p->used_addr, data_size);
-    free_buffer(buf_p, data_size);
+    assert(used_buf_size(buf_p) >= data_size);
+
+    debug(DEBUG_MSG, "data_size = %lu", data_size);
+
+    get_buf_data(buf_p, *data, data_size);
+    free_buf(buf_p, data_size);
 
     return IOFW_BUF_ERROR_NONE;
 }
@@ -155,30 +175,27 @@ int iofw_buf_unpack_data_array_ptr(
 	void **data, unsigned int *len, 
 	size_t size, iofw_buf_t *buf_p)
 {
-    assert(NULL == data);
-    assert(NULL == buf_p);
+    assert(NULL != data);
+    assert(NULL != buf_p);
 
     size_t data_size;
+    volatile size_t used_size;
+    unsigned int _len;
     
-    if(buf_p->magic != IOFW_BUF_MAGIC || buf_p->magic != IOFW_BUF_MAGIC)
-    {
-	return -IOFW_BUF_ERROR_OVER;
-    }
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
 
-    /* wait for data */
-    while(used_buf_size(buf_p) < sizeof(unsigned int)) {}
+    assert(used_buf_size(buf_p) >= sizeof(unsigned int));
 
+    get_buf_data(buf_p, &_len, sizeof(unsigned int));
+    free_buf(buf_p, sizeof(unsigned int));
     if(NULL != len)
     {
-	memcpy(len, buf_p->used_addr, sizeof(unsigned int));
+	*len = _len;
     }
-    inc_buf_addr(buf_p, buf_p->used_addr, sizeof(unsigned int));
+    free_buf(buf_p, sizeof(unsigned int));
 
     data_size = (*len) * size;
-    if(used_buf_size(buf_p) < data_size)
-    {
-	return -IOFW_BUF_ERROR_NO_DATA;
-    }
+    assert(used_buf_size(buf_p) >= data_size);
 
     (*data) = buf_p->used_addr;
 

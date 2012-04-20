@@ -15,6 +15,10 @@
 #ifndef _BUFFER_H
 #define _BUFFER_H
 
+#include <stdint.h>
+
+#include "debug.h"
+
 #define IOFW_BUF_ERROR_NONE	0
 #define IOFW_BUF_ERROR_NO_MEM	1 /* the buffer has no available memory */
 #define IOFW_BUF_ERROR_NO_DATA	2 /* the buffer has no enough data to unpack */
@@ -36,7 +40,6 @@ typedef struct
     char *start_addr;	/* start address of the buffer */
     char *free_addr;	/* start address of free buffer */
     char *used_addr;	/* start address of used buffer */
-    void (*free)();	/* free function */
     uint16_t magic2;	/* upper magic of the buffer */
 }iofw_buf_t;
 
@@ -45,10 +48,9 @@ typedef struct
  *	buffer space was freed
  *
  * @param buf_p: pointer to the buffer
- * @param addr: pointer to the addr which is to be increased
  * @param size: the size to increase
  */
-static inline void alloc_buf(iofw_buf_t *buf_p, char **addr, size_t size)
+static inline void use_buf(iofw_buf_t *buf_p, size_t size)
 {
     buf_p->free_addr += size;
     if(buf_p->free_addr >= ((buf_p->start_addr) + buf_p->size))
@@ -61,7 +63,6 @@ static inline void alloc_buf(iofw_buf_t *buf_p, char **addr, size_t size)
  *	was freed
  *
  * @param buf_p: pointer to the buffer
- * @param addr: pointer to the addr which is to be increased
  * @param size: the size to increase
  */
 static inline void free_buf(iofw_buf_t *buf_p, size_t size)
@@ -92,25 +93,68 @@ static inline void free_buf(iofw_buf_t *buf_p, size_t size)
     (((buf_p)->size + (buf_p)->free_addr - (buf_p)->used_addr) \
      % (buf_p)->size)
 
-static inline void ensure_free_space(iofw_buf_t *buf_p, const size_t size)
+static inline void ensure_free_space(iofw_buf_t *buf_p, size_t size, void(*free)())
 {
-    while(free_buf_size(buf_p) < size)
+    size_t left_space = buf_p->start_addr + buf_p->size - buf_p->free_addr;
+    volatile size_t free_size;
+    
+    while((free_size = free_buf_size(buf_p)) < size)
     {
-	buf_p->free();
+	free();
     }
-    return;
+    /* if buffer tail left size < data size, move free_addr to start of buffer*/
+    if(size > left_space)
+    {
+	use_buf(buf_p, left_space);
+	while((free_size = free_buf_size(buf_p)) < size)
+	{
+	    free();
+	}
+    }
+}
+
+/**
+ * @brief: check whether addr is in one buffer's used pace
+ *
+ * @param addr: the to check addr
+ * @param buf_p: the buffer
+ *
+ * @return: true if in 
+ */
+static inline int check_used_addr(char *addr, iofw_buf_t *buf_p)
+{
+    assert(addr >= buf_p->start_addr && addr < buf_p->start_addr + buf_p->size);
+
+    if(buf_p->used_addr < buf_p->free_addr)
+    {
+	if(buf_p->used_addr <= addr && addr < buf_p->free_addr)
+	{
+	    return 1;
+	}else
+	{
+	    return 0;
+	}
+    }else
+    {
+	if(buf_p->free_addr <= addr && addr < buf_p->used_addr)
+	{
+	    return 0;
+	}else
+	{
+	    return 1;
+	}
+    }
 }
 
 /**
  * @brief: create a new buffer , and init
  *
  * @param size: size of the buffer
- * @param free: free fuction for the buffer
  * @param error: error code 
  *
  * @return: pointer to the new buffer
  */
-iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error);
+iofw_buf_t *iofw_buf_open(size_t size, int *error);
 
 /**
  * @brief: clear the buffer's data
@@ -121,6 +165,7 @@ iofw_buf_t *iofw_buf_open(size_t size, void (*free)(), int *error);
  */
 int iofw_buf_clear(iofw_buf_t *buf_p);
 
+size_t iofw_buf_pack_size(const void *data, size_t size);
 /**
  * @brief: pack one data in the buffer
  *
@@ -131,7 +176,7 @@ int iofw_buf_clear(iofw_buf_t *buf_p);
  * @return: error code
  */
 int iofw_buf_pack_data(
-	void *data, size_t size, iofw_buf_t *buf_p);
+	const void *data, size_t size, iofw_buf_t *buf_p);
 
 /**
  * @brief: unpack one data from the buffer
@@ -145,6 +190,8 @@ int iofw_buf_pack_data(
 int iofw_buf_unpack_data(
 	void *data, size_t size, iofw_buf_t *buf_p);
 
+size_t iofw_buf_pack_array_size(
+	const void *data, unsigned int len, size_t size);
 /**
  * @brief: pack an array of data into the buffer
  *
@@ -156,7 +203,7 @@ int iofw_buf_unpack_data(
  * @return: error code
  */
 int iofw_buf_pack_data_array(
-	void *data, unsigned len,
+	const void *data, unsigned len,
 	size_t size, iofw_buf_t *buf_p);
 
 /**
@@ -190,14 +237,21 @@ int iofw_buf_unpack_data_array_ptr(
 	void **data, unsigned int *len,
 	const size_t size, iofw_buf_t *buf_p);
 
+static inline size_t iofw_buf_pack_str_size(char *str)
+{
+    assert(NULL != (str)); 
+    return iofw_buf_pack_array_size(
+	    (const void*)str, strlen(str) + 1, sizeof(char));
+} 
+
 #define iofw_buf_pack_str(str, buf) do{ \
     assert(NULL != (str)); \
-    iofw_buf_pack_data_array((str), strlen(str) + 1, sizeof(char), buf); \
-    } while(0) 
+    iofw_buf_pack_data_array((const void*)(str), strlen(str) + 1, sizeof(char), buf); \
+} while(0) 
 #define iofw_buf_unpack_str(str, buf) \
-    iofw_buf_unpack_data_array(str, NULL, sizeof(char), buf); 
+    iofw_buf_unpack_data_array((void **)str, NULL, sizeof(char), buf)
 #define iofw_buf_unpack_str_ptr(str, buf) \
-    iofw_buf_unpack_data_array_ptr(str, NULL, sizeof(char), buf);
+    iofw_buf_unpack_data_array_ptr((void **)str, NULL, sizeof(char), buf)
 
 #endif
 

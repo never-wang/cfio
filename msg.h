@@ -40,11 +40,13 @@
 
 #define IOFW_MSG_ERROR_NONE	0
 #define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
+#define IOFW_MSG_ERROR_MALLOC	2   /* malloc error */
+#define IOFW_MSG_ERROR_MPI	3   /* mpi recv error */
 
 typedef struct
 {
     size_t size;	/* size of the msg */
-    void *addr;		/* pointer to the data buffer of the msg */   
+    char *addr;		/* pointer to the data buffer of the msg */   
     int src;		/* id of sending msg proc */
     int dst;		/* id of dst porc */  
     MPI_Request req;	/* MPI request of the send msg */
@@ -62,14 +64,7 @@ int iofw_msg_init();
  *
  * @return: error code
  */
-int ifow_msg_final();
-/**
- * @brief: free unsed space in buffer, it will be registed in 
- *	iofw_msg_init func, and be called by buffer's func
- *
- * @return: error code
- */
-int ifow_msg_buf_free();
+int iofw_msg_final();
 /**
  * @brief: async send msg to other proc by mpi
  *
@@ -78,9 +73,23 @@ int ifow_msg_buf_free();
  *
  * @return: error code
  */
-int iofw_msg_isend(
-	iofw_msg_t *msg,  MPI_Comm comm);
+int iofw_msg_isend(iofw_msg_t *msg,  MPI_Comm comm);
+/**
+ * @brief: recv msg from client
+ *
+ * @param rank: the rank of server who recv the msg
+ * @param comm: MPI communicator
+ *
+ * @return: error code
+ */
+int iofw_msg_recv(int rank, MPI_Comm comm);
 
+/**
+ * @brief: get the first msg in msg queue
+ *
+ * @return: pointer to the first msg
+ */
+iofw_msg_t *iofw_msg_get_first();
 /**
  * @brief: pack iofw_nc_create function into struct iofw_msg_t
  *
@@ -210,11 +219,13 @@ int iofw_msg_pack_io_done(
 /**
  * @brief: unpack funciton code from the buffer
  *
+ * @param msg: pointer to the recv msg
  * @param func_code: the code of fucntion
  *
  * @return: error code
  */
 int iofw_msg_unpack_func_code(
+	iofw_msg_t *msg,
 	uint32_t *func_code);
 /**
  * @brief: unpack arguments for ifow_nc_create function
@@ -225,7 +236,7 @@ int iofw_msg_unpack_func_code(
  *
  * @return: error code
  */
-int iofw_msg_unpack_create(
+int iofw_msg_unpack_nc_create(
 	char **path, int *cmode);
 /**
  * @brief: unpack arguments for ifow_nc_def_dim function
@@ -236,7 +247,7 @@ int iofw_msg_unpack_create(
  *
  * @return: error code
  */
-int iofw_msg_unpack_def_dim(
+int iofw_msg_unpack_nc_def_dim(
 	int *ncid, char **name, size_t *len);
 /**
  * @brief: unpack arguments for the iofw_nc_def_var function
@@ -252,9 +263,9 @@ int iofw_msg_unpack_def_dim(
  *
  * @return: error code
  */
-int iofw_msg_unpack_def_var(
+int iofw_msg_unpack_nc_def_var(
 	int *ncid, char **name, nc_type *xtype,
-	int *ndims, int **dimids);
+	unsigned int *ndims, int **dimids);
 /**
  * @brief: unpack arguments for the iofw_nc_enddef function 
  *
@@ -262,7 +273,7 @@ int iofw_msg_unpack_def_var(
  *
  * @return: error code
  */
-int iofw_msg_unpack_enddef(
+int iofw_msg_unpack_nc_enddef(
 	int *ncid);
 /**
  * @brief: unpack arguments for the iofw_nc_put_var1_float function
@@ -276,8 +287,8 @@ int iofw_msg_unpack_enddef(
  *
  * @return: error code
  */
-int iofw_msg_unpack_put_var1_float(
-	int *ncid, int *varid, int *indexdim, size_t **index);
+int iofw_msg_unpack_nc_put_var1_float(
+	int *ncid, int *varid, unsigned int *indexdim, size_t **index);
 /**
  * @brief: unpack arguments for function : iofw_msg_unpack_put_vara_float
  *
@@ -294,10 +305,10 @@ int iofw_msg_unpack_put_var1_float(
  *
  * @return: error code
  */
-int iofw_msg_unpack_put_vara_float(
-	int *ncid, int *varid, int *dim, 
+int iofw_msg_unpack_nc_put_vara_float(
+	int *ncid, int *varid, unsigned int *dim, 
 	size_t **start, size_t **count,
-	int *data_len, float **fp);
+	unsigned int *data_len, float **fp);
 /**
  * @brief: unpack arguments for the iofw_nc_close function
  *
@@ -305,6 +316,6 @@ int iofw_msg_unpack_put_vara_float(
  *
  * @return: error code
  */
-int iofw_msg_unpack_close(int *ncid);
+int iofw_msg_unpack_nc_close(int *ncid);
 
 #endif

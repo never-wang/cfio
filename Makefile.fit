@@ -46,7 +46,7 @@ $(SOOBJECTS):$(ALLOBJECTS)
 .PHONY:clean run install
 clean:
 	-rm $(ALLOBJECTS) $(EXEFILES) $(SOOBJECTS)
-	rm -r output
+	-rm -r output csv
 run:
 	#$(shell ./startserver.sh)
 #install:

@@ -18,7 +18,7 @@
 #include "iofw.h"
 #include "debug.h"
 
-#define LAT 360
+#define LAT 180
 #define LON 180
 
 
@@ -36,9 +36,8 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_UNMAP); 
-
-    debug_mark(DEBUG_USER);
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW); 
+    set_debug_mask(DEBUG_USER | DEBUG_MSG);
 
     iofw_init( size);
     char fileName[100];
@@ -61,9 +60,11 @@ int main(int argc, char** argv)
 
     for( i = 0; i< LON * LAT; i++)
     {
-	fp[i]=1.0;
+	fp[i]=35.5;
     }
 
+    iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+    iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
     iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
     iofw_nc_close(rank,ncidp);
