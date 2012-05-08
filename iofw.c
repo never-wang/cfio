@@ -20,11 +20,12 @@
 
 #include "iofw.h"
 #include "map.h"
-#include "mpi.h"
+#include "id.h"
 #include "buffer.h"
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
+#include "mpi.h"
 
 /* my real rank in mpi_comm_world */
 static int rank;
@@ -122,14 +123,18 @@ int iofw_nc_create(
     assert(ncidp != NULL);
 
     iofw_msg_t *msg;
+    int ret;
 
-    iofw_msg_pack_nc_create(&msg, rank, path, cmode);
+    ret = iofw_id_assign_nc(ncidp);
+    if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
+    {
+	return IOFW_ERROR_TOO_MANY_OPEN;
+    }
+
+    iofw_msg_pack_nc_create(&msg, rank, path, cmode, *ncidp);
     iofw_msg_isend(msg, inter_comm);
 
-    /* TODO */
-    *ncidp = 1;
-
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 /**
  * @brief: nc_def_dim
@@ -151,12 +156,11 @@ int iofw_nc_def_dim(
 
     iofw_msg_t *msg;
 
-    iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len);
+    iofw_id_assign_dim(ncid, idp);
+
+    iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len, *idp);
     iofw_msg_isend(msg, inter_comm);
 
-    /* TODO */
-    *idp = 2;
-    
     return 0;
 }
 /**
@@ -183,12 +187,11 @@ int iofw_nc_def_var(
 
     iofw_msg_t *msg;
 
-    iofw_msg_pack_nc_def_var(&msg, rank, 
-	    ncid, name, xtype, ndims, dimids);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_id_assign_var(ncid, varidp);
     
-    /* TODO */
-    *varidp = 3;
+    iofw_msg_pack_nc_def_var(&msg, rank, 
+	    ncid, name, xtype, ndims, dimids, *varidp);
+    iofw_msg_isend(msg, inter_comm);
     
     return 0;
 }

@@ -98,12 +98,13 @@ iofw_msg_t *iofw_msg_get_first();
  * @param path: the file name of the new netCDF dataset, iofw_nc_create's
  *	arg
  * @param cmode: the creation mode flag , arg of iofw_nc_create
+ * @param ncid: ncid assigned by client
  *
  * @return: error code
  */
 int iofw_msg_pack_nc_create(
 	iofw_msg_t **_msg, int client_proc_id, 
-	const char *path, int cmode);
+	const char *path, int cmode, int ncid);
 /**
  * @brief: pack iofw_nc_def_dim into msg
  *
@@ -112,12 +113,13 @@ int iofw_msg_pack_nc_create(
  * @param ncid: NetCDF group ID, arg of iofw_nc_def_dim
  * @param name: Dimension name, arg of iofw_nc_def_dim
  * @param len: Length of dimension, arg of iofw_nc_def_dim
+ * @param dimid: dim id assigned by client
  *
  * @return: error_code
  */
 int iofw_msg_pack_nc_def_dim(
 	iofw_msg_t **_msg, int client_proc_id, 
-	int ncid, const char *name, size_t len);
+	int ncid, const char *name, size_t len, int dimid);
 /**
  * @brief: pack iofw_nc_def_var into msg
  *
@@ -131,13 +133,14 @@ int iofw_msg_pack_nc_def_dim(
  *	iofw_nc_def_var
  * @param dimids: vector of ndims dimension IDs corresponding to the
  *	variable dimensions, arg of iofw_nc_def_var
+ * @param varid: var id assigned by client
  *
  * @return: error code
  */
 int iofw_msg_pack_nc_def_var(
 	iofw_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, nc_type xtype,
-	int ndims, const int *dimids);
+	int ndims, const int *dimids, int varid);
 /**
  * @brief: pack iofw_nc_enddef into msg
  *
@@ -233,22 +236,24 @@ int iofw_msg_unpack_func_code(
  * @param path: poiter to where the file anme of the new netCDF dataset is to be 
  *	stored
  * @param cmode: pointer to where the creation mode flag is to be stored
+ * @param ncid: pointer to where the ncid assigned by client is to be stored
  *
  * @return: error code
  */
 int iofw_msg_unpack_nc_create(
-	char **path, int *cmode);
+	char **path, int *cmode, int *ncid);
 /**
  * @brief: unpack arguments for ifow_nc_def_dim function
  *
  * @param ncid: pointer to where NetCDF group ID is to be stored
  * @param name: pointer to where dimension name is to be stored
  * @param len: pointer to where length of dimension is to be stored
+ * @param dimid: pointer to where the dimid assigned by client is to be stored
  *
  * @return: error code
  */
 int iofw_msg_unpack_nc_def_dim(
-	int *ncid, char **name, size_t *len);
+	int *ncid, char **name, size_t *len,int *dimid);
 /**
  * @brief: unpack arguments for the iofw_nc_def_var function
  *
@@ -260,12 +265,13 @@ int iofw_msg_unpack_nc_def_dim(
  *	stored
  * @param dimids: pointer to where vector of ndims dimension IDs corresponding to
  *      the variable dimensions is to be stored, need to be freed by the caller
+ * @param varid: pointer to where the varid assigned by client is to be stored
  *
  * @return: error code
  */
 int iofw_msg_unpack_nc_def_var(
 	int *ncid, char **name, nc_type *xtype,
-	unsigned int *ndims, int **dimids);
+	unsigned int *ndims, int **dimids, int *varid);
 /**
  * @brief: unpack arguments for the iofw_nc_enddef function 
  *

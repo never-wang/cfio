@@ -19,6 +19,7 @@
 #include <netcdf.h>
 
 #include "io.h"
+#include "id.h"
 #include "msg.h"
 #include "buffer.h"
 #include "debug.h"
@@ -43,18 +44,25 @@ int iofw_io_client_done(int *client_done, int *server_done,
 int iofw_io_nc_create(int client_proc)
 {
     int ret, cmode;
-    char *path;
-    int ncid = 0,dimid;
+    char *path = NULL;
+    int ncid, client_ncid;
     
-    iofw_msg_unpack_nc_create(&path,&cmode);
+    iofw_msg_unpack_nc_create(&path,&cmode, &client_ncid);
     
-    //ret = nc_create(path,cmode,&ncid);	
-    //if( ret != NC_NOERR )
-    //{
-    //    error("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
-    //    return -IOFW_IO_ERROR_NC;
-    //}
+    ret = nc_create(path,cmode,&ncid);	
+    if( ret != NC_NOERR )
+    {
+        error("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
+        return -IOFW_IO_ERROR_NC;
+    }
 
+    iofw_id_map_nc(client_proc, client_ncid, ncid);
+
+    if(NULL != path)
+    {
+	free(path);
+	path = NULL;
+    }
     return IOFW_IO_ERROR_NONE;
 }
 
@@ -62,63 +70,83 @@ int iofw_io_nc_def_dim(int client_proc)
 {
     int ret = 0;
     int ncid,dimid;
+    int client_ncid, client_dimid;
     size_t len;
-    char *name;
-    iofw_msg_unpack_nc_def_dim(&ncid, &name, &len);
+    char *name = NULL;
+    iofw_msg_unpack_nc_def_dim(&client_ncid, &name, &len, &client_dimid);
 
-   // ret = nc_def_dim(ncid,name,len,&dimid);
-   // if( ret != NC_NOERR )
-   // {
-   //     error("def dim(%s) error(%s)",name,nc_strerror(ret));
-   //     return -IOFW_IO_ERROR_NC;
-   // }
-
+    iofw_id_get_nc(client_proc, client_ncid, &ncid);
+    ret = nc_def_dim(ncid,name,len,&dimid);
+    if( ret != NC_NOERR )
+    {
+	error("def dim(%s) error(%s)",name,nc_strerror(ret));
+	return -IOFW_IO_ERROR_NC;
+    }
+    iofw_id_map_dim(client_proc, client_ncid, client_dimid, ncid, dimid);
+    
+    if(NULL != name)
+    {
+	free(name);
+	name = NULL;
+    }
     return IOFW_IO_ERROR_NONE;
 }
 
 int iofw_io_nc_def_var(int client_proc)
 {
-    int ret = 0;
-    int ncid, ndims;
-    int *dimids;
+    int ret = 0, i;
+    int ncid, varid, ndims;
+    int client_ncid, client_varid;
+    int *dimids, *client_dimids;
     char *name;
     nc_type xtype;
-    ret = iofw_msg_unpack_nc_def_var(&ncid, &name, &xtype, &ndims, &dimids);
-    //if( ret < 0 )
-    //{
-    //    error("unpack_msg_def_var failed");
-    //    return ret;
-    //}
-
-    //int varid;
-    //ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
-    //if( ret != NC_NOERR )
-    //{
-    //    error("nc_def_var failed error");
-    //    return ret;
-    //}
-
+    ret = iofw_msg_unpack_nc_def_var(&client_ncid, &name, &xtype, &ndims, 
+	    &client_dimids, &client_varid);
+    if( ret < 0 )
+    {
+        error("unpack_msg_def_var failed");
+        return ret;
+    }
+    
+    iofw_id_get_nc(client_proc, client_ncid, &ncid);
+    dimids = malloc(ndims * sizeof(int));
+    for(i = 0; i < ndims; i ++)
+    {
+	iofw_id_get_dim(client_proc, client_ncid, client_dimids[i], 
+		&ncid, &dimids[i]);
+    }
+    ret = nc_def_var(ncid,name,xtype,ndims,dimids,&varid);
+    if( ret != NC_NOERR )
+    {
+        error("nc_def_var failed error");
+        return ret;
+    }
+    iofw_id_map_var(client_proc, client_ncid, client_varid, ncid, varid);
+    
     return 0;
 }
 int iofw_io_nc_enddef(int client_proc)
 {
-    int ncid, ret ;
-    ret = iofw_msg_unpack_nc_enddef(&ncid);
-    //if( ret < 0 )
-    //{
-    //    error("unapck msg error");
-    //    return ret;
-    //}
-    //ret = nc_enddef(ncid);
-    //if( ret != NC_NOERR )
-    //{
-    //    error("nc_enddef error(%s)",nc_strerror(ret));
-    //}
+    int client_ncid, ncid, ret;
+    ret = iofw_msg_unpack_nc_enddef(&client_ncid);
+    if( ret < 0 )
+    {
+        error("unapck msg error");
+        return ret;
+    }
+
+    iofw_id_get_nc(client_proc, client_ncid, &ncid);
+    ret = nc_enddef(ncid);
+    if( ret != NC_NOERR )
+    {
+        error("nc_enddef error(%s)",nc_strerror(ret));
+    }
     return IOFW_IO_ERROR_NONE;
 }
 int iofw_io_nc_put_vara_float(int client_proc)
 {
     int i,ret = 0,ncid, varid, dim;
+    int client_ncid, client_varid;
     size_t *start, *count;
     size_t data_size;
     float *data;
@@ -126,7 +154,7 @@ int iofw_io_nc_put_vara_float(int client_proc)
 
 //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
     ret = iofw_msg_unpack_nc_put_vara_float(
-	    &ncid, &varid, &dim, &start, &count,
+	    &client_ncid, &client_varid, &dim, &start, &count,
 	    &data_len, &data);	
 
     if( ret < 0 )
@@ -140,16 +168,15 @@ int iofw_io_nc_put_vara_float(int client_proc)
     //memcpy(_start,start,sizeof(_start));
     //memcpy(_count,count,sizeof(_count));
 
-    //ret = nc_put_vara_float( ncid, varid, _start, _count, (float *)(data));
-    //if( ret != NC_NOERR )
-    //{
-    //    error("write nc(%d) var (%d) failure(%s)",ncid,varid,nc_strerror(ret));
-    //    return -1;
-    //}
-    //
+    iofw_id_get_var(client_proc, client_ncid, client_varid, &ncid, &varid);
 
+    ret = nc_put_vara_float( ncid, varid, start, count, (float *)(data));
+    if( ret != NC_NOERR )
+    {
+        error("write nc(%d) var (%d) failure(%s)",ncid,varid,nc_strerror(ret));
+        return -1;
+    }
     return IOFW_IO_ERROR_NONE;	
-
 }
 /**
  * @brief iofw_io_nc_close 
@@ -163,8 +190,8 @@ int iofw_io_nc_put_vara_float(int client_proc)
 int iofw_io_nc_close(int client_proc)
 {
 
-    int ncid, ret;
-    ret = iofw_msg_unpack_nc_close(&ncid);
+    int client_ncid, ncid, ret;
+    ret = iofw_msg_unpack_nc_close(&client_ncid);
 
     if( ret < 0 )
     {
@@ -172,13 +199,14 @@ int iofw_io_nc_close(int client_proc)
 	return ret;
     }
 
-    //ret = nc_close(ncid);
+    iofw_id_get_nc(client_proc, client_ncid, &ncid);
+    ret = nc_close(ncid);
 
-    //if( ret != NC_NOERR )
-    //{
-    //    error("close nc %d file failure,%s\n",ncid,nc_strerror(ret));
-    //    ret = -1;
-    //}
+    if( ret != NC_NOERR )
+    {
+        error("close nc %d file failure,%s\n",ncid,nc_strerror(ret));
+        ret = -1;
+    }
     return IOFW_IO_ERROR_NONE;
 }
 
