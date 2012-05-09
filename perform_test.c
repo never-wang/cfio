@@ -312,7 +312,8 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //set_debug_mask(DEBUG_MSG | DEBUG_IOFW | DEBUG_USER);
-    //set_debug_mask(DEBUG_TIME);
+    //set_debug_mask(DEBUG_MSG | DEBUG_IOFW);
+    set_debug_mask(DEBUG_TIME);
 
     iofw_init(size / 2 > 0 ? size /2 : 1);
     times_init();

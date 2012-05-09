@@ -22,6 +22,7 @@
 #include "times.h"
 #include "map.h"
 #include "pthread.h"
+#include "id.h"
 
 static iofw_msg_t *msg_head;
 iofw_buf_t *buffer;
@@ -46,7 +47,7 @@ int iofw_msg_init()
     msg_head = malloc(sizeof(iofw_msg_t));
     if(NULL == msg_head)
     {
-	return IOFW_MSG_ERROR_MALLOC;
+	return -IOFW_MSG_ERROR_MALLOC;
     }
     INIT_QLIST_HEAD(&(msg_head->link));
 
@@ -54,13 +55,13 @@ int iofw_msg_init()
 
     if(NULL == buffer)
     {
-	return IOFW_MSG_ERROR_BUFFER;
+	return -IOFW_MSG_ERROR_BUFFER;
     }
 
     mutex = malloc(sizeof(mutex));
     if(NULL == mutex)
     {
-	return IOFW_MSG_ERROR_MALLOC;
+	return -IOFW_MSG_ERROR_MALLOC;
     }
 
     return IOFW_MSG_ERROR_NONE;
@@ -172,7 +173,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
 
     if(status.MPI_SOURCE != status.MPI_TAG)
     {
-	return IOFW_MSG_ERROR_MPI;
+	return -IOFW_MSG_ERROR_MPI;
     }
 
     msg = create_msg();
@@ -245,6 +246,8 @@ int iofw_msg_pack_nc_create(
 
     iofw_map_forwarding_proc(msg->src, &(msg->dst));
     *_msg = msg;
+    
+    debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -306,6 +309,8 @@ int iofw_msg_pack_nc_def_var(
 
     ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
     
+    debug_mark(DEBUG_MSG);
+    
     msg->addr = buffer->free_addr;
 
     iofw_buf_pack_data(&code , sizeof(uint32_t), buffer);
@@ -317,6 +322,8 @@ int iofw_msg_pack_nc_def_var(
 
     iofw_map_forwarding_proc(msg->src, &(msg->dst));
     *_msg = msg;
+    
+    debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", ncid, name, ndims);
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -344,13 +351,14 @@ int iofw_msg_pack_nc_enddef(
     iofw_map_forwarding_proc(msg->src, &(msg->dst));
     *_msg = msg;
     
-    return 0;
+    debug(DEBUG_MSG, "ncid = %d", ncid);
+    
     return IOFW_MSG_ERROR_NONE;
 }
 
 int iofw_msg_pack_nc_put_var1_float(
 	iofw_msg_t **_msg, int client_proc_id,
-	int ncid, int varid, int dim,
+	int ncid, int varid, int ndims,
 	const size_t *index, const float *fp)
 {
     uint32_t code = FUNC_NC_PUT_VAR1_FLOAT;
@@ -362,7 +370,7 @@ int iofw_msg_pack_nc_put_var1_float(
     msg->size += iofw_buf_pack_size(&code, sizeof(uint32_t));
     msg->size += iofw_buf_pack_size(&ncid, sizeof(int));
     msg->size += iofw_buf_pack_size(&varid, sizeof(int));
-    msg->size += iofw_buf_pack_array_size(index, dim, sizeof(size_t));
+    msg->size += iofw_buf_pack_array_size(index, ndims, sizeof(size_t));
     msg->size += iofw_buf_pack_size((void*)fp, sizeof(float));
     
     ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
@@ -372,7 +380,7 @@ int iofw_msg_pack_nc_put_var1_float(
     iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
     iofw_buf_pack_data(&ncid, sizeof(int), buffer);
     iofw_buf_pack_data(&varid, sizeof(int), buffer);
-    iofw_buf_pack_data_array(index, dim, sizeof(size_t), buffer);
+    iofw_buf_pack_data_array(index, ndims, sizeof(size_t), buffer);
     iofw_buf_pack_data((void*)fp, sizeof(float), buffer);
 
     iofw_map_forwarding_proc(msg->src, &(msg->dst));
@@ -383,7 +391,7 @@ int iofw_msg_pack_nc_put_var1_float(
 
 int iofw_msg_pack_nc_put_vara_float(
 	iofw_msg_t **_msg, int client_proc_id,
-	int ncid, int varid, int dim,
+	int ncid, int varid, int ndims,
 	const size_t *start, const size_t *count, const float *fp)
 {
     int i;
@@ -394,17 +402,17 @@ int iofw_msg_pack_nc_put_vara_float(
     //times_start();
 
     debug(DEBUG_MSG, "pack_msg_put_vara_float");
-    for(i = 0; i < dim; i ++)
+    for(i = 0; i < ndims; i ++)
     {
 	debug(DEBUG_MSG, "start[%d] = %lu", i, start[i]);
     }
-    for(i = 0; i < dim; i ++)
+    for(i = 0; i < ndims; i ++)
     {
 	debug(DEBUG_MSG, "count[%d] = %lu", i, count[i]);
     }
     
     data_len = 1;
-    for(i = 0; i < dim; i ++)
+    for(i = 0; i < ndims; i ++)
     {
 	data_len *= count[i]; 
     }
@@ -415,8 +423,8 @@ int iofw_msg_pack_nc_put_vara_float(
     msg->size += iofw_buf_pack_size(&code, sizeof(uint32_t));
     msg->size += iofw_buf_pack_size(&ncid, sizeof(int));
     msg->size += iofw_buf_pack_size(&varid, sizeof(int));
-    msg->size += iofw_buf_pack_array_size(start, dim, sizeof(size_t));
-    msg->size += iofw_buf_pack_array_size(count, dim, sizeof(size_t));
+    msg->size += iofw_buf_pack_array_size(start, ndims, sizeof(size_t));
+    msg->size += iofw_buf_pack_array_size(count, ndims, sizeof(size_t));
     msg->size += iofw_buf_pack_array_size(fp, data_len, sizeof(float));
 	    
     ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
@@ -426,14 +434,16 @@ int iofw_msg_pack_nc_put_vara_float(
     iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
     iofw_buf_pack_data(&ncid, sizeof(int), buffer);
     iofw_buf_pack_data(&varid, sizeof(int), buffer);
-    iofw_buf_pack_data_array(start, dim, sizeof(size_t), buffer);
-    iofw_buf_pack_data_array(count, dim, sizeof(size_t), buffer);
+    iofw_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
+    iofw_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
     iofw_buf_pack_data_array(fp, data_len, sizeof(float), buffer);
 
     iofw_map_forwarding_proc(msg->src, &(msg->dst));
     *_msg = msg;
     
     //debug(DEBUG_TIME, "%f ms", times_end());
+    debug(DEBUG_MSG, "ncid = %d, varid = %d, ndims = %d, data_len = %lu", 
+	    ncid, varid, ndims, data_len);
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -511,7 +521,7 @@ int iofw_msg_unpack_nc_create(
     iofw_buf_unpack_data(cmode, sizeof(int), buffer);
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
 
-    debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = ", *path, *cmode, *ncid);
+    debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", *path, *cmode, *ncid);
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -531,7 +541,7 @@ int iofw_msg_unpack_nc_def_dim(
 
 int iofw_msg_unpack_nc_def_var(
 	int *ncid, char **name, nc_type *xtype,
-	unsigned int *ndims, int **dimids, int *varid)
+	int *ndims, int **dimids, int *varid)
 {
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
     iofw_buf_unpack_str(name, buffer);
@@ -555,36 +565,36 @@ int iofw_msg_unpack_nc_enddef(
 }
 
 int iofw_msg_unpack_nc_put_var1_float(
-	int *ncid, int *varid, unsigned int *indexdim, size_t **index)
+	int *ncid, int *varid, int *ndims, size_t **index)
 {
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
     iofw_buf_unpack_data(varid, sizeof(int), buffer);
-    iofw_buf_unpack_data_array((void **)index, indexdim, 
+    iofw_buf_unpack_data_array((void **)index, ndims, 
 	    sizeof(int), buffer);
 
     return IOFW_MSG_ERROR_NONE;
 }
 
 int iofw_msg_unpack_nc_put_vara_float(
-	int *ncid, int *varid, unsigned int *dim, 
+	int *ncid, int *varid, int *ndims, 
 	size_t **start, size_t **count,
-	unsigned int *data_len, float **fp)
+	int *data_len, float **fp)
 {
     int i;
 
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
     iofw_buf_unpack_data(varid, sizeof(int), buffer);
     
-    iofw_buf_unpack_data_array((void**)start, dim, sizeof(size_t), buffer);
-    iofw_buf_unpack_data_array((void**)count, dim, sizeof(size_t), buffer);
+    iofw_buf_unpack_data_array((void**)start, ndims, sizeof(size_t), buffer);
+    iofw_buf_unpack_data_array((void**)count, ndims, sizeof(size_t), buffer);
 
 //    iofw_buf_unpack_data_array_ptr((void**)fp, data_len, 
 //	    sizeof(float), buffer);
 //
     iofw_buf_unpack_data_array((void**)fp, data_len, sizeof(float), buffer);
 
-    debug(DEBUG_MSG, "ncid = %d, varid = %d, dim = %d, data_len = %u", 
-	    *ncid, *varid, *dim, *data_len);
+    debug(DEBUG_MSG, "ncid = %d, varid = %d, ndims = %d, data_len = %u", 
+	    *ncid, *varid, *ndims, *data_len);
     debug(DEBUG_MSG, "fp[0] = %f", (*fp)[0]); 
     
     return IOFW_MSG_ERROR_NONE;

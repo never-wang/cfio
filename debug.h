@@ -28,6 +28,7 @@
 #define DEBUG_MSG   ((uint32_t)1 << 4)
 #define DEBUG_IO    ((uint32_t)1 << 5)
 #define DEBUG_MAP   ((uint32_t)1 << 6)
+#define DEBUG_ID    ((uint32_t)1 << 7)
 
 extern int debug_mask;
 

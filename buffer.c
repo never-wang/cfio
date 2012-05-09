@@ -28,11 +28,20 @@ static inline void put_buf_data(iofw_buf_t *buf_p, const void *data, size_t size
 {
     char *_data = data;
 	
+    if(0 == size)
+    {
+	return;
+    }
     memcpy(buf_p->free_addr, _data, size);
 }
 static inline void get_buf_data(iofw_buf_t *buf_p, void *data, size_t size)
 {
     char *_data = data;
+
+    if(0 == size)
+    {
+	return;
+    }
 
     memcpy(_data, buf_p->used_addr, size);
 }
@@ -109,27 +118,31 @@ int iofw_buf_unpack_data(
 }
 
 size_t iofw_buf_pack_array_size(
-	const void *data, unsigned int len, size_t size)
+	const void *data, int len, size_t size)
 {
-    return len * (size_t)size + (sizeof(unsigned int));
+    return len * (size_t)size + (sizeof(int));
 }
 
 
 int iofw_buf_pack_data_array(
-	const void *data, unsigned int len,
+	const void *data, int len,
 	size_t size, iofw_buf_t *buf_p)
 {
+    
+    /**
+     *remember consider len = 0
+     **/
+
     size_t data_size = (size_t)len * size;
 
-    assert(NULL != data);
     assert(NULL != buf_p);
 
     assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
 
-    assert((free_buf_size(buf_p) >= (data_size + sizeof(unsigned int))));
+    assert((free_buf_size(buf_p) >= (data_size + sizeof(int))));
 
-    put_buf_data(buf_p, &len, sizeof(unsigned int));
-    use_buf(buf_p, sizeof(unsigned int));
+    put_buf_data(buf_p, &len, sizeof(int));
+    use_buf(buf_p, sizeof(int));
     put_buf_data(buf_p, data, data_size);
     use_buf(buf_p, data_size);
 
@@ -137,7 +150,7 @@ int iofw_buf_pack_data_array(
 }
 
 int iofw_buf_unpack_data_array(
-	void **data, unsigned int *len, 
+	void **data, int *len, 
 	size_t size, iofw_buf_t *buf_p)
 {
     assert(NULL != data);
@@ -145,17 +158,22 @@ int iofw_buf_unpack_data_array(
 
     size_t data_size;
     volatile size_t used_size;
-    unsigned int _len;
+    int _len;
     
     assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
     
-    assert(used_buf_size(buf_p) >= sizeof(unsigned int));
+    assert(used_buf_size(buf_p) >= sizeof(int));
 
-    get_buf_data(buf_p, &_len, sizeof(unsigned int));
-    free_buf(buf_p, sizeof(unsigned int));
+    get_buf_data(buf_p, &_len, sizeof(int));
+    free_buf(buf_p, sizeof(int));
     if(NULL != len)
     {
 	*len = _len;
+    }
+
+    if(0 == _len)
+    {
+	return IOFW_BUF_ERROR_NONE;
     }
 
     data_size = _len * size;
@@ -172,7 +190,7 @@ int iofw_buf_unpack_data_array(
 }
 
 int iofw_buf_unpack_data_array_ptr(
-	void **data, unsigned int *len, 
+	void **data, int *len, 
 	size_t size, iofw_buf_t *buf_p)
 {
     assert(NULL != data);
@@ -180,19 +198,19 @@ int iofw_buf_unpack_data_array_ptr(
 
     size_t data_size;
     volatile size_t used_size;
-    unsigned int _len;
+    int _len;
     
     assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
 
-    assert(used_buf_size(buf_p) >= sizeof(unsigned int));
+    assert(used_buf_size(buf_p) >= sizeof(int));
 
-    get_buf_data(buf_p, &_len, sizeof(unsigned int));
-    free_buf(buf_p, sizeof(unsigned int));
+    get_buf_data(buf_p, &_len, sizeof(int));
+    free_buf(buf_p, sizeof(int));
     if(NULL != len)
     {
 	*len = _len;
     }
-    free_buf(buf_p, sizeof(unsigned int));
+    free_buf(buf_p, sizeof(int));
 
     data_size = (*len) * size;
     assert(used_buf_size(buf_p) >= data_size);
