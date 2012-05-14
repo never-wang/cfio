@@ -303,7 +303,7 @@ int main(int argc, char** argv)
 {
     int idate[3] = {1990, 1, 1};
     int i;
-    int cycle = 1;
+    int cycle = 5;
     char *prefix = "output/";
     int is_server;
 
