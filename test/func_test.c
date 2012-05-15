@@ -36,8 +36,9 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW); 
-    set_debug_mask(DEBUG_USER | DEBUG_MSG);
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
+    //set_debug_mask(DEBUG_ID); 
+    set_debug_mask(DEBUG_TIME); 
 
     iofw_init( size);
     char fileName[100];
