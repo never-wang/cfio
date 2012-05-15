@@ -13,7 +13,7 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
-#include "io.h"
+#include "id.h"
 #include "debug.h"
 #include "times.h"
 #include "quickhash.h"
