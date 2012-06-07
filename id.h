@@ -15,6 +15,10 @@
 #ifndef _ID_H
 #define _ID_H
 
+#include <stdint.h>
+
+#include "quicklist.h"
+
 #define MAX_OPEN_NC_NUM 1024
 #define MAP_HASH_TABLE_SIZE 1024
 
@@ -22,8 +26,9 @@
 #define IOFW_ID_INIT_SERVER 1
 
 #define IOFW_ID_ERROR_NONE 0
-#define IOFW_ID_ERROR_TOO_MANY_OPEN 1 /* the opened nc file amount exceed MAX_OPEN_NC_NUM */
-#define IOFW_ID_ERROR_GET_NULL /* can't find the client id in Map Hash Table*/
+#define IOFW_ID_ERROR_TOO_MANY_OPEN 1	/* the opened nc file amount exceed MAX_OPEN_NC_NUM */
+#define IOFW_ID_ERROR_GET_NULL	    2	/* can't find the client id in Map Hash Table*/
+#define IOFW_ID_ERROR_WRONG_FLAG    3   /* wrong flag in iofw_id_init */
 
 typedef struct 
 {
@@ -37,19 +42,19 @@ typedef struct
 {
     int client_id;	/* id of client proc */
     int client_nc_id;	/* id of nc file in client */
-    int client_var_id;	/* id of nc var in client */
     int client_dim_id;	/* id of nc dim in client */
+    int client_var_id;	/* id of nc var in client */
 }iofw_id_key_t;
 
 typedef struct
 {
     int client_id;	/* id of client proc */
     int client_nc_id;	/* id of nc file in client */
-    int client_var_id;	/* id of nc var in client */
     int client_dim_id;	/* id of nc dim in client */
+    int client_var_id;	/* id of nc var in client */
     int server_nc_id;	/* id of nc file in server */
-    int server_var_id;	/* id of nc var in server */
     int server_dim_id;	/* id of nc dim in server */
+    int server_var_id;	/* id of nc var in server */
     qlist_head_t hash_link;	
 }iofw_id_val_t;
 
@@ -115,9 +120,9 @@ int iofw_id_map_nc(int client_id, int client_ncid, int server_ncid);
  *
  * @return: error code
  */
-int ifow_id_map_dim(int client_id,
+int iofw_id_map_dim(int client_id,
 	int client_ncid, int client_dimid, 
-	int server_ncid, server_dimid);
+	int server_ncid, int server_dimid);
 /**
  * @brief: add a new map((client_ncid, client_varid)->(server_ncid,
  *	server_dimid)) in server
@@ -132,7 +137,7 @@ int ifow_id_map_dim(int client_id,
  */
 int iofw_id_map_var(int client_id,
 	int client_ncid, int client_varid,
-	int server_ncid, int client_varid);
+	int server_ncid, int server_varid);
 /**
  * @brief: get server_ncid by client_ncid in server
  *
@@ -156,7 +161,7 @@ int iofw_id_get_nc(int client_id,
  *
  * @return: error code
  */
-int ifow_id_get_dim(int client_id,
+int iofw_id_get_dim(int client_id,
 	int client_ncid, int client_dimid, 
 	int *server_ncid, int *server_dimid);
 /**

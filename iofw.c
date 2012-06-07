@@ -72,12 +72,19 @@ int iofw_init(int iofw_servers)
     if(ret != MPI_SUCCESS)
     {
 	error("Spwan iofw server fail.");
-	return -1;
+	return -IOFW_ERROR_INIT;
     }
 
     if(iofw_msg_init() < 0)
     {
-	return -1;
+	error("Msg Init Fail.");
+	return -IOFW_ERROR_INIT;
+    }
+
+    if(iofw_id_init(IOFW_ID_INIT_CLIENT) < 0)
+    {
+	error("Id Init Fail.");
+	return -IOFW_ERROR_INIT;
     }
 
     return 0;
@@ -101,6 +108,7 @@ int iofw_finalize()
     debug(DEBUG_IOFW, "Finish iofw_finalize");
 
     iofw_msg_final();
+    iofw_id_final();
 
     return 0;
 }
@@ -128,7 +136,7 @@ int iofw_nc_create(
     ret = iofw_id_assign_nc(ncidp);
     if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
     {
-	return IOFW_ERROR_TOO_MANY_OPEN;
+	return -IOFW_ERROR_TOO_MANY_OPEN;
     }
 
     iofw_msg_pack_nc_create(&msg, rank, path, cmode, *ncidp);
@@ -182,6 +190,8 @@ int iofw_nc_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, int *varidp)
 {
+    debug(DEBUG_MSG, "ndims = %d", ndims);
+
     assert(name != NULL);
     assert(varidp != NULL);
 

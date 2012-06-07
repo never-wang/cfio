@@ -191,7 +191,7 @@ int iofw_buf_unpack_data(
 	void *data, size_t size, iofw_buf_t *buf_p);
 
 size_t iofw_buf_pack_array_size(
-	const void *data, unsigned int len, size_t size);
+	const void *data, int len, size_t size);
 /**
  * @brief: pack an array of data into the buffer
  *
@@ -203,7 +203,7 @@ size_t iofw_buf_pack_array_size(
  * @return: error code
  */
 int iofw_buf_pack_data_array(
-	const void *data, unsigned len,
+	const void *data, int len,
 	size_t size, iofw_buf_t *buf_p);
 
 /**
@@ -218,7 +218,7 @@ int iofw_buf_pack_data_array(
  * @return: error code
  */
 int iofw_buf_unpack_data_array(
-	void **data, unsigned int *len, 
+	void **data, int *len, 
 	size_t size, iofw_buf_t *buf_p);
 
 /**
@@ -234,20 +234,16 @@ int iofw_buf_unpack_data_array(
  * @return: error code
  */
 int iofw_buf_unpack_data_array_ptr(
-	void **data, unsigned int *len,
+	void **data, int *len,
 	const size_t size, iofw_buf_t *buf_p);
 
-static inline size_t iofw_buf_pack_str_size(char *str)
-{
-    assert(NULL != (str)); 
-    return iofw_buf_pack_array_size(
-	    (const void*)str, strlen(str) + 1, sizeof(char));
-} 
-
-#define iofw_buf_pack_str(str, buf) do{ \
-    assert(NULL != (str)); \
-    iofw_buf_pack_data_array((const void*)(str), strlen(str) + 1, sizeof(char), buf); \
-} while(0) 
+#define iofw_buf_pack_str_size(str) \
+    iofw_buf_pack_array_size((const void*)(str), strlen((char*)str) + 1, \
+	    sizeof(char))
+    
+#define iofw_buf_pack_str(str, buf) \
+    iofw_buf_pack_data_array((const void*)(str), strlen((char*)str) + 1, \
+	    sizeof(char), buf)
 #define iofw_buf_unpack_str(str, buf) \
     iofw_buf_unpack_data_array((void **)str, NULL, sizeof(char), buf)
 #define iofw_buf_unpack_str_ptr(str, buf) \

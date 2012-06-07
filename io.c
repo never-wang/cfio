@@ -55,7 +55,7 @@ int iofw_io_nc_create(int client_proc)
         error("Error happened when open %s error(%s) \n",path,nc_strerror(ret));
         return -IOFW_IO_ERROR_NC;
     }
-
+    
     iofw_id_map_nc(client_proc, client_ncid, ncid);
 
     if(NULL != path)

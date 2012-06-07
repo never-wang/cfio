@@ -24,6 +24,9 @@
 #include "buffer.h"
 #include "mpi.h"
 
+#define IOFW_ERROR_NONE		    0
+#define IOFW_ERROR_TOO_MANY_OPEN    1 /* Too Many Open NC File */
+#define IOFW_ERROR_INIT		    2 /* error when init */
 /**********************************************************
  *  des: init the io forwrding invironment
  *  @param iofw_servers: the number of iofw_servers;

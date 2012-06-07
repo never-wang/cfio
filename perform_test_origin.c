@@ -68,24 +68,24 @@ int nc_hist_create(const char *path, int *nc_id, int *idate)
     int vid_year, vid_day, vid_second;
     int vid_lon, vid_lat, vid_soilz, vid_time, vid_longxy, vid_latixy;
 
-    times_start();
+    //times_start();
     nc_create(path, NC_CLOBBER, &ncid);
-    debug(DEBUG_TIME, "Porc %03d : nc_create time : %f", times_end());
+    //debug(DEBUG_TIME, "Porc %03d : nc_create time : %f", times_end());
 
-    times_start();
+    //times_start();
     nc_def_dim(ncid, "lon", lon_points, &dim_lon);
     nc_def_dim(ncid, "lat", lat_points, &dim_lat);
     nc_def_dim(ncid, "soilz", nl_soil, &dim_soilz);
     nc_def_dim(ncid, "time", ntime, &dim_time);
-    debug(DEBUG_TIME, "Porc %03d : nc_def_dim time : %f", times_end());
+    //debug(DEBUG_TIME, "Porc %03d : nc_def_dim time : %f", times_end());
 
-    times_start();
+    //times_start();
     nc_def_var(ncid, "origin_year", NC_INT, 0, NULL, &vid_year);
     nc_def_var(ncid, "origin_day", NC_INT, 0, NULL, &vid_day);
     nc_def_var(ncid, "origin_second", NC_INT, 0, NULL, &vid_second);
-    debug(DEBUG_TIME, "Porc %03d : nc_def_dim time : %f", times_end());
+    //debug(DEBUG_TIME, "Porc %03d : nc_def_dim time : %f", times_end());
 
-    times_start();
+    //times_start();
     dimids1[0] = dim_lon;
     nc_def_var(ncid, "lon", NC_DOUBLE, 1, dimids1, &vid_lon);
     dimids1[0] = dim_lat;
@@ -116,7 +116,7 @@ int nc_hist_create(const char *path, int *nc_id, int *idate)
 	    nc_def_var(ncid, flxname[i], NC_FLOAT, 4, dimids4, &flxvid[i]);
 	}
     }
-    debug(DEBUG_TIME, "Porc %03d : nc_def_var time : %f", times_end());
+    //debug(DEBUG_TIME, "Porc %03d : nc_def_var time : %f", times_end());
 
     /**
      *Just no attr TODO
