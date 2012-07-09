@@ -1,6 +1,9 @@
 program func_test_f
+include 'iofwf.h'
+
+implicit none
+
 include 'mpif.h'
-!include 'iofw.h'
 
 integer my_rank, comm_size
 
