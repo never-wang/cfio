@@ -47,7 +47,8 @@ int main(int argc, char** argv)
     debug_mark(DEBUG_USER);
     iofw_nc_create(rank, fileName, 0, &ncidp);
     debug_mark(DEBUG_USER);
-    iofw_nc_def_dim(rank, ncidp, "lat", LAT,&dimids[0]);
+    int lat = LAT;
+    iofw_nc_def_dim_(&rank, &ncidp, "lat", &lat,&dimids[0]);
     iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
 
     iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);

@@ -17,7 +17,6 @@
 #include <assert.h>
 
 #include "msg.h"
-#include "error.h"
 #include "debug.h"
 #include "times.h"
 #include "map.h"

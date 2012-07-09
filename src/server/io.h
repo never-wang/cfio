@@ -17,7 +17,6 @@
  */
 #ifndef _UNMAP_H
 #define _UNMAP_H
-#include "utils.h"
 #include "buffer.h"
 #include "mpi.h"
 
