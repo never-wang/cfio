@@ -1,4 +1,4 @@
 bin_PROGRAMS = iofw_server
-iofw_server_SOURCES = iofw.c iofw.h io.c io.h buffer.c buffer.h debug.c debug.h \
-		      id.c id.h map.c map.h msg.c msg.h quicklist.h quickhash.h \
-		      times.c times.h
+iofw_server_SOURCES = iofw_server.c iofw_server.h io.c io.h
+iofw_server_LDADD=../common/libcommon.a
+iofw_server_CFLAGS = -I../common

@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <netcdf.h>
 
-#include "buffer.h"
 #include "mpi.h"
 
 #define IOFW_ERROR_NONE		    0

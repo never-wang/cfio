@@ -17,7 +17,6 @@
 #include <assert.h>
 
 #include "msg.h"
-#include "error.h"
 #include "debug.h"
 #include "times.h"
 #include "map.h"
@@ -73,24 +72,24 @@ int iofw_msg_final()
 
     if(NULL != msg_head)
     {
-	qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
-	{
-	    free(msg);
-	}
-	free(msg_head);
-	msg_head = NULL;
+        qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
+        {
+            free(msg);
+        }
+        free(msg_head);
+        msg_head = NULL;
     }
 
     if(NULL != mutex)
     {
-	pthread_mutex_destroy(mutex);
-	free(mutex);
-	mutex = NULL;
+        pthread_mutex_destroy(mutex);
+        //free(mutex);
+        mutex = NULL;
     }
 
     if(NULL != buffer)
     {
-	buffer = NULL;
+        buffer = NULL;
     }
 
     return IOFW_MSG_ERROR_NONE;

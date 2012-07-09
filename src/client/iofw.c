@@ -36,6 +36,7 @@ int server_proc_num;
 
 MPI_Comm inter_comm;
 
+
 int iofw_init(int iofw_servers)
 {
     int rc, i;
@@ -44,6 +45,9 @@ int iofw_init(int iofw_servers)
     int error, ret;
 
     char **argv;
+
+    //set_debug_mask(DEBUG_IOFW | DEBUG_MSG);
+    set_debug_mask(DEBUG_IOFW);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -65,7 +69,7 @@ int iofw_init(int iofw_servers)
     argv[0] = malloc(128);
     sprintf(argv[0], "%d", app_proc_num);
     argv[1] = NULL;
-    ret = MPI_Comm_spawn("./iofw_server", argv, server_proc_num, MPI_INFO_NULL, 
+    ret = MPI_Comm_spawn("iofw_server", argv, server_proc_num, MPI_INFO_NULL, 
 	    root, MPI_COMM_WORLD, &inter_comm, &error);
     free(argv[0]);
     free(argv);
@@ -162,6 +166,9 @@ int iofw_nc_def_dim(
     assert(name != NULL);
     assert(idp != NULL);
 
+    debug(DEBUG_IOFW, "io_proc_id = %d, ncid = %d, name = %s, len = %lu",
+	    io_proc_id, ncid, name, len);
+    
     iofw_msg_t *msg;
 
     iofw_id_assign_dim(ncid, idp);
@@ -358,5 +365,61 @@ int iofw_nc_close(
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
 
     return 0;
+}
+
+/**
+ *For Fortran Call
+ **/
+int iofw_init_(int *iofw_servers)
+{
+    return iofw_init(*iofw_servers);
+}
+int iofw_finalize_()
+{
+    return iofw_finalize();
+}
+int iofw_nc_create_(
+	int *io_proc_id, 
+	const char *path, int *cmode, int *ncidp)
+{
+    debug(DEBUG_IOFW, "io_proc_id = %d, path = %s, cmode = %d",
+	    *io_proc_id, path, *cmode);
+
+    return iofw_nc_create(*io_proc_id, path, *cmode, ncidp);
+}
+int iofw_nc_def_dim_(
+	int *io_proc_id, 
+	int *ncid, const char *name, int *len, int *idp)
+{
+
+    return iofw_nc_def_dim(*io_proc_id, *ncid, name, *len, idp);
+}
+
+int iofw_nc_def_var_(
+	int *io_proc_id, 
+	int *ncid, const char *name, int *xtype,
+	int *ndims, const int *dimids, int *varidp)
+{
+    return iofw_nc_def_var(*io_proc_id, *ncid, name, *xtype, *ndims, dimids, varidp);
+}
+
+int iofw_nc_put_var(
+	int *io_proc_id,
+	int *ncid, int *varid, int *dim,
+	const int *index, const float *fp)
+{
+    return iofw_nc_put_var1_float(*io_proc_id, *ncid, *varid, *dim, index, fp);
+}
+
+int iofw_nc_enddef_(
+	int *io_proc_id, int *ncid)
+{
+    return iofw_nc_enddef(*io_proc_id, *ncid);
+}
+
+int iofw_nc_close_(
+	int *io_proc_id, int *ncid)
+{
+    return iofw_nc_close(*io_proc_id, *ncid);
 }
 

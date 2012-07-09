@@ -57,6 +57,7 @@ static int decode(iofw_msg_t *msg)
     uint32_t code;
     /* TODO the buf control here may have some bad thing */
     iofw_msg_unpack_func_code(msg, &code);
+    client_proc = msg->src;
 
     switch(code)
     {
@@ -178,7 +179,7 @@ int main(int argc, char** argv)
     times_start();
     //set_debug_mask(DEBUG_USER | DEBUG_MSG);
     //set_debug_mask(DEBUG_ID);
-    set_debug_mask(DEBUG_TIME);
+    //set_debug_mask(DEBUG_TIME);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
