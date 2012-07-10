@@ -1,7 +1,6 @@
 program func_test_f
-include 'iofwf.h'
 
-implicit none
+use iofw
 
 include 'mpif.h'
 
