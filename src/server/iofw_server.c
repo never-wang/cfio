@@ -207,14 +207,13 @@ int main(int argc, char** argv)
      * init for client and server num
      **/
     client_num = atoi(argv[1]);
-    iofw_map_init(client_num, size);
     if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
     {
 	error("ID Init Fail.");
 	return -1;
     }
 
-    iofw_map_client_num(rank, &client_to_serve);
+    iofw_map_client_num(rank, size, &client_to_serve);
     client_done = 0;
     debug(DEBUG_USER, "client_to_serve = %d", client_to_serve);
 
