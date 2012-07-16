@@ -37,7 +37,7 @@ int server_proc_num;
 MPI_Comm inter_comm;
 
 
-int iofw_init(int iofw_servers)
+int iofw_init(int server_group_num, int *server_group_size)
 {
     int rc, i;
     int size;
@@ -58,25 +58,25 @@ int iofw_init(int iofw_servers)
 
     MPI_Comm_size(MPI_COMM_WORLD, &app_proc_num);
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-    server_proc_num = iofw_servers;
 
-    /* now with "./", TODO delete */
-    debug(DEBUG_IOFW, "server_proc_num = %d", server_proc_num);
-    
-    iofw_map_init(app_proc_num, server_proc_num);
+    //iofw_map_init(app_proc_num, server_proc_num);
 
-    argv = malloc(2 * sizeof(char*));
-    argv[0] = malloc(128);
-    sprintf(argv[0], "%d", app_proc_num);
-    argv[1] = NULL;
-    ret = MPI_Comm_spawn("iofw_server", argv, server_proc_num, MPI_INFO_NULL, 
-	    root, MPI_COMM_WORLD, &inter_comm, &error);
-    free(argv[0]);
-    free(argv);
-    if(ret != MPI_SUCCESS)
+    for(i = 0; i < server_group_num; i ++)
     {
-	error("Spwan iofw server fail.");
-	return -IOFW_ERROR_INIT;
+
+	argv = malloc(2 * sizeof(char*));
+	argv[0] = malloc(128);
+	sprintf(argv[0], "%d", app_proc_num);
+	argv[1] = NULL;
+	ret = MPI_Comm_spawn("iofw_server", argv, server_group_size[i], 
+		MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
+	free(argv[0]);
+	free(argv);
+	if(ret != MPI_SUCCESS)
+	{
+	    error("Spwan iofw server fail.");
+	    return -IOFW_ERROR_INIT;
+	}
     }
 
     if(iofw_msg_init() < 0)
@@ -107,7 +107,7 @@ int iofw_finalize()
     }
 
     iofw_msg_pack_io_done(&msg, rank);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
     
     debug(DEBUG_IOFW, "Finish iofw_finalize");
 
@@ -115,6 +115,57 @@ int iofw_finalize()
     iofw_id_final();
 
     return 0;
+}
+int iofw_open(
+	int io_proc_id,
+	const char *path, int flags)
+{
+    assert(path != NULL);
+    iofw_msg_t *msg;
+    int ret;
+    int id;
+
+    ret = iofw_id_assign_file(&id);
+    if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
+    {
+	return -IOFW_ERROR_TOO_MANY_OPEN;
+    }
+
+    iofw_msg_pack_open(&msg, rank, path, flags, id);
+    iofw_msg_isend(msg);
+
+    return IOFW_ERROR_NONE;
+}
+
+int iofw_write(
+	int io_proc_id,
+	int fd, size_t start, size_t len, char *fp)
+{
+    int ret, id;
+    iofw_msg_t *msg;
+
+    if(NULL ==fp)
+    {
+	return IOFW_ERROR_NULL_DATA;
+    }
+    
+    iofw_msg_pack_write(&msg, rank, fd, start, len, fp);
+    iofw_msg_isend(msg);
+
+    return IOFW_ERROR_NONE;
+}
+
+int iofw_close(
+	int io_proc_id,
+	int fd)
+{
+    int ret, id;
+    iofw_msg_t *msg;
+    
+    iofw_msg_pack_close(&msg, rank, fd);
+    iofw_msg_isend(msg);
+
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -144,7 +195,7 @@ int iofw_nc_create(
     }
 
     iofw_msg_pack_nc_create(&msg, rank, path, cmode, *ncidp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return IOFW_ERROR_NONE;
 }
@@ -174,7 +225,7 @@ int iofw_nc_def_dim(
     iofw_id_assign_dim(ncid, idp);
 
     iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len, *idp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -208,7 +259,7 @@ int iofw_nc_def_var(
     
     iofw_msg_pack_nc_def_var(&msg, rank, 
 	    ncid, name, xtype, ndims, dimids, *varidp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
     
     return 0;
 }
@@ -228,7 +279,7 @@ int iofw_nc_enddef(
     iofw_msg_t *msg;
 
     iofw_msg_pack_nc_enddef(&msg, rank, ncid);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -243,7 +294,7 @@ int iofw_nc_put_var1_float(
     iofw_msg_pack_nc_put_var1_float(&msg, rank, 
 	    ncid, varid, dim, index, fp);
     
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -308,8 +359,7 @@ static int _nc_put_vara_float(
 	{
 	    iofw_msg_pack_nc_put_vara_float(&msg, rank, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
-	    debug_mark(DEBUG_IOFW);
-	    iofw_msg_isend(msg, inter_comm);
+	    iofw_msg_isend(msg);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
@@ -360,7 +410,7 @@ int iofw_nc_close(
     //times_start();
 
     iofw_msg_pack_nc_close(&msg, rank, ncid);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
 
@@ -370,9 +420,9 @@ int iofw_nc_close(
 /**
  *For Fortran Call
  **/
-int iofw_init_(int *iofw_servers)
+int iofw_init_(int *server_group_num, int *server_group_size)
 {
-    return iofw_init(*iofw_servers);
+    return iofw_init(*server_group_num, server_group_size);
 }
 int iofw_finalize_()
 {

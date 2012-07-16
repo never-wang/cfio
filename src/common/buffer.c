@@ -80,7 +80,7 @@ int iofw_buf_clear(iofw_buf_t *buf_p)
 }
 
 size_t iofw_buf_pack_size(
-	const void *data, size_t size)
+	size_t size)
 {
     return size;
 }
@@ -118,14 +118,14 @@ int iofw_buf_unpack_data(
 }
 
 size_t iofw_buf_pack_array_size(
-	const void *data, int len, size_t size)
+	int len, size_t size)
 {
     return len * (size_t)size + (sizeof(int));
 }
 
 
 int iofw_buf_pack_data_array(
-	const void *data, int len,
+	const void *data, size_t len,
 	size_t size, iofw_buf_t *buf_p)
 {
     

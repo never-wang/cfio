@@ -14,35 +14,43 @@
  ***************************************************************************/
 #ifndef _MAP_H
 #define _MAP_H
+#include "msg.h"
+
+#define IOFW_MAP_ERROR_NONE	     0	/* success return */
+#define IOFW_MAP_ERROR_MALLOC_FAIL  -1	/* malloc fail */
 /**
- * @brief: iofw map variable init, only be called in iofw_init and 
- *	iofw_server's main function
+ * @brief: iofw map var init, only be called in iofw_init adn iofw_server's main
+ *	function
  *
- * @param init_app_proc_num: init value of app_proc_num
- * @param init_server_proc_num: init value of server_proc_num
+ * @param _client_proc_num: 
+ * @param _server_group_num: 
+ * @param _server_group_size: 
+ * @param _comm: 
  *
- * @return: 0
+ * @return: error code
  */
-int iofw_map_init(int init_app_proc_num, int init_server_proc_num);
+int iofw_map_init(
+	int _client_proc_num, int _server_group_num,
+	int *_server_group_size, MPI_Comm *_comm);
 /**
- * @brief: map from IO proc to IO Forwarding Proc
+ * @brief: map from client proc to server proc, store map information in msg struct 
  *
- * @param io_proc_id: the id of IO Proc
- * @param forwarding_proc_id: the id of Forwarding Proc
+ * @param msg: pointer to msg struct
  *
- * @return: 0 if sucess
+ * @return: error code
  */
-int iofw_map_forwarding_proc(
-	int io_proc_id, int *forwarding_proc_id);
+int iofw_map_forwarding(
+	iofw_msg_t *msg);
 /**
  * @brief iofw_map_client_num 
  *
  * @param rank: the rank of the server
+ * @param size : the size of group which the server is belong to 
  * @param clien_num: return of the number of client assigned to this server
  *
- * @return : < 0 for error, 0 for succss
+ * @return : error code
  */
 int iofw_map_client_num(
-	int rank, int *clien_num);
+	int rank, int size, int *clien_num);
 
 #endif

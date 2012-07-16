@@ -12,52 +12,70 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
+#include <assert.h>
+
 #include "map.h"
 #include "debug.h"
 
-int app_proc_num;
-int server_proc_num;
+int client_proc_num;
+int server_group_num;
+int *server_group_size;
+MPI_Comm *comm;
 
-int iofw_map_init(int init_app_proc_num, int init_server_proc_num)
+int iofw_map_init(
+	int _client_proc_num, int _server_group_num,
+	int *_server_group_size, MPI_Comm *_comm)
 {
-    app_proc_num = init_app_proc_num;
-    server_proc_num = init_server_proc_num;
-    return 0;
-}
-/**
- * @brief: map from IO proc to IO Forwarding Proc
- *
- * @param io_proc_id: the id of IO Proc
- * @param forwarding_proc_id: the id of Forwarding Proc
- *
- * @return: 0 if sucess
- */
-int iofw_map_forwarding_proc(
-	int io_proc_id, int *forwarding_proc_id)
-{
-    *forwarding_proc_id =  io_proc_id * server_proc_num / app_proc_num;
+    assert(_server_group_size != NULL);
+    assert(_comm != NULL);
 
-    debug(DEBUG_MAP, "io_proc : %d; server_proc : %d", io_proc_id, 
-	    *forwarding_proc_id);
-    return 0;
+    int i;
+
+    client_proc_num = _client_proc_num;
+    server_group_num = _server_group_num;
+    server_group_size = malloc(server_group_num * sizeof(int));
+    if(NULL == server_group_size)
+    {
+	debug(DEBUG_MAP, "malloc fail.");
+	return IOFW_MAP_ERROR_MALLOC_FAIL;
+    }
+    comm = malloc(server_group_num * sizeof(int));
+    if(NULL == comm)
+    {
+	debug(DEBUG_MAP, "malloc fail.");
+	return IOFW_MAP_ERROR_MALLOC_FAIL;
+    }
+
+    for(i = 0; i < server_group_num; i ++)
+    {
+	server_group_size[i] = _server_group_size[i];
+        comm[i] = _comm[i];
+    }
+    
+    debug(DEBUG_MAP, "success return.");
+    return IOFW_MAP_ERROR_NONE;
 }
-/**
- * @brief iofw_map_client_num 
- *
- * @param rank: the runk of the server
- * @param clien_num: return of the number of client assigned to this server
- *
- * @return : < 0 for error, 0 for succss
- */
+
+int iofw_map_forwarding(
+	iofw_msg_t *msg)
+{
+    msg->dst = msg->src * server_group_size[0] / client_proc_num;
+
+    debug(DEBUG_MAP, "success return.");
+    return IOFW_MAP_ERROR_NONE;
+}
+
 int iofw_map_client_num(
-	int rank, int *client_num)
+	int rank, int size, int *client_num)
 {
-    *client_num = app_proc_num / server_proc_num;
-    debug(DEBUG_USER, "app = %d; server = %d", 
-	    app_proc_num, server_proc_num);
-    if( rank <= app_proc_num % server_proc_num )
+    int server_proc_num = size;
+    
+    *client_num = client_proc_num / server_proc_num;
+    if( rank <= client_proc_num % server_proc_num )
     {
 	*client_num++;
     }
-    return 0;
+
+    debug(DEBUG_MAP, "success return."); 
+    return IOFW_MAP_ERROR_NONE;
 }

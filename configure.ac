@@ -1,7 +1,9 @@
-AC_INIT([io-forward], [1.0], [never.wencan@gmail.com])
+AC_INIT([iofw], [1.0], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
-AC_PROG_CC
+#AC_PROG_CC
+CC=mpiicc
 AC_PROG_FC
+FC=mpiifort
 
 AC_ARG_WITH([dependency],
 	    [AC_HELP_STRING([--with-dependency=DIR],
@@ -125,7 +127,7 @@ AC_CHECK_LIB([pthread], [pthread_create],,AC_MSG_ERROR([invalid pthread library]
 
 AC_PROG_RANLIB
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile src/common/Makefile src/client/Makefile src/server/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/common/Makefile src/client/Makefile src/client/C/Makefile src/client/Fortran/Makefile src/server/Makefile test/Makefile])
 AC_OUTPUT
 
 

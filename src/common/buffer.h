@@ -33,6 +33,12 @@
 	    (*(pnt)) = (val); \
 	}} while(0)
 
+#define iofw_buf_data_size(len) (len)
+#define iofw_buf_data_array_size(len, size) \
+    (iofw_buf_data_size(len) * (size) + sizeof(int))
+#define iofw_buf_str_size(str) \
+    iofw_buf_data_array_size(strlen((char*)str) + 1, sizeof(char))
+
 typedef struct
 {
     uint16_t magic;	/* magic of the buffer */
@@ -165,7 +171,6 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error);
  */
 int iofw_buf_clear(iofw_buf_t *buf_p);
 
-size_t iofw_buf_pack_size(const void *data, size_t size);
 /**
  * @brief: pack one data in the buffer
  *
@@ -189,9 +194,6 @@ int iofw_buf_pack_data(
  */
 int iofw_buf_unpack_data(
 	void *data, size_t size, iofw_buf_t *buf_p);
-
-size_t iofw_buf_pack_array_size(
-	const void *data, int len, size_t size);
 /**
  * @brief: pack an array of data into the buffer
  *
@@ -203,7 +205,7 @@ size_t iofw_buf_pack_array_size(
  * @return: error code
  */
 int iofw_buf_pack_data_array(
-	const void *data, int len,
+	const void *data, size_t len,
 	size_t size, iofw_buf_t *buf_p);
 
 /**
@@ -237,9 +239,6 @@ int iofw_buf_unpack_data_array_ptr(
 	void **data, int *len,
 	const size_t size, iofw_buf_t *buf_p);
 
-#define iofw_buf_pack_str_size(str) \
-    iofw_buf_pack_array_size((const void*)(str), strlen((char*)str) + 1, \
-	    sizeof(char))
     
 #define iofw_buf_pack_str(str, buf) \
     iofw_buf_pack_data_array((const void*)(str), strlen((char*)str) + 1, \
