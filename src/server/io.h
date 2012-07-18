@@ -29,11 +29,28 @@
 #define ENQUEUE_MSG 3
 #define IMM_MSG 4
 
-#define IOFW_IO_ERROR_NONE  0
-#define IOFW_IO_ERROR_NC    1
+#define IOFW_IO_ERROR_NONE	     0
+#define IOFW_IO_ERROR_NC	    -1	/* nc operation error */
+#define IOFW_IO_ERROR_INVALID_NC    -2	/* invalid nc id */
+#define IOFW_IO_ERROR_INVALID_DIM   -3	/* invalid dimension id */
+#define IOFW_IO_ERROR_INVALID_VAR   -4	/* invalid variable id */
+#define IOFW_IO_ERROR_MSG_UNPACK    -5
+#define IOFW_IO_ERROR_PUT_VAR	    -6
 
-
-
+/**
+ * @brief: initialize
+ *
+ * @param _server_group_size: size of the server group
+ *
+ * @return: error code
+ */
+int iofw_io_init(int _server_group_size)
+/**
+ * @brief: finalize
+ *
+ * @return: error code
+ */
+int iofw_io_final();
 int iofw_io_client_done(int *client_done, int *server_done,
 	int client_to_serve);
 int iofw_io_nc_create(int client_proc);

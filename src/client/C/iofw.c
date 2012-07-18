@@ -30,9 +30,7 @@
 /* my real rank in mpi_comm_world */
 static int rank;
 /*  the number of the app proc*/
-int app_proc_num;
-/* the number of the server proc */
-int server_proc_num;
+int client_num;
 
 MPI_Comm inter_comm;
 
@@ -56,17 +54,15 @@ int iofw_init(int server_group_num, int *server_group_size)
 	return -1;
     }
 
-    MPI_Comm_size(MPI_COMM_WORLD, &app_proc_num);
+    MPI_Comm_size(MPI_COMM_WORLD, &client_num);
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-
-    //iofw_map_init(app_proc_num, server_proc_num);
 
     for(i = 0; i < server_group_num; i ++)
     {
 
 	argv = malloc(2 * sizeof(char*));
 	argv[0] = malloc(128);
-	sprintf(argv[0], "%d", app_proc_num);
+	sprintf(argv[0], "%d", client_num);
 	argv[1] = NULL;
 	ret = MPI_Comm_spawn("iofw_server", argv, server_group_size[i], 
 		MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
@@ -115,57 +111,6 @@ int iofw_finalize()
     iofw_id_final();
 
     return 0;
-}
-int iofw_open(
-	int io_proc_id,
-	const char *path, int flags)
-{
-    assert(path != NULL);
-    iofw_msg_t *msg;
-    int ret;
-    int id;
-
-    ret = iofw_id_assign_file(&id);
-    if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
-    {
-	return -IOFW_ERROR_TOO_MANY_OPEN;
-    }
-
-    iofw_msg_pack_open(&msg, rank, path, flags, id);
-    iofw_msg_isend(msg);
-
-    return IOFW_ERROR_NONE;
-}
-
-int iofw_write(
-	int io_proc_id,
-	int fd, size_t start, size_t len, char *fp)
-{
-    int ret, id;
-    iofw_msg_t *msg;
-
-    if(NULL ==fp)
-    {
-	return IOFW_ERROR_NULL_DATA;
-    }
-    
-    iofw_msg_pack_write(&msg, rank, fd, start, len, fp);
-    iofw_msg_isend(msg);
-
-    return IOFW_ERROR_NONE;
-}
-
-int iofw_close(
-	int io_proc_id,
-	int fd)
-{
-    int ret, id;
-    iofw_msg_t *msg;
-    
-    iofw_msg_pack_close(&msg, rank, fd);
-    iofw_msg_isend(msg);
-
-    return IOFW_ERROR_NONE;
 }
 
 /**

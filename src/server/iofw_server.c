@@ -35,19 +35,19 @@ static MPI_Comm inter_comm;
 /* Num of clients whose io is done*/
 static int client_done = 0;
 /* Num of clients which need to be served by the server */
-static int client_to_serve = 0;
+int client_num = 0;
 /* all the client report done */
 static int server_done = 0;
 
 static inline void _client_end_io()
 {
-   if((++client_done) == client_to_serve)
+   if((++client_done) == client_num)
    {
        server_done = 1;
    }
 
-   debug(DEBUG_USER, "client_done = %d, client_to_serve = %d", 
-	   client_done, client_to_serve);
+   debug(DEBUG_USER, "client_done = %d, client_num = %d", 
+	   client_done, client_num);
 }
 
 static int decode(iofw_msg_t *msg)
@@ -118,7 +118,7 @@ static int decode(iofw_msg_t *msg)
 	default:
 	    error("server %d received unexpected msg from client %d",
 		    rank, client_proc);
-	    return -IOFW_SERVER_ERROR_UNEXPECTED_MSG;
+	    return IOFW_SERVER_ERROR_UNEXPECTED_MSG;
     }	
 }
 
@@ -169,37 +169,23 @@ int iofw_server()
     return 0;
 }
 
-int main(int argc, char** argv)
+static int server_init(int argc, char** argv)
 {
-    int size;
-    int client_num;
+    int rank, size;
+    int ret = 0;
 
     MPI_Init(&argc, &argv);
-    times_init();
-    times_start();
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG);
-    //set_debug_mask(DEBUG_ID);
-    set_debug_mask(DEBUG_TIME);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     debug(DEBUG_USER, "rank = %d; size = %d", rank, size);
 
-    int ret = 0;
-    char name[10];
-
-    if( ret < 0 )
-    {
-	error("rank %d init io op queue failure",rank);
-	return -1;
-    }
-    
     ret = MPI_Comm_get_parent(&inter_comm);
 
     if(ret != MPI_SUCCESS)
     {
 	error("MPI_Comm_get_parent fail.");
-	return -1;
+	return IOFW_SERVER_ERROR_INIT_FAIL;
     }
 
     iofw_msg_init();
@@ -210,23 +196,51 @@ int main(int argc, char** argv)
     if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
     {
 	error("ID Init Fail.");
-	return -1;
+	return IOFW_SERVER_ERROR_INIT_FAIL;
     }
 
-    iofw_map_client_num(rank, size, &client_to_serve);
+    iofw_map_client_num(rank, size, &client_num);
     client_done = 0;
-    debug(DEBUG_USER, "client_to_serve = %d", client_to_serve);
+    debug(DEBUG_USER, "client_num = %d", client_num);
 
     server_done = 0;
+
+    if(iofw_io_init(size) < 0)
+    {
+	error("IO Init Fail.");
+	return IOFW_SERVER_ERROR_NONE;
+    }
+
+    return IOFW_SERVER_ERROR_NONE;
+
+}
+
+static void server_final()
+{
+    ifow_io_final();
+    iofw_msg_final();
+    iofw_id_final();
+
+    MPI_Finalize();
+}
+
+int main(int argc, char** argv)
+{
+
+    times_init();
+    times_start();
+
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG);
+    //set_debug_mask(DEBUG_ID);
+    set_debug_mask(DEBUG_TIME);
+    
+    server_init(argc, argv);
 
     iofw_server();
 
     debug(DEBUG_TIME, "ifow_server total time : %f ms", times_end());
     times_final();
 
-    iofw_msg_final();
-    iofw_id_final();
-
-    MPI_Finalize();
+    server_final();
     return 0;
 }

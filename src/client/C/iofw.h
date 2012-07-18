@@ -45,43 +45,6 @@ int iofw_init(int server_group_num, int *server_group_size);
  */
 int iofw_finalize();
 /**
- * @brief: open a file
- *
- * @param io_proc_id: id of IO proc
- * @param path: the file path
- * @param flags: 
- *
- * @return: error code
- */
-int iofw_open(
-	int io_proc_id,
-	const char *path, int flags);
-/**
- * @brief: write data into an opened file
- *
- * @param io_proc_id: id of IO proc
- * @param fd: the file id
- * @param start: offset of data
- * @param len: length of data in byte
- * @param fp: pointer to data
- *
- * @return: error code
- */
-int iofw_write(
-	int io_proc_id,
-	int fd, size_t start, size_t len, char *fp);
-/**
- * @brief: close the opened file
- *
- * @param io_proc_id: id of IO proc
- * @param fd: the file id
- *
- * @return: error code
- */
-int iofw_close(
-	int io_proc_id,
-	int fd);
-/**
  * @brief: iofw_nc_create
  *
  * @param io_proc_id: id of IO proc

@@ -37,9 +37,6 @@
 #define FUNC_NC_DEF_VAR		((uint32_t)12)
 #define FUNC_NC_PUT_VAR1_FLOAT	((uint32_t)20)
 #define FUNC_NC_PUT_VARA_FLOAT	((uint32_t)21)
-#define FUNC_OPEN		((uint32_t)101)
-#define FUNC_WRITE		((uint32_t)110)
-#define FUNC_CLOSE		((uint32_t)102)
 
 #define IOFW_MSG_ERROR_NONE	0
 #define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
@@ -93,47 +90,6 @@ int iofw_msg_recv(int rank, MPI_Comm comm);
  * @return: pointer to the first msg
  */
 iofw_msg_t *iofw_msg_get_first();
-/**
- * @brief: pack iofw_open into struct iofw_msg_t
- *
- * @param _msg: pointer_to the struct iofw_msg_t
- * @param client_proc_id: id of client proc who call the function
- * @param path: arg of iofw_open
- * @param flags: arg of iofw_open
- * @param fd: arg of iofw_open
- *
- * @return: error code
- */
-int iofw_msg_pack_open(
-	iofw_msg_t **_msg, int client_proc_id,
-	const char *path, int flags, int fd);
-/**
- * @brief: pack iofw_write fuction into struct inofw_msg_t
- *
- * @param _msg: pointer to the struct iofw_msg_t
- * @param client_proc_id: id of client proc who call the function
- * @param fd: file ID, arg of iofw_write
- * @param start: offset of the data, arg of iofw_write
- * @param len: length of the data in Byte, arg of iofw_write
- * @param fp: pointer to the data, arg of iofw_write
- *
- * @return: error code
- */
-int iofw_msg_pack_write(
-	iofw_msg_t **_msg, int client_proc_id,
-	int fd, size_t start, size_t len, char *fp);
-/**
- * @brief: pack iofw_close function int struct iofw_msg_t
- *
- * @param _msg: pointer to the struct iofw_msg_t
- * @param client_proc_id: id of client proc who call the function
- * @param fd: arg ofw iofw_close
- *
- * @return: error code
- */
-int iofw_msg_pack_close(
-	iofw_msg_t **_msg, int client_proc_id,
-	int fd);
 /**
  * @brief: pack iofw_nc_create function into struct iofw_msg_t
  *
