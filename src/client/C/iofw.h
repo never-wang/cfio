@@ -26,11 +26,16 @@
 #define IOFW_ERROR_NONE		    0
 #define IOFW_ERROR_TOO_MANY_OPEN    1 /* Too Many Open NC File */
 #define IOFW_ERROR_INIT		    2 /* error when init */
-/**********************************************************
- *  des: init the io forwrding invironment
- *  @param iofw_servers: the number of iofw_servers;
- *********************************************************/
-int iofw_init(int iofw_servers);
+#define IOFW_ERROR_NULL_DATA	    3 /* pointer to data is NULL */
+/**
+ * @brief: init
+ *
+ * @param server_group_num: number of server group 
+ * @param server_group_size: size of each server group 
+ *
+ * @return: error code
+ */
+int iofw_init(int server_group_num, int *server_group_size);
 
 /**
  * @brief iofw_Finalize : stop the iofw services, the function 

@@ -15,7 +15,8 @@
 #ifndef _IOFW_SERVER_H
 #define _IOFW_SERVER_H
 
-#define IOFW_SERVER_ERROR_NONE              0
-#define IOFW_SERVER_ERROR_UNEXPECTED_MSG    1
+#define IOFW_SERVER_ERROR_NONE               0
+#define IOFW_SERVER_ERROR_UNEXPECTED_MSG    -1
+#define IOFW_SERVER_ERROR_INIT_FAIL         -2 
 
 #endif

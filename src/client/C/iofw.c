@@ -30,14 +30,12 @@
 /* my real rank in mpi_comm_world */
 static int rank;
 /*  the number of the app proc*/
-int app_proc_num;
-/* the number of the server proc */
-int server_proc_num;
+int client_num;
 
 MPI_Comm inter_comm;
 
 
-int iofw_init(int iofw_servers)
+int iofw_init(int server_group_num, int *server_group_size)
 {
     int rc, i;
     int size;
@@ -47,7 +45,6 @@ int iofw_init(int iofw_servers)
     char **argv;
 
     //set_debug_mask(DEBUG_IOFW | DEBUG_MSG);
-    set_debug_mask(DEBUG_IOFW);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -56,21 +53,16 @@ int iofw_init(int iofw_servers)
 	return -1;
     }
 
-    MPI_Comm_size(MPI_COMM_WORLD, &app_proc_num);
+    MPI_Comm_size(MPI_COMM_WORLD, &client_num);
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-    server_proc_num = iofw_servers;
 
-    /* now with "./", TODO delete */
-    debug(DEBUG_IOFW, "server_proc_num = %d", server_proc_num);
-    
-    iofw_map_init(app_proc_num, server_proc_num);
 
     argv = malloc(2 * sizeof(char*));
     argv[0] = malloc(128);
-    sprintf(argv[0], "%d", app_proc_num);
+    sprintf(argv[0], "%d", client_num);
     argv[1] = NULL;
-    ret = MPI_Comm_spawn("iofw_server", argv, server_proc_num, MPI_INFO_NULL, 
-	    root, MPI_COMM_WORLD, &inter_comm, &error);
+    ret = MPI_Comm_spawn("iofw_server", argv, 1, 
+	    MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
     free(argv[0]);
     free(argv);
     if(ret != MPI_SUCCESS)
@@ -84,6 +76,11 @@ int iofw_init(int iofw_servers)
 	error("Msg Init Fail.");
 	return -IOFW_ERROR_INIT;
     }
+
+    server_group_num = 1;
+    server_group_size = malloc(sizeof(int));
+    server_group_size[0] = 1;
+    iofw_map_init(client_num, server_group_num, server_group_size, &inter_comm);
 
     if(iofw_id_init(IOFW_ID_INIT_CLIENT) < 0)
     {
@@ -107,7 +104,7 @@ int iofw_finalize()
     }
 
     iofw_msg_pack_io_done(&msg, rank);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
     
     debug(DEBUG_IOFW, "Finish iofw_finalize");
 
@@ -137,14 +134,16 @@ int iofw_nc_create(
     iofw_msg_t *msg;
     int ret;
 
+    debug_mark(DEBUG_MSG);
     ret = iofw_id_assign_nc(ncidp);
+    debug_mark(DEBUG_MSG);
     if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
     {
 	return -IOFW_ERROR_TOO_MANY_OPEN;
     }
 
     iofw_msg_pack_nc_create(&msg, rank, path, cmode, *ncidp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return IOFW_ERROR_NONE;
 }
@@ -174,7 +173,7 @@ int iofw_nc_def_dim(
     iofw_id_assign_dim(ncid, idp);
 
     iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len, *idp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -208,7 +207,7 @@ int iofw_nc_def_var(
     
     iofw_msg_pack_nc_def_var(&msg, rank, 
 	    ncid, name, xtype, ndims, dimids, *varidp);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
     
     return 0;
 }
@@ -228,7 +227,7 @@ int iofw_nc_enddef(
     iofw_msg_t *msg;
 
     iofw_msg_pack_nc_enddef(&msg, rank, ncid);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -243,7 +242,7 @@ int iofw_nc_put_var1_float(
     iofw_msg_pack_nc_put_var1_float(&msg, rank, 
 	    ncid, varid, dim, index, fp);
     
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     return 0;
 }
@@ -308,8 +307,7 @@ static int _nc_put_vara_float(
 	{
 	    iofw_msg_pack_nc_put_vara_float(&msg, rank, ncid, varid, dim, 
 		    cur_start, cur_count, cur_fp);
-	    debug_mark(DEBUG_IOFW);
-	    iofw_msg_isend(msg, inter_comm);
+	    iofw_msg_isend(msg);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
@@ -360,7 +358,7 @@ int iofw_nc_close(
     //times_start();
 
     iofw_msg_pack_nc_close(&msg, rank, ncid);
-    iofw_msg_isend(msg, inter_comm);
+    iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "Finish iofw_nc_close");
 
@@ -370,9 +368,9 @@ int iofw_nc_close(
 /**
  *For Fortran Call
  **/
-int iofw_init_(int *iofw_servers)
+int iofw_init_(int *server_group_num, int *server_group_size)
 {
-    return iofw_init(*iofw_servers);
+    return iofw_init(*server_group_num, server_group_size);
 }
 int iofw_finalize_()
 {

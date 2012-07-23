@@ -32,11 +32,11 @@
  **/
 #define FUNC_NC_CREATE		((uint32_t)1)
 #define FUNC_NC_ENDDEF		((uint32_t)2)
-#define FUNC_NC_CLOSE  ((uint32_t) 303)
-#define FUNC_NC_DEF_DIM ((uint32_t)10)
-#define FUNC_NC_DEF_VAR ((uint32_t)20)
-#define FUNC_NC_PUT_VAR1_FLOAT ((uint32_t)100)
-#define FUNC_NC_PUT_VARA_FLOAT ((uint32_t)110)
+#define FUNC_NC_CLOSE		((uint32_t)3)
+#define FUNC_NC_DEF_DIM		((uint32_t)11)
+#define FUNC_NC_DEF_VAR		((uint32_t)12)
+#define FUNC_NC_PUT_VAR1_FLOAT	((uint32_t)20)
+#define FUNC_NC_PUT_VARA_FLOAT	((uint32_t)21)
 
 #define IOFW_MSG_ERROR_NONE	0
 #define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
@@ -49,6 +49,7 @@ typedef struct
     char *addr;		/* pointer to the data buffer of the msg */   
     int src;		/* id of sending msg proc */
     int dst;		/* id of dst porc */  
+    MPI_Comm comm;	/* communication  */
     MPI_Request req;	/* MPI request of the send msg */
     qlist_head_t link;	/* quicklist head */
 }iofw_msg_t;
@@ -69,11 +70,10 @@ int iofw_msg_final();
  * @brief: async send msg to other proc by mpi
  *
  * @param msg: point to the msg which is to be send
- * @param comm: MPI communicator
  *
  * @return: error code
  */
-int iofw_msg_isend(iofw_msg_t *msg,  MPI_Comm comm);
+int iofw_msg_isend(iofw_msg_t *msg);
 /**
  * @brief: recv msg from client
  *
