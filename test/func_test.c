@@ -13,14 +13,17 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 #include <stdio.h>
+#include <assert.h>
 
 #include "mpi.h"
 #include "iofw.h"
 #include "debug.h"
 
-#define LAT 180
-#define LON 180
+#define LAT 6
+#define LON 6
 
+#define LAT_PROC 3
+#define LON_PROC 3
 
 int main(int argc, char** argv)
 {
@@ -36,13 +39,14 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
+    assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
-    set_debug_mask(DEBUG_TIME); 
+    //set_debug_mask(DEBUG_TIME); 
 
-    iofw_init( size);
+    iofw_init( size, NULL);
     char fileName[100];
-    sprintf(fileName,"%s_%d.nc",path,rank);
+    sprintf(fileName,"%s.nc",path);
     int dimids[2];
     debug_mark(DEBUG_USER);
     iofw_nc_create(rank, fileName, 0, &ncidp);
@@ -54,20 +58,20 @@ int main(int argc, char** argv)
     iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);
     iofw_nc_enddef(rank,ncidp);
     size_t start[2],count[2];
-    float *fp = malloc(LAT * LON *sizeof(float));
-    start[0] = 0;
-    start[1] = 0;
-    count[0] = LAT;
-    count[1] = LON;
+    start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
+    start[1] = (rank / LON_PROC) * (LON / LON_PROC);
+    count[0] = LAT / LAT_PROC;
+    count[1] = LON / LON_PROC;
+    float *fp = malloc(count[0] * count[1] *sizeof(float));
 
-    for( i = 0; i< LON * LAT; i++)
+    for( i = 0; i< count[0] * count[1]; i++)
     {
-	fp[i]=35.5;
+	fp[i] = i + rank * count[0] * count[1];
     }
 
     iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-    iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-    iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
     iofw_nc_close(rank,ncidp);
     free(fp);

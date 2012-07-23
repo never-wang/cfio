@@ -17,10 +17,10 @@
 #include "map.h"
 #include "debug.h"
 
-int client_proc_num;
-int server_group_num;
-int *server_group_size;
-MPI_Comm *comm;
+static int client_proc_num;
+static int server_group_num;
+static int *server_group_size;
+static MPI_Comm *comm;
 
 int iofw_map_init(
 	int _client_proc_num, int _server_group_num,
@@ -59,7 +59,9 @@ int iofw_map_init(
 int iofw_map_forwarding(
 	iofw_msg_t *msg)
 {
-    msg->dst = msg->src * server_group_size[0] / client_proc_num;
+    //msg->dst = msg->src * server_group_size[0] / client_proc_num;
+    msg->comm = comm[0];
+    msg->dst = 0;
 
     debug(DEBUG_MAP, "success return.");
     return IOFW_MAP_ERROR_NONE;

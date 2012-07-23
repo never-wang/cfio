@@ -243,7 +243,9 @@ int iofw_msg_pack_nc_create(
     iofw_buf_pack_data(&cmode, sizeof(int), buffer);
     iofw_buf_pack_data(&ncid, sizeof(int), buffer);
 
+    debug_mark(DEBUG_MSG);
     iofw_map_forwarding(msg);
+    debug_mark(DEBUG_MSG);
     *_msg = msg;
     
     debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);

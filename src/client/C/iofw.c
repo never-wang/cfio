@@ -45,7 +45,6 @@ int iofw_init(int server_group_num, int *server_group_size)
     char **argv;
 
     //set_debug_mask(DEBUG_IOFW | DEBUG_MSG);
-    set_debug_mask(DEBUG_IOFW);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -57,22 +56,19 @@ int iofw_init(int server_group_num, int *server_group_size)
     MPI_Comm_size(MPI_COMM_WORLD, &client_num);
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
-    for(i = 0; i < server_group_num; i ++)
-    {
 
-	argv = malloc(2 * sizeof(char*));
-	argv[0] = malloc(128);
-	sprintf(argv[0], "%d", client_num);
-	argv[1] = NULL;
-	ret = MPI_Comm_spawn("iofw_server", argv, server_group_size[i], 
-		MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
-	free(argv[0]);
-	free(argv);
-	if(ret != MPI_SUCCESS)
-	{
-	    error("Spwan iofw server fail.");
-	    return -IOFW_ERROR_INIT;
-	}
+    argv = malloc(2 * sizeof(char*));
+    argv[0] = malloc(128);
+    sprintf(argv[0], "%d", client_num);
+    argv[1] = NULL;
+    ret = MPI_Comm_spawn("iofw_server", argv, 1, 
+	    MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
+    free(argv[0]);
+    free(argv);
+    if(ret != MPI_SUCCESS)
+    {
+	error("Spwan iofw server fail.");
+	return -IOFW_ERROR_INIT;
     }
 
     if(iofw_msg_init() < 0)
@@ -80,6 +76,11 @@ int iofw_init(int server_group_num, int *server_group_size)
 	error("Msg Init Fail.");
 	return -IOFW_ERROR_INIT;
     }
+
+    server_group_num = 1;
+    server_group_size = malloc(sizeof(int));
+    server_group_size[0] = 1;
+    iofw_map_init(client_num, server_group_num, server_group_size, &inter_comm);
 
     if(iofw_id_init(IOFW_ID_INIT_CLIENT) < 0)
     {
@@ -133,7 +134,9 @@ int iofw_nc_create(
     iofw_msg_t *msg;
     int ret;
 
+    debug_mark(DEBUG_MSG);
     ret = iofw_id_assign_nc(ncidp);
+    debug_mark(DEBUG_MSG);
     if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
     {
 	return -IOFW_ERROR_TOO_MANY_OPEN;

@@ -37,6 +37,13 @@
 #define DEFINE_MODE 0
 #define DATA_MODE   1
 
+/**
+ * special id assigned to nc, dim and var when the real server nc ,dim or var id 
+ * hasn't been created
+ **/
+#define IOFW_ID_NC_INVALID -1   
+#define IOFW_ID_DIM_INVALID -1
+#define IOFW_ID_VAR_INVALID -1
 /** @brief: store opened nc file 's information in client */
 typedef struct 
 {
@@ -50,8 +57,6 @@ typedef struct
 typedef struct 
 {
     int nc_id;		    /* id of nc file */
-    int recv_client_num;    /* number fo client whose nc file request has been
-			       received by server */
     int nc_status;	    /* the status of nc file : DEFINE_MODE or DATA_MODE */
 }iofw_id_nc_t;
 
@@ -60,19 +65,17 @@ typedef struct
 {
     int nc_id;		    /* id of nc file which the dimension belong to */
     int dim_id;		    /* id of the dimension */
+    
     int dim_len;	    /* length of the dim */
-    int recv_client_num;    /* number fo client whose dimension request has been
-			       received by server */
 }iofw_id_dim_t;
 /** @brief: store a variable information in server */
 typedef struct
 {
     int nc_id;		    /* id of nc file which the variable is belong to */
     int var_id;		    /* id of var */
-    int recv_client_num;    /* number of client whose variable I/O request
-			       has been received by server */
+    
     int ndims;		    /* number of dimensions for the variable */
-    int *dims_len;	    /* vector of ndims dimension length for the variable */
+    size_t *dims_len;	    /* vector of ndims dimension length for the variable */
     size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
 
@@ -123,53 +126,53 @@ int iofw_id_assign_nc(int *nc_id);
 /**
  * @brief: assign a nc dim id in client
  *
- * @param ncid: the nc file id
- * @param dimid: the assigned dim id
+ * @param nc_id: the nc file id
+ * @param dim_id: the assigned dim id
  *
  * @return: error code
  */
-int iofw_id_assign_dim(int ncid, int *dimid);
+int iofw_id_assign_dim(int nc_id, int *dim_id);
 /**
  * @brief: assign a nc var id in client
  *
- * @param ncid: the nc file id
- * @param varid: the assigne var id
+ * @param nc_id: the nc file id
+ * @param var_id: the assigne var id
  *
  * @return: error code
  */
-int iofw_id_assign_var(int ncid, int *varid);
+int iofw_id_assign_var(int nc_id, int *var_id);
 /**
- * @brief: add a new map(client_ncid->server_ncid) in server
+ * @brief: add a new map(client_nc_id->server_nc_id) in server
  *
- * @param client_ncid: the nc file id in client
- * @param server_ncid: the nc file id in server
+ * @param client_nc_id: the nc file id in client
+ * @param server_nc_id: the nc file id in server
  *
  * @return: error code
  */
-int iofw_id_map_nc(int client_ncid, int server_ncid);
+int iofw_id_map_nc(int client_nc_id, int server_nc_id);
 /**
- * @brief: add a new map((client_ncid, client_dimid)->(server_ncid, 
- *	server_dimid)) in server
+ * @brief: add a new map((client_nc_id, client_dim_id)->(server_nc_id, 
+ *	server_dim_id)) in server
  *
- * @param client_ncid: the nc file id in client
- * @param client_dimid: the dim id in client
- * @param server_ncid: the nc file id in server
- * @param server_dimid: the dim id in server
+ * @param client_nc_id: the nc file id in client
+ * @param client_dim_id: the dim id in client
+ * @param server_nc_id: the nc file id in server
+ * @param server_dim_id: the dim id in server
  * @param dim_len: length of dim
  *
  * @return: error code
  */
 int iofw_id_map_dim(
-	int client_ncid, int client_dimid, 
-	int server_ncid, int server_dimid, int dim_len);
+	int client_nc_id, int client_dim_id, 
+	int server_nc_id, int server_dim_id, int dim_len);
 /**
- * @brief: add a new map((client_ncid, client_varid)->(server_ncid,
- *	server_dimid)) in server
+ * @brief: add a new map((client_nc_id, client_var_id)->(server_nc_id,
+ *	server_dim_id)) in server
  *
- * @param client_ncid: the nc file id in client
- * @param client_varid: the var id in client
- * @param server_ncid: the nc file id in server
- * @param client_varid: the var id in server
+ * @param client_nc_id: the nc file id in client
+ * @param client_var_id: the var id in client
+ * @param server_nc_id: the nc file id in server
+ * @param client_var_id: the var id in server
  * @param ndims: number of dimensions for the variable 
  * @param dims_len: vector of ndims dimension length for the variable 
  * @param ele_size: size of each element in the variable array 
@@ -177,52 +180,52 @@ int iofw_id_map_dim(
  * @return: error code
  */
 int iofw_id_map_var(
-	int client_ncid, int client_varid,
-	int server_ncid, int server_varid,
-	int ndims, int *dims_len, int ele_size)
+	int client_nc_id, int client_var_id,
+	int server_nc_id, int server_var_id,
+	int ndims, size_t *dims_len, size_t ele_size);
 /**
- * @brief: get server_ncid by client_ncid in server
+ * @brief: get server_nc_id by client_nc_id in server
  *
- * @param client_ncid: the nc file id in client
+ * @param client_nc_id: the nc file id in client
  * @param nc: pointer to the nc file information in server
  *
  * @return: error code
  */
 int iofw_id_get_nc( 
-	int client_ncid, iofw_id_nc_t **nc)
+	int client_nc_id, iofw_id_nc_t **nc);
 /**
- * @brief: get (server_ncid, server_dimid) by (client_dimid) in
+ * @brief: get (server_nc_id, server_dim_id) by (client_dim_id) in
  *	server
  *
- * @param client_ncid: the nc file id in client
- * @param client_dimid: the dim id in client
+ * @param client_nc_id: the nc file id in client
+ * @param client_dim_id: the dim id in client
  * @param dim: pointer to the dim information in server
  *
  * @return: error code
  */
 int iofw_id_get_dim(
-	int client_ncid, int client_dimid, 
-	iofw_id_dim_t **dim)
+	int client_nc_id, int client_dim_id, 
+	iofw_id_dim_t **dim);
 /**
- * @brief: get (server_ncid, server_varid) by (client_varid) in
+ * @brief: get (server_nc_id, server_var_id) by (client_var_id) in
  *	server
  *
- * @param client_ncid: the nc file id in client
- * @param client_varid: the var id in client
+ * @param client_nc_id: the nc file id in client
+ * @param client_var_id: the var id in client
  * @param var: pointer to the variable information in the server
  *
  * @return: error code
  */
 int iofw_id_get_var(
-	int client_ncid, int client_varid, 
+	int client_nc_id, int client_var_id, 
 	iofw_id_var_t **var);
 
 /**
  * @brief: put part of variable data in the whole var buf which is stored in the 
  *	hash table
  *
- * @param client_ncid: the nc file id in client
- * @param client_varid: the variable id in client
+ * @param client_nc_id: the nc file id in client
+ * @param client_var_id: the variable id in client
  * @param start: start index of the variable in the whole variable array
  * @param count: count of the variable
  * @param data: pointer to the date
@@ -230,7 +233,7 @@ int iofw_id_get_var(
  * @return: error code
  */
 int iofw_id_put_var(
-	int client_ncid, int client_varid,
+	int client_nc_id, int client_var_id,
 	size_t *start, size_t *count, 
 	char *data);
 

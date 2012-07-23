@@ -19,6 +19,9 @@
 #define _UNMAP_H
 #include "buffer.h"
 #include "mpi.h"
+#include "quicklist.h"
+
+#define IO_HASH_TABLE_SIZE 32
 
 /* return codes */
 #define	ALL_CLINET_REPORT_DONE 1
@@ -36,6 +39,31 @@
 #define IOFW_IO_ERROR_INVALID_VAR   -4	/* invalid variable id */
 #define IOFW_IO_ERROR_MSG_UNPACK    -5
 #define IOFW_IO_ERROR_PUT_VAR	    -6
+#define IOFW_IO_ERROR_WRONG_NDIMS   -7  /* Wrong ndims in put var */
+#define IOFW_IO_ERROR_NC_NOT_DEFINE -8  /* nc file is not in DEFINE_MODE, some IO
+					   function only can be called in 
+					   DEFINE_MODE*/
+
+typedef struct
+{
+    int func_code;
+    int client_nc_id;
+    int client_dim_id;
+    int client_var_id;
+}iofw_io_key_t;
+
+typedef struct
+{
+    int func_code;
+    int client_nc_id;
+    int client_dim_id;
+    int client_var_id;
+
+    uint8_t *client_bitmap;
+
+    qlist_head_t hash_link;
+    //qlist_head_t queue_link;
+}iofw_io_val_t;
 
 /**
  * @brief: initialize
@@ -44,15 +72,14 @@
  *
  * @return: error code
  */
-int iofw_io_init(int _server_group_size)
+int iofw_io_init();
 /**
  * @brief: finalize
  *
  * @return: error code
  */
 int iofw_io_final();
-int iofw_io_client_done(int *client_done, int *server_done,
-	int client_to_serve);
+int iofw_io_client_done(int client_id, int *server_done);
 int iofw_io_nc_create(int client_proc);
 int iofw_io_nc_def_dim(int client_proc);
 int iofw_io_nc_def_var(int client_proc);

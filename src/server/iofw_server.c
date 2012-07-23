@@ -29,6 +29,7 @@ static pthread_t writer;
 static pthread_t reader;
 /* my real rank in mpi_comm_world */
 static int rank;
+static int group_size;	    /* server group size */
 /* Communicator between IO process adn compute process*/   
 static MPI_Comm inter_comm;
 
@@ -39,85 +40,74 @@ int client_num = 0;
 /* all the client report done */
 static int server_done = 0;
 
-static inline void _client_end_io()
-{
-   if((++client_done) == client_num)
-   {
-       server_done = 1;
-   }
-
-   debug(DEBUG_USER, "client_done = %d, client_num = %d", 
-	   client_done, client_num);
-}
-
 static int decode(iofw_msg_t *msg)
 {	
-    int client_proc = 0;
+    int client_id = 0;
     int ret = 0;
     uint32_t code;
     /* TODO the buf control here may have some bad thing */
     iofw_msg_unpack_func_code(msg, &code);
-    client_proc = msg->src;
+    client_id = msg->src;
 
     switch(code)
     {
 	case FUNC_NC_CREATE: 
 	    debug(DEBUG_USER,"server %d recv nc_create from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_create(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_create(client_id);
 	    debug(DEBUG_USER, "server %d done nc_create for client %d\n",
-		    rank,client_proc);
+		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_DEF_DIM:
 	    debug(DEBUG_USER,"server %d recv nc_def_dim from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_def_dim(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_def_dim(client_id);
 	    debug(DEBUG_USER, "server %d done nc_def_dim for client %d\n",
-		    rank,client_proc);
+		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_DEF_VAR:
 	    debug(DEBUG_USER,"server %d recv nc_def_var from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_def_var(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_def_var(client_id);
 	    debug(DEBUG_USER, "server %d done nc_def_var for client %d\n",
-		    rank,client_proc);
+		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
 	    debug(DEBUG_USER,"server %d recv nc_enddef from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_enddef(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_enddef(client_id);
 	    debug(DEBUG_USER, "server %d done nc_enddef for client %d\n",
-		    rank,client_proc);
+		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_PUT_VAR1_FLOAT:
 	    debug(DEBUG_USER,"server %d recv nc_put_vara1_float from client %d",
-		    rank, client_proc);
+		    rank, client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_PUT_VARA_FLOAT:
 	    debug(DEBUG_USER,"server %d recv nc_put_vara_float from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_put_vara_float(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_put_vara_float(client_id);
 	    debug(DEBUG_USER, 
 		    "server %d done nc_put_vara_float from client %d\n", 
-		    rank, client_proc);
+		    rank, client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_CLOSE:
 	    debug(DEBUG_USER,"server %d recv nc_close from client %d",
-		    rank, client_proc);
-	    iofw_io_nc_close(client_proc);
+		    rank, client_id);
+	    iofw_io_nc_close(client_id);
 	    debug(DEBUG_USER,"server %d received nc_close from client %d\n",
-		    rank, client_proc);
+		    rank, client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case CLIENT_END_IO:
 	    debug(DEBUG_USER,"server %d recv client_end_io from client %d",
-		    rank, client_proc);
-	    _client_end_io();
+		    rank, client_id);
+	    iofw_io_client_done(client_id, &server_done);
 	    debug(DEBUG_USER, "server %d done client_end_io for client %d\n",
-		    rank,client_proc);
+		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	default:
 	    error("server %d received unexpected msg from client %d",
-		    rank, client_proc);
+		    rank, client_id);
 	    return IOFW_SERVER_ERROR_UNEXPECTED_MSG;
     }	
 }
@@ -160,8 +150,8 @@ int iofw_server()
     }
     if( (ret = pthread_create(&reader,NULL,iofw_reader,NULL))<0  )
     {
-	error("Tread Reader create error()");
-	return ret;
+        error("Tread Reader create error()");
+        return ret;
     }
 
     pthread_join(writer, NULL);
@@ -169,16 +159,15 @@ int iofw_server()
     return 0;
 }
 
-static int server_init(int argc, char** argv)
+static int _server_init(int argc, char** argv)
 {
-    int rank, size;
     int ret = 0;
 
     MPI_Init(&argc, &argv);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    debug(DEBUG_USER, "rank = %d; size = %d", rank, size);
+    MPI_Comm_size(MPI_COMM_WORLD, &group_size);
+    debug(DEBUG_USER, "rank = %d; size = %d", rank, group_size);
 
     ret = MPI_Comm_get_parent(&inter_comm);
 
@@ -193,22 +182,28 @@ static int server_init(int argc, char** argv)
      * init for client and server num
      **/
     client_num = atoi(argv[1]);
-    if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
-    {
-	error("ID Init Fail.");
-	return IOFW_SERVER_ERROR_INIT_FAIL;
-    }
+    //if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
+    //{
+    //    error("ID Init Fail.");
+    //    return IOFW_SERVER_ERROR_INIT_FAIL;
+    //}
 
-    iofw_map_client_num(rank, size, &client_num);
+    //iofw_map_client_num(rank, size, &client_num);
     client_done = 0;
     debug(DEBUG_USER, "client_num = %d", client_num);
 
     server_done = 0;
 
-    if(iofw_io_init(size) < 0)
+    if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
     {
-	error("IO Init Fail.");
-	return IOFW_SERVER_ERROR_NONE;
+	error("ID init fail.");
+	return IOFW_SERVER_ERROR_INIT_FAIL;
+    }
+
+    if(iofw_io_init() < 0)
+    {
+	error("IO init fail.");
+	return IOFW_SERVER_ERROR_INIT_FAIL;
     }
 
     return IOFW_SERVER_ERROR_NONE;
@@ -217,7 +212,7 @@ static int server_init(int argc, char** argv)
 
 static void server_final()
 {
-    ifow_io_final();
+    iofw_io_final();
     iofw_msg_final();
     iofw_id_final();
 
@@ -230,11 +225,11 @@ int main(int argc, char** argv)
     times_init();
     times_start();
 
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG);
+    //set_debug_mask(DEBUG_USER | DEBUG_IO | DEBUG_ID);
     //set_debug_mask(DEBUG_ID);
-    set_debug_mask(DEBUG_TIME);
+    //set_debug_mask(DEBUG_TIME);
     
-    server_init(argc, argv);
+    _server_init(argc, argv);
 
     iofw_server();
 
