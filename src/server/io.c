@@ -26,6 +26,7 @@
 #include "debug.h"
 #include "mpi.h"
 #include "quickhash.h"
+#include "iofw_types.h"
 
 extern int client_num;
 
@@ -427,7 +428,7 @@ int iofw_io_nc_def_var(int client_id)
 	    dims_len[i] = dims[i]->dim_len;
 	}
 	iofw_id_map_var(client_nc_id, client_var_id, IOFW_ID_NC_INVALID, 
-		IOFW_ID_VAR_INVALID, ndims, dims_len, sizeof(float));
+		IOFW_ID_VAR_INVALID, ndims, dims_len, xtype);
     }
 
     if(_bitmap_full(io_info->client_bitmap))
@@ -465,7 +466,7 @@ int iofw_io_nc_def_var(int client_id)
 		iofw_id_get_var(client_nc_id, client_var_id, &var))
 	{
 	    iofw_id_map_var(client_nc_id, client_var_id, nc->nc_id, var_id,
-		    ndims, dims_len, sizeof(float));
+		    ndims, dims_len, xtype);
 	}else
 	{
 	    assert(IOFW_ID_VAR_INVALID == var->var_id);
@@ -550,7 +551,7 @@ int iofw_io_nc_enddef(int client_id)
     return IOFW_IO_ERROR_NONE;
 }
 
-int iofw_io_nc_put_vara_float(int client_id)
+int iofw_io_nc_put_vara(int client_id)
 {
     int i,ret = 0, ndims;
     iofw_id_nc_t *nc;
@@ -559,16 +560,23 @@ int iofw_io_nc_put_vara_float(int client_id)
     int client_nc_id, client_var_id;
     size_t *start, *count;
     size_t data_size;
-    float *data;
-    int data_len;
+    char *data;
+    int data_len, data_type;
 
-    int func_code = FUNC_NC_PUT_VARA_FLOAT;
+    int func_code = FUNC_NC_PUT_VARA;
     int return_code;
 
     //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
-    ret = iofw_msg_unpack_nc_put_vara_float(
+    ret = iofw_msg_unpack_nc_put_vara(
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
-	    &data_len, &data);	
+	    &data_len, &data_type, &data);	
+
+    //float *_data = data;
+    //for(i = 0; i < 4; i ++)
+    //{
+    //    printf("%f, ", _data[i]);
+    //}
+    //printf("\n");
 
     if( ret < 0 )
     {
@@ -579,6 +587,7 @@ int iofw_io_nc_put_vara_float(int client_id)
     _recv_client_io(
 	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
+    //TODO  check whether data_type is right
     if(IOFW_ID_ERROR_GET_NULL == iofw_id_put_var(
 		client_nc_id, client_var_id, start, count, (char*)data))
     {
@@ -617,8 +626,30 @@ int iofw_io_nc_put_vara_float(int client_id)
 	{
 	    start[i] = 0;
 	}
-	ret = nc_put_vara_float(
-		nc->nc_id, var->var_id, start, var->dims_len, (float*)var->data);
+	switch(var->data_type)
+	{
+	    case IOFW_BYTE :
+		break;
+	    case IOFW_CHAR :
+		break;
+	    case IOFW_SHORT :
+		ret = nc_put_vara_short(
+			nc->nc_id, var->var_id, start, var->dims_len, (short*)var->data);
+		break;
+	    case IOFW_INT :
+		ret = nc_put_vara_int(
+			nc->nc_id, var->var_id, start, var->dims_len, (int*)var->data);
+		break;
+	    case IOFW_FLOAT :
+		ret = nc_put_vara_float(
+			nc->nc_id, var->var_id, start, var->dims_len, (float*)var->data);
+		break;
+	    case IOFW_DOUBLE :
+		ret = nc_put_vara_double(
+			nc->nc_id, var->var_id, start, var->dims_len, (double*)var->data);
+		break;
+	}
+
 	if( ret != NC_NOERR )
 	{
 	    error("write nc(%d) var (%d) failure(%s)",
@@ -691,16 +722,3 @@ int iofw_io_nc_close(int client_id)
     return IOFW_IO_ERROR_NONE;
 }
 
-/**
- * @brief iofw_nc_put_var1_float : 
- *
- * @param src: the rank of the client
- * @param my_rank: 
- * @param buf
- *
- * @return 
- */
-int iofw_io_nc_put_var1_float(int client_id)
-{
-    return 0;	
-}

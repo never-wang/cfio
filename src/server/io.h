@@ -84,8 +84,7 @@ int iofw_io_nc_create(int client_proc);
 int iofw_io_nc_def_dim(int client_proc);
 int iofw_io_nc_def_var(int client_proc);
 int iofw_io_nc_enddef(int client_proc);
-int iofw_io_nc_put_var1_float(int client_proc);
-int iofw_io_nc_put_vara_float(int client_proc);
+int iofw_io_nc_put_vara(int client_proc);
 int iofw_io_nc_close(int client_proc);
 
 #endif

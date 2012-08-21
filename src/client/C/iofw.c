@@ -232,29 +232,16 @@ int iofw_nc_enddef(
     return 0;
 }
 
-int iofw_nc_put_var1_float(
-	int io_proc_id,
-	int ncid, int varid, int dim,  
-	const size_t *index, const float *fp)
-{
-    iofw_msg_t *msg;
-
-    iofw_msg_pack_nc_put_var1_float(&msg, rank, 
-	    ncid, varid, dim, index, fp);
-    
-    iofw_msg_isend(msg);
-
-    return 0;
-}
-
-static int _nc_put_vara_float(
+//TODO Maybe can rewrite so better performance
+static int _nc_put_vara(
 	int io_proc_id, int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const float *fp,
+	const size_t *start, const size_t *count, 
+	const int  fp_type, const char *fp,
 	size_t head_size, int div_dim)
 {
     size_t *cur_start, *cur_count;
     int div, left_dim;
-    const float *cur_fp;
+    const char *cur_fp;
     size_t desc_data_size, div_data_size;
     int i;
     iofw_msg_t *msg;
@@ -274,10 +261,29 @@ static int _nc_put_vara_float(
     {
 	desc_data_size *= count[i]; 
     }
-    desc_data_size *= sizeof(float);
+    switch(fp_type)
+    {
+	case IOFW_BYTE :
+	    break;
+	case IOFW_CHAR :
+	    break;
+	case IOFW_SHORT :
+	    desc_data_size *= sizeof(short);
+	    break;
+	case IOFW_INT :
+	    desc_data_size *= sizeof(int);
+	    break;
+	case IOFW_FLOAT :
+	    desc_data_size *= sizeof(float);
+	    break;
+	case IOFW_DOUBLE :
+	    desc_data_size *= sizeof(double);
+	    break;
+    }
     div_data_size = desc_data_size * count[div_dim];
     
     div = count[div_dim];
+    //TODO can use binary search
     while(div_data_size + head_size > MSG_MAX_SIZE)
     {
 	div_data_size -= desc_data_size;
@@ -294,10 +300,10 @@ static int _nc_put_vara_float(
 	cur_count[div_dim] = 1;
 	for(i = 0; i < count[div_dim]; i ++)
 	{
-	    _nc_put_vara_float(io_proc_id, ncid, varid, dim, cur_start, cur_count,
-		    cur_fp, head_size, div_dim - 1);
+	    _nc_put_vara(io_proc_id, ncid, varid, dim, cur_start, cur_count,
+		    fp_type, cur_fp, head_size, div_dim - 1);
 	    cur_start[div_dim] += 1;
-	    cur_fp += desc_data_size / sizeof(float);
+	    cur_fp += desc_data_size;
 	}
     }else
     {
@@ -305,13 +311,13 @@ static int _nc_put_vara_float(
 	left_dim = count[div_dim];
 	for(i = 0; i < count[div_dim]; i += div)
 	{
-	    iofw_msg_pack_nc_put_vara_float(&msg, rank, ncid, varid, dim, 
-		    cur_start, cur_count, cur_fp);
+	    iofw_msg_pack_nc_put_vara(&msg, rank, ncid, varid, dim, 
+		    cur_start, cur_count, fp_type, cur_fp);
 	    iofw_msg_isend(msg);
 	    left_dim -= div;
 	    cur_start[div_dim] += div;
 	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
-	    cur_fp += div_data_size / sizeof(float);
+	    cur_fp += div_data_size;
 	}
     }
 
@@ -331,8 +337,8 @@ int iofw_nc_put_vara_float(
 
     head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
     
-    _nc_put_vara_float(io_proc_id, ncid, varid, dim,
-	    start, count, fp, head_size, dim - 1);
+    _nc_put_vara(io_proc_id, ncid, varid, dim,
+	    start, count, IOFW_FLOAT, fp, head_size, dim - 1);
 
     debug_mark(DEBUG_IOFW);
 
@@ -341,6 +347,29 @@ int iofw_nc_put_vara_float(
     return 0;
 }
 
+int iofw_nc_put_vara_double(
+	int io_proc_id,
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count, const double *fp)
+{
+    size_t head_size;
+
+	//times_start();
+
+    head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
+
+    debug(DEBUG_IOFW, "start :(%lu, %lu), count :(%lu, %lu)", 
+	    start[0], start[1], count[0], count[1]);
+    
+    _nc_put_vara(io_proc_id, ncid, varid, dim,
+	    start, count, IOFW_DOUBLE, fp, head_size, dim - 1);
+
+    debug_mark(DEBUG_IOFW);
+
+	//debug(DEBUG_TIME, "%f ms", times_end());
+
+    return 0;
+}
 /**
  * @brief: nc_close
  *
@@ -401,12 +430,38 @@ int iofw_nc_def_var_(
     return iofw_nc_def_var(*io_proc_id, *ncid, name, *xtype, *ndims, dimids, varidp);
 }
 
-int iofw_nc_put_var(
+int iofw_nc_put_vara_double_(
 	int *io_proc_id,
 	int *ncid, int *varid, int *dim,
-	const int *index, const float *fp)
+	const int *start, const int *count, const double *fp)
 {
-    return iofw_nc_put_var1_float(*io_proc_id, *ncid, *varid, *dim, index, fp);
+    size_t *_start, *_count;
+    int i, ret;
+
+    _start = malloc((*dim) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    _count = malloc((*dim) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    for(i = 0; i < (*dim); i ++)
+    {
+	_start[i] = start[i] - 1;
+	_count[i] = count[i];
+    }
+    ret = iofw_nc_put_vara_double(
+	    *io_proc_id, *ncid, *varid, *dim, _start, _count, fp);
+    
+    free(_start);
+    free(_count);
+    return ret;
 }
 
 int iofw_nc_enddef_(

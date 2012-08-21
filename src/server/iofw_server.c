@@ -79,14 +79,10 @@ static int decode(iofw_msg_t *msg)
 	    debug(DEBUG_USER, "server %d done nc_enddef for client %d\n",
 		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
-	case FUNC_NC_PUT_VAR1_FLOAT:
-	    debug(DEBUG_USER,"server %d recv nc_put_vara1_float from client %d",
+	case FUNC_NC_PUT_VARA:
+	    debug(DEBUG_USER,"server %d recv nc_put_vara from client %d",
 		    rank, client_id);
-	    return IOFW_SERVER_ERROR_NONE;
-	case FUNC_NC_PUT_VARA_FLOAT:
-	    debug(DEBUG_USER,"server %d recv nc_put_vara_float from client %d",
-		    rank, client_id);
-	    iofw_io_nc_put_vara_float(client_id);
+	    iofw_io_nc_put_vara(client_id);
 	    debug(DEBUG_USER, 
 		    "server %d done nc_put_vara_float from client %d\n", 
 		    rank, client_id);

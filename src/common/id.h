@@ -76,6 +76,7 @@ typedef struct
     
     int ndims;		    /* number of dimensions for the variable */
     size_t *dims_len;	    /* vector of ndims dimension length for the variable */
+    int data_type;          /* type of data, define in iofw_types.h */
     size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
 
@@ -175,14 +176,14 @@ int iofw_id_map_dim(
  * @param client_var_id: the var id in server
  * @param ndims: number of dimensions for the variable 
  * @param dims_len: vector of ndims dimension length for the variable 
- * @param ele_size: size of each element in the variable array 
+ * @param data_type: type of data 
  *
  * @return: error code
  */
 int iofw_id_map_var(
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, size_t ele_size);
+	int ndims, size_t *dims_len, int data_type);
 /**
  * @brief: get server_nc_id by client_nc_id in server
  *

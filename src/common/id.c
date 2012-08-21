@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "id.h"
+#include "iofw_types.h"
 #include "debug.h"
 #include "times.h"
 #include "quickhash.h"
@@ -306,7 +307,7 @@ int iofw_id_map_dim(
 int iofw_id_map_var(
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, size_t ele_size)
+	int ndims, size_t *dims_len, int data_type)
 {
     int i;
     size_t data_size;
@@ -330,19 +331,21 @@ int iofw_id_map_var(
     if(ndims > 0)
     val->var->dims_len = malloc(sizeof(size_t) * ndims);
     memcpy(val->var->dims_len, dims_len, sizeof(size_t) * ndims);
-    val->var->ele_size = ele_size;
-
+    val->var->data_type = data_type;
+    iofw_types_size(val->var->ele_size, data_type);
+    
     data_size = 1;
     for(i = 0; i < ndims; i ++)
     {
 	data_size *= dims_len[i];
     }
-    val->var->data = malloc(ele_size * data_size); 
+    val->var->data = malloc(val->var->ele_size * data_size); 
 
     qhash_add(map_table, &key, &(val->hash_link));
     
-    debug(DEBUG_ID, "map ((%d, 0, %d)->(%d, 0, %d))",  
-	    client_nc_id, client_var_id, server_nc_id, server_var_id);
+    debug(DEBUG_ID, "map ((%d, 0, %d)->(%d, 0, %d)), ele_size = %lu",  
+	    client_nc_id, client_var_id, server_nc_id, server_var_id, 
+	    val->var->ele_size);
 
     return IOFW_ID_ERROR_NONE;
 }
@@ -468,7 +471,14 @@ int iofw_id_put_var(
 		return IOFW_ID_ERROR_EXCEED_BOUND;
 	    }
 	}
-	
+
+	//float *_data = data;
+	//for(i = 0; i < 4; i ++)
+	//{
+	//    printf("%f, ", _data[i]);
+	//}
+	//printf("\n");
+
 	_put_var(var->ndims, var->ele_size, var->dims_len, var->data,
 		start, count, data);
 

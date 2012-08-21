@@ -1,4 +1,4 @@
-AC_INIT([iofw], [1.01], [never.wencan@gmail.com])
+AC_INIT([iofw], [1.02], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
 CC=mpiicc

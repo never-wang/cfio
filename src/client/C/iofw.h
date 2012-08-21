@@ -22,11 +22,13 @@
 #include <netcdf.h>
 
 #include "mpi.h"
+#include "iofw_types.h"
 
 #define IOFW_ERROR_NONE		    0
 #define IOFW_ERROR_TOO_MANY_OPEN    1 /* Too Many Open NC File */
 #define IOFW_ERROR_INIT		    2 /* error when init */
 #define IOFW_ERROR_NULL_DATA	    3 /* pointer to data is NULL */
+#define IOFW_ERROR_MALLOC	    4 /* malloc fail */
 /**
  * @brief: init
  *
@@ -101,21 +103,6 @@ int iofw_nc_def_var(
 int iofw_nc_enddef(
 	int io_proc_id,
 	int ncid);
-/**
- * @brief: iofw_nc_put_var_float
- *
- * @param io_proc_id: id of IO proc
- * @param ncid: netCDF ID
- * @param varid: variable ID
- * @param index: the index of the data value to be written
- * @param fp: pinter to the data value to be written
- *
- * @return: 0 if success
- */
-int iofw_nc_put_var1_float(
-	int io_proc_id,
-	int ncid, int varid, int dim,  
-	const size_t *index, const float *fp);
 /**
  * @brief: iofw_nc_put_vara_float
  *
