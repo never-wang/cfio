@@ -229,7 +229,7 @@ int main(int argc, char** argv)
 
     iofw_server();
 
-    debug(DEBUG_TIME, "ifow_server total time : %f ms", times_end());
+    debug(DEBUG_TIME, "iofw_server total time : %f", times_end());
     times_final();
 
     server_final();

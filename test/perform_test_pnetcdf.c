@@ -16,8 +16,8 @@
 #include <assert.h>
 
 #include "mpi.h"
-#include "iofw.h"
 #include "debug.h"
+#include "pnetcdf.h"
 #include "times.h"
 
 #define LAT 8192
@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     int dim1,var1,i;
 
     int LAT_PROC, LON_PROC;
-    size_t start[2],count[2];
+    MPI_Offset start[2],count[2];
 
     LAT_PROC = LON_PROC = atoi(argv[1]);
 
@@ -43,7 +43,6 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     times_init();
-    times_start();
     times_start();
 
     assert(size == LAT_PROC * LON_PROC);
@@ -61,37 +60,34 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( size, NULL);
     for(i = 0; i < 10; i ++)
     {
 	sleep(1);
 	times_start();
 	char fileName[100];
-	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
+	sprintf(fileName,"%s/pnetcdf-%d.nc", argv[2], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
-	iofw_nc_create(rank, fileName, 0, &ncidp);
+	ncmpi_create(MPI_COMM_WORLD, fileName, 0, MPI_INFO_NULL, &ncidp);
 	debug_mark(DEBUG_USER);
 	int lat = LAT;
-	iofw_nc_def_dim_(&rank, &ncidp, "lat", &lat,&dimids[0]);
-	iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
+	ncmpi_def_dim(ncidp, "lat", lat,&dimids[0]);
+	ncmpi_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-	iofw_nc_def_var(rank, ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
-	iofw_nc_enddef(rank,ncidp);
+	ncmpi_def_var(ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
+	ncmpi_enddef(ncidp);
 
-	iofw_nc_put_vara_double(rank,ncidp,var1, 2,start, count,fp); 
-	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-
-	iofw_nc_close(rank,ncidp);
+	ncmpi_put_vara_double_all(ncidp,var1, start, count,fp);
+	ncmpi_close(ncidp);
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }
-    free(fp);
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
-    iofw_finalize();
-    printf("proc %d iofw time : %f\n", rank, times_end());
+    free(fp);
     MPI_Finalize();
     printf("proc %d total time : %f\n", rank, times_end());
     times_final();
     return 0;
 }
+

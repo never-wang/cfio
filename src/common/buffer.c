@@ -51,7 +51,7 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error)
 {
     iofw_buf_t *buf_p;
     
-    buf_p = sbrk(size + sizeof(iofw_buf_t));
+    buf_p = malloc(size + sizeof(iofw_buf_t));
 
     if(NULL == buf_p)
     {

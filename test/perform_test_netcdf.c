@@ -1,10 +1,10 @@
 /****************************************************************************
- *       Filename:  perform_test.c
+ *       Filename:  perform_test_netcdf.c
  *
  *    Description:  
  *
  *        Version:  1.0
- *        Created:  08/26/2012 10:09:11 AM
+ *        Created:  08/26/2012 06:20:19 PM
  *       Revision:  none
  *       Compiler:  gcc
  *
@@ -15,9 +15,8 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "mpi.h"
-#include "iofw.h"
 #include "debug.h"
+#include "netcdf.h"
 #include "times.h"
 
 #define LAT 8192
@@ -26,34 +25,24 @@
 int main(int argc, char** argv)
 {
     int rank, size;
-    char *path = "./output/test";
     int ncidp;
     int dim1,var1,i;
 
-    int LAT_PROC, LON_PROC;
     size_t start[2],count[2];
 
-    LAT_PROC = LON_PROC = atoi(argv[1]);
-
     size_t len = 10;
-    MPI_Comm comm = MPI_COMM_WORLD;
-
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(comm, &rank);
-    MPI_Comm_size(comm, &size);
 
     times_init();
     times_start();
-    times_start();
 
-    assert(size == LAT_PROC * LON_PROC);
+    rank = 0;
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
-    start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
-    start[1] = (rank / LON_PROC) * (LON / LON_PROC);
-    count[0] = LAT / LAT_PROC;
-    count[1] = LON / LON_PROC;
+    start[0] = 0;
+    start[1] = 0;
+    count[0] = LAT;
+    count[1] = LON;
     double *fp = malloc(count[0] * count[1] *sizeof(double));
 
     for( i = 0; i< count[0] * count[1]; i++)
@@ -61,36 +50,31 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( size, NULL);
     for(i = 0; i < 10; i ++)
     {
 	sleep(1);
 	times_start();
 	char fileName[100];
-	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
+	sprintf(fileName,"%s/netcdf-%d.nc", argv[1], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
-	iofw_nc_create(rank, fileName, 0, &ncidp);
+	nc_create(fileName, 0, &ncidp);
 	debug_mark(DEBUG_USER);
 	int lat = LAT;
-	iofw_nc_def_dim_(&rank, &ncidp, "lat", &lat,&dimids[0]);
-	iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
+	nc_def_dim(ncidp, "lat", lat,&dimids[0]);
+	nc_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-	iofw_nc_def_var(rank, ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
-	iofw_nc_enddef(rank,ncidp);
+	nc_def_var(ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
+	nc_enddef(ncidp);
 
-	iofw_nc_put_vara_double(rank,ncidp,var1, 2,start, count,fp); 
-	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-
-	iofw_nc_close(rank,ncidp);
+	nc_put_vara_double(ncidp,var1, start, count,fp);
+	nc_close(ncidp);
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }
-    free(fp);
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
-    iofw_finalize();
-    printf("proc %d iofw time : %f\n", rank, times_end());
-    MPI_Finalize();
+    free(fp);
     printf("proc %d total time : %f\n", rank, times_end());
     times_final();
     return 0;

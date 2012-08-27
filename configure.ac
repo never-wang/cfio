@@ -5,6 +5,8 @@ CC=mpiicc
 AC_PROG_FC
 FC=mpiifort
 
+CPPFLAGS="$CPPFLAGS -mcmodel=large -shared-intel"
+
 AC_ARG_WITH([dependency],
 	    [AC_HELP_STRING([--with-dependency=DIR],
 			    [Specify path to all dependent library.])],
