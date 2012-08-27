@@ -51,7 +51,6 @@ typedef struct
 
 /**
  * @brief: increase a buffer's free_addr, means more buffer space was used
- *	buffer space was freed
  *
  * @param buf_p: pointer to the buffer
  * @param size: the size to increase

@@ -21,7 +21,7 @@
 #include "buffer.h"
 #include "quicklist.h"
 
-#define MSG_MAX_SIZE 1048576
+#define MSG_MAX_SIZE 536870912
 /* define for control messge */
 #define CLIENT_END_IO 201
 

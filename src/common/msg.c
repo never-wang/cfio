@@ -58,11 +58,12 @@ int iofw_msg_init()
 	return -IOFW_MSG_ERROR_BUFFER;
     }
 
-    mutex = malloc(sizeof(mutex));
+    mutex = malloc(sizeof(pthread_mutex_t));
     if(NULL == mutex)
     {
 	return -IOFW_MSG_ERROR_MALLOC;
     }
+    pthread_mutex_init(mutex, NULL);
 
     return IOFW_MSG_ERROR_NONE;
 }
@@ -162,7 +163,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     int size;
     iofw_msg_t *msg;
 
+    times_start();
     ensure_free_space(buffer, MSG_MAX_SIZE, iofw_msg_server_buf_free);
+    debug(DEBUG_TIME, "%f", times_end());
 
     MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_ANY_SOURCE, 
 	    MPI_ANY_TAG, comm, &status);
@@ -181,10 +184,15 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     msg->src = status.MPI_SOURCE;
     msg->dst = rank;
 
+    debug_mark(DEBUG_MSG);
     /* need lock */
     pthread_mutex_lock(mutex);
+    debug_mark(DEBUG_MSG);
     qlist_add_tail(&(msg->link), &(msg_head->link));
+    debug_mark(DEBUG_MSG);
     pthread_mutex_unlock(mutex);
+    
+    debug_mark(DEBUG_MSG);
     
     use_buf(buffer, size);
     
@@ -193,6 +201,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
 	debug_mark(DEBUG_MSG);
     }
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
+    debug(DEBUG_MSG, "success return");
     return IOFW_MSG_ERROR_NONE;
 }
 
