@@ -107,23 +107,14 @@ static void iofw_msg_client_buf_free()
     int done;
     MPI_Status status;
 
-    qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
-    {
-	MPI_Test(&msg->req, &done, &status);
-    
-	if(done)
-	{
-	    //assert(msg->addr == buffer->used_addr);
-	    assert(check_used_addr(msg->addr, buffer));
-	    buffer->used_addr = msg->addr;
-	    free_buf(buffer, msg->size);
-	    qlist_del(&(msg->link));
-	    free(msg);
-	}else
-	{
-	    break;
-	}
-    }
+    msg = qlist_entry(qlist_pop(&msg_head->link), iofw_msg_t, link);
+    MPI_Wait(&msg->req, &status);
+
+    assert(check_used_addr(msg->addr, buffer));
+    buffer->used_addr = msg->addr;
+    free_buf(buffer, msg->size);
+    free(msg);
+
     return;
 }
 
