@@ -19,21 +19,24 @@
 #include "netcdf.h"
 #include "times.h"
 
-#define LAT 8192
-#define LON 4096
+#define LAT 4096
+#define LON 2048
+
+#define valn 8
 
 int main(int argc, char** argv)
 {
     int rank, size;
     int ncidp;
-    int dim1,var1,i;
+    int dim1,var1,i, j;
 
     size_t start[2],count[2];
 
     size_t len = 10;
+    char var_name[16];
+    int var[valn];
 
     times_init();
-    times_start();
 
     rank = 0;
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
@@ -50,9 +53,9 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
+    times_start();
     for(i = 0; i < 10; i ++)
     {
-	sleep(1);
 	times_start();
 	char fileName[100];
 	sprintf(fileName,"%s/netcdf-%d.nc", argv[1], i);
@@ -64,10 +67,17 @@ int main(int argc, char** argv)
 	nc_def_dim(ncidp, "lat", lat,&dimids[0]);
 	nc_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-	nc_def_var(ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
+	for(j = 0; j < valn; j++)
+	{
+	    sprintf(var_name, "time_v%d", j);
+	    nc_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids,&var[j]);
+	}
 	nc_enddef(ncidp);
 
-	nc_put_vara_double(ncidp,var1, start, count,fp);
+	for(j = 0; j < valn; j++)
+	{
+	    nc_put_vara_double(ncidp,var[j], start, count,fp);
+	}
 	nc_close(ncidp);
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }

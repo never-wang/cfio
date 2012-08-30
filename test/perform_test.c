@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     iofw_init( size, NULL);
     for(i = 0; i < 10; i ++)
     {
-	sleep(1);
+	sleep(4);
 	times_start();
 	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
 	int dimids[2];

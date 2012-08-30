@@ -111,7 +111,7 @@ static void iofw_msg_client_buf_free()
 static void iofw_msg_server_buf_free()
 {
 
-    //pthread_cond_wait(&full_conf, &full_mutex);
+    pthread_cond_wait(&full_cond, &full_mutex);
     return;
 }
 
@@ -143,9 +143,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     int size;
     iofw_msg_t *msg;
 
-    times_start();
+    //times_start();
     ensure_free_space(buffer, MSG_MAX_SIZE, iofw_msg_server_buf_free);
-    debug(DEBUG_TIME, "%f", times_end());
+    //debug(DEBUG_TIME, "%f", times_end());
 
     MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_ANY_SOURCE, 
 	    MPI_ANY_TAG, comm, &status);
@@ -186,6 +186,8 @@ iofw_msg_t *iofw_msg_get_first()
     iofw_msg_t *msg = NULL;
     qlist_head_t *link;
 
+    pthread_cond_signal(&full_cond);
+
     while(NULL == msg)
     {
 	pthread_mutex_lock(&mutex);
@@ -193,9 +195,7 @@ iofw_msg_t *iofw_msg_get_first()
 	if(NULL == link)
 	{
 	    msg = NULL;
-	    debug_mark(DEBUG_MSG);
 	    pthread_cond_wait(&empty_cond, &mutex);
-	    debug_mark(DEBUG_MSG);
 	}else
 	{
 	    msg = qlist_entry(link, iofw_msg_t, link);
