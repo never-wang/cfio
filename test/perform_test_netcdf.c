@@ -20,7 +20,7 @@
 #include "times.h"
 
 #define LAT 8192
-#define LON 8192
+#define LON 4096
 
 int main(int argc, char** argv)
 {

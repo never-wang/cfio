@@ -20,18 +20,23 @@
 #include "debug.h"
 #include "times.h"
 
-#define LAT 8192
-#define LON 8192
+#define LAT 4096
+#define LON 2048
+
+#define valn 8
 
 int main(int argc, char** argv)
 {
     int rank, size;
     char *path = "./output/test";
     int ncidp;
-    int dim1,var1,i;
+    int dim1,var1,i, j;
 
     int LAT_PROC, LON_PROC;
     size_t start[2],count[2];
+    char fileName[100];
+    char var_name[16];
+    int var[valn];
 
     LAT_PROC = LON_PROC = atoi(argv[1]);
 
@@ -66,7 +71,6 @@ int main(int argc, char** argv)
     {
 	sleep(1);
 	times_start();
-	char fileName[100];
 	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
@@ -76,10 +80,17 @@ int main(int argc, char** argv)
 	iofw_nc_def_dim_(&rank, &ncidp, "lat", &lat,&dimids[0]);
 	iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
 
-	iofw_nc_def_var(rank, ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
+	for(j = 0; j < valn; j++)
+	{
+	    sprintf(var_name, "time_v%d", j);
+	    iofw_nc_def_var(rank, ncidp,var_name, NC_DOUBLE, 2,dimids,&var[j]);
+	}
 	iofw_nc_enddef(rank,ncidp);
 
-	iofw_nc_put_vara_double(rank,ncidp,var1, 2,start, count,fp); 
+	for(j = 0; j < valn; j++)
+	{
+	    iofw_nc_put_vara_double(rank,ncidp,var[j], 2,start, count,fp);
+	}
 	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 	//iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 

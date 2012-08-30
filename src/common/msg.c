@@ -143,7 +143,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     int size;
     iofw_msg_t *msg;
 
+    times_start();
     ensure_free_space(buffer, MSG_MAX_SIZE, iofw_msg_server_buf_free);
+    debug(DEBUG_TIME, "%f", times_end());
 
     MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_ANY_SOURCE, 
 	    MPI_ANY_TAG, comm, &status);
@@ -175,6 +177,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
 	debug_mark(DEBUG_MSG);
     }
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
+    debug(DEBUG_MSG, "success return");
     return IOFW_MSG_ERROR_NONE;
 }
 
