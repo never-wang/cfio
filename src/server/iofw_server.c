@@ -221,7 +221,7 @@ int main(int argc, char** argv)
     times_init();
     times_start();
 
-    //set_debug_mask(DEBUG_USER | DEBUG_IO | DEBUG_ID);
+    set_debug_mask(DEBUG_USER | DEBUG_IO | DEBUG_MSG);
     //set_debug_mask(DEBUG_ID);
     //set_debug_mask(DEBUG_TIME);
     

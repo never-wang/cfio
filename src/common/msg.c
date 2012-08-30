@@ -26,7 +26,10 @@
 
 static iofw_msg_t *msg_head;
 iofw_buf_t *buffer;
-pthread_mutex_t *mutex;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t empty_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t full_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t full_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static inline iofw_msg_t *create_msg()
 {
@@ -58,12 +61,6 @@ int iofw_msg_init()
 	return -IOFW_MSG_ERROR_BUFFER;
     }
 
-    mutex = malloc(sizeof(mutex));
-    if(NULL == mutex)
-    {
-	return -IOFW_MSG_ERROR_MALLOC;
-    }
-
     return IOFW_MSG_ERROR_NONE;
 }
 
@@ -79,13 +76,6 @@ int iofw_msg_final()
         }
         free(msg_head);
         msg_head = NULL;
-    }
-
-    if(NULL != mutex)
-    {
-        pthread_mutex_destroy(mutex);
-        //free(mutex);
-        mutex = NULL;
     }
 
     if(NULL != buffer)
@@ -120,8 +110,8 @@ static void iofw_msg_client_buf_free()
 
 static void iofw_msg_server_buf_free()
 {
-    
 
+    //pthread_cond_wait(&full_conf, &full_mutex);
     return;
 }
 
@@ -172,12 +162,13 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     msg->src = status.MPI_SOURCE;
     msg->dst = rank;
 
-    /* need lock */
-    pthread_mutex_lock(mutex);
-    qlist_add_tail(&(msg->link), &(msg_head->link));
-    pthread_mutex_unlock(mutex);
-    
     use_buf(buffer, size);
+    
+    /* need lock */
+    pthread_mutex_lock(&mutex);
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+    pthread_cond_signal(&empty_cond);
+    pthread_mutex_unlock(&mutex);
     
     if(msg->addr == buffer->start_addr)
     {
@@ -189,18 +180,24 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
 
 iofw_msg_t *iofw_msg_get_first()
 {
-    iofw_msg_t *msg;
+    iofw_msg_t *msg = NULL;
     qlist_head_t *link;
 
-    pthread_mutex_lock(mutex);
-    link = qlist_pop(&(msg_head->link));
-    pthread_mutex_unlock(mutex);
-    if(NULL == link)
+    while(NULL == msg)
     {
-	msg = NULL;
-    }else
-    {
-	msg = qlist_entry(link, iofw_msg_t, link);
+	pthread_mutex_lock(&mutex);
+	link = qlist_pop(&(msg_head->link));
+	if(NULL == link)
+	{
+	    msg = NULL;
+	    debug_mark(DEBUG_MSG);
+	    pthread_cond_wait(&empty_cond, &mutex);
+	    debug_mark(DEBUG_MSG);
+	}else
+	{
+	    msg = qlist_entry(link, iofw_msg_t, link);
+	}
+	pthread_mutex_unlock(&mutex);
     }
 
     if(msg != NULL)

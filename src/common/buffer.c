@@ -72,7 +72,7 @@ int iofw_buf_clear(iofw_buf_t *buf_p)
 {
     assert(NULL != buf_p);
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
 
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
 
@@ -91,7 +91,7 @@ int iofw_buf_pack_data(
     assert(NULL != data);
     assert(NULL != buf_p);
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
 
     assert(free_buf_size(buf_p) >= size);
 
@@ -107,13 +107,12 @@ int iofw_buf_unpack_data(
     assert(NULL != buf_p);
     volatile size_t used_size;
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
 
     assert(used_buf_size(buf_p) >= size);
 
     get_buf_data(buf_p, data, size);
     free_buf(buf_p, size);
-
     return IOFW_BUF_ERROR_NONE;
 }
 
@@ -137,7 +136,7 @@ int iofw_buf_pack_data_array(
 
     assert(NULL != buf_p);
 
-    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
+    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC));
 
     assert((free_buf_size(buf_p) >= (data_size + sizeof(int))));
 
@@ -160,7 +159,7 @@ int iofw_buf_unpack_data_array(
     volatile size_t used_size;
     int _len;
     
-    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC));
+    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC));
     
     assert(used_buf_size(buf_p) >= sizeof(int));
 
@@ -200,7 +199,7 @@ int iofw_buf_unpack_data_array_ptr(
     volatile size_t used_size;
     int _len;
     
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
 
     assert(used_buf_size(buf_p) >= sizeof(int));
 
