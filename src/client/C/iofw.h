@@ -29,6 +29,8 @@
 #define IOFW_ERROR_INIT		    2 /* error when init */
 #define IOFW_ERROR_NULL_DATA	    3 /* pointer to data is NULL */
 #define IOFW_ERROR_MALLOC	    4 /* malloc fail */
+
+#define CLIENT_BUF_SIZE 1024*1024*256
 /**
  * @brief: init
  *

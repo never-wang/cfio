@@ -173,7 +173,10 @@ static int _server_init(int argc, char** argv)
 	return IOFW_SERVER_ERROR_INIT_FAIL;
     }
 
-    iofw_msg_init();
+    if(iofw_msg_init(SERVER_BUF_SIZE) < 0)
+    {
+	return IOFW_SERVER_ERROR_INIT_FAIL;
+    }
     /**
      * init for client and server num
      **/

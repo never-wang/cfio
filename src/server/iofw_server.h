@@ -17,6 +17,8 @@
 
 #define IOFW_SERVER_ERROR_NONE               0
 #define IOFW_SERVER_ERROR_UNEXPECTED_MSG    -1
-#define IOFW_SERVER_ERROR_INIT_FAIL         -2 
+#define IOFW_SERVER_ERROR_INIT_FAIL         -2
+
+#define SERVER_BUF_SIZE 1024*1024*1024
 
 #endif

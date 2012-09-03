@@ -39,7 +39,7 @@ static int _compare(void *key, struct qhash_head *link)
 
     iofw_io_val_t *val = qlist_entry(link, iofw_io_val_t, hash_link);
 
-    if(0 == memcmp(key, val, sizeof(iofw_id_key_t)))
+    if(0 == memcmp(key, val, sizeof(iofw_io_key_t)))
     {
 	return 1;
     }

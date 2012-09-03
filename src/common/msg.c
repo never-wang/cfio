@@ -45,7 +45,7 @@ static inline iofw_msg_t *create_msg()
     return msg;
 }
 
-int iofw_msg_init()
+int iofw_msg_init(int buffer_size)
 {
     msg_head = malloc(sizeof(iofw_msg_t));
     if(NULL == msg_head)
@@ -54,7 +54,7 @@ int iofw_msg_init()
     }
     INIT_QLIST_HEAD(&(msg_head->link));
 
-    buffer = iofw_buf_open(CLIENT_BUF_SIZE, NULL);
+    buffer = iofw_buf_open(buffer_size, NULL);
 
     if(NULL == buffer)
     {
@@ -129,6 +129,8 @@ int iofw_msg_isend(
 
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, tag, msg->comm, &(msg->req));
+
+    //MPI_Wait(&(msg->req), &status);
 
     qlist_add_tail(&(msg->link), &(msg_head->link));
 

@@ -71,7 +71,7 @@ int iofw_init(int server_group_num, int *server_group_size)
 	return -IOFW_ERROR_INIT;
     }
 
-    if(iofw_msg_init() < 0)
+    if(iofw_msg_init(CLIENT_BUF_SIZE) < 0)
     {
 	error("Msg Init Fail.");
 	return -IOFW_ERROR_INIT;

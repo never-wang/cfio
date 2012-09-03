@@ -21,11 +21,9 @@
 #include "buffer.h"
 #include "quicklist.h"
 
-#define MSG_MAX_SIZE 536870912
+#define MSG_MAX_SIZE 1024*1024*128
 /* define for control messge */
 #define CLIENT_END_IO 201
-
-#define CLIENT_BUF_SIZE 1024*1024*1024
 
 /**
  *define for nc function code
@@ -56,9 +54,11 @@ typedef struct
 /**
  * @brief: init the buffer and msg queue
  *
+ * @param buffer_size: msg buffer size
+ *
  * @return: error code
  */
-int iofw_msg_init();
+int iofw_msg_init(int buffer_size);
 /**
  * @brief: finalize , free the buffer and msg queue
  *
