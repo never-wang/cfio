@@ -130,9 +130,10 @@ int iofw_msg_isend(
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, tag, msg->comm, &(msg->req));
 
-    //MPI_Wait(&(msg->req), &status);
+    MPI_Wait(&(msg->req), &status);
+    free_buf(buffer, msg->size);
 
-    qlist_add_tail(&(msg->link), &(msg_head->link));
+    //qlist_add_tail(&(msg->link), &(msg_head->link));
 
     //debug(DEBUG_TIME, "%f ms", times_end());
 
