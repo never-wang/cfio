@@ -29,14 +29,12 @@ static pthread_t writer;
 static pthread_t reader;
 /* my real rank in mpi_comm_world */
 static int rank;
-static int group_size;	    /* server group size */
+static int server_proc_num;	    /* server group size */
 /* Communicator between IO process adn compute process*/   
 static MPI_Comm inter_comm;
 
 /* Num of clients whose io is done*/
 static int client_done = 0;
-/* Num of clients which need to be served by the server */
-int client_num = 0;
 /* all the client report done */
 static int server_done = 0;
 
@@ -70,6 +68,13 @@ static int decode(iofw_msg_t *msg)
 		    rank, client_id);
 	    iofw_io_nc_def_var(client_id);
 	    debug(DEBUG_USER, "server %d done nc_def_var for client %d\n",
+		    rank,client_id);
+	    return IOFW_SERVER_ERROR_NONE;
+	case FUNC_DEF_VAR_RANGE:
+	    debug(DEBUG_USER,"server %d recv def_var_range from client %d",
+		    rank, client_id);
+	    iofw_io_def_var_range(client_id);
+	    debug(DEBUG_USER, "server %d done def_var_range for client %d\n",
 		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
@@ -124,7 +129,7 @@ static void * iofw_writer(void *argv)
 
     pthread_cancel(reader);
 
-    debug(DEBUG_USER, "\nWriter done");
+    debug(DEBUG_USER, "Server(%d) Writer done", rank);
     return ((void *)0);
 }
 static void* iofw_reader(void *argv)
@@ -158,12 +163,20 @@ int iofw_server()
 static int _server_init(int argc, char** argv)
 {
     int ret = 0;
+    int x_proc_num, y_proc_num;
 
     MPI_Init(&argc, &argv);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &group_size);
-    debug(DEBUG_USER, "rank = %d; size = %d", rank, group_size);
+    MPI_Comm_size(MPI_COMM_WORLD, &server_proc_num);
+    debug(DEBUG_USER, "rank = %d; size = %d", rank, server_proc_num);
+
+    if(rank == 1 || rank == 0)
+    {
+	set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID | DEBUG_MAP);
+	//set_debug_mask(DEBUG_ID);
+	//set_debug_mask(DEBUG_TIME);
+    }
 
     ret = MPI_Comm_get_parent(&inter_comm);
 
@@ -180,7 +193,8 @@ static int _server_init(int argc, char** argv)
     /**
      * init for client and server num
      **/
-    client_num = atoi(argv[1]);
+    x_proc_num = atoi(argv[1]);
+    y_proc_num = atoi(argv[2]);
     //if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
     //{
     //    error("ID Init Fail.");
@@ -189,17 +203,20 @@ static int _server_init(int argc, char** argv)
 
     //iofw_map_client_num(rank, size, &client_num);
     client_done = 0;
-    debug(DEBUG_USER, "client_num = %d", client_num);
-
     server_done = 0;
-
+    
+    if(iofw_map_init(x_proc_num, y_proc_num, server_proc_num, inter_comm) < 0) 
+    {
+	error("Map Init fial.");
+	return IOFW_SERVER_ERROR_INIT_FAIL;
+    }
     if(iofw_id_init(IOFW_ID_INIT_SERVER) < 0)
     {
 	error("ID init fail.");
 	return IOFW_SERVER_ERROR_INIT_FAIL;
     }
 
-    if(iofw_io_init() < 0)
+    if(iofw_io_init(rank) < 0)
     {
 	error("IO init fail.");
 	return IOFW_SERVER_ERROR_INIT_FAIL;
@@ -224,10 +241,6 @@ int main(int argc, char** argv)
     times_init();
     times_start();
 
-    set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID);
-    //set_debug_mask(DEBUG_ID);
-    set_debug_mask(DEBUG_TIME);
-    
     _server_init(argc, argv);
 
     iofw_server();
@@ -235,6 +248,10 @@ int main(int argc, char** argv)
     debug(DEBUG_TIME, "iofw_server total time : %f", times_end());
     times_final();
 
+    debug(DEBUG_USER, "Proc %d : wait for final", rank);
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    debug(DEBUG_USER, "Proc %d : begin final", rank);
     server_final();
     return 0;
 }

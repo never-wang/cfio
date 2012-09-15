@@ -68,8 +68,6 @@ typedef struct
 /**
  * @brief: initialize
  *
- * @param _server_group_size: size of the server group
- *
  * @return: error code
  */
 int iofw_io_init();

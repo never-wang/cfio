@@ -20,6 +20,7 @@
 #include "debug.h"
 #include "times.h"
 #include "quickhash.h"
+#include "map.h"
 
 static int open_nc_a;  /* amount of opened nc file */
 static iofw_nc_t *open_nc;
@@ -64,6 +65,21 @@ static void _val_free(iofw_id_val_t *val)
 		free(val->var->dims_len);
 		val->var->dims_len = NULL;
 	    }
+	    if(NULL != val->var->start)
+	    {
+		free(val->var->start);
+		val->var->start = NULL;
+	    }
+	    if(NULL != val->var->count)
+	    {
+		free(val->var->count);
+		val->var->count = NULL;
+	    }
+	    if(NULL != val->var->recv_data)
+	    {
+		free(val->var->recv_data);
+		val->var->recv_data = NULL;
+	    }
 	    if(NULL != val->var->data)
 	    {
 		free(val->var->data);
@@ -85,7 +101,7 @@ static void _inc_src_index(
     int dim;
     size_t sub_size, last_sub_size;
 
-    dim = 0;
+    dim = ndims - 1;
     src_index[dim] ++;
 
     sub_size = ele_size;
@@ -94,7 +110,7 @@ static void _inc_src_index(
 	*dst_addr -= (src_dims_len[dim] - 1) * sub_size;
 	src_index[dim] = 0;
 	sub_size *= dst_dims_len[dim];
-	dim ++;
+	dim --;
 	src_index[dim] ++;
     }
 
@@ -102,28 +118,38 @@ static void _inc_src_index(
 }
 
 /**
- * @brief: put the src data array into the dst data array
+ * @brief: put the src data array into the dst data array, src and dst both are
+ *	sub-array of a total data array
  *
  * @param ndims: number of dimensions for the variable
  * @param ele_size: size of each element in the variable array
- * @param dst_dims_len: length of each dimemsion fo the variable
+ * @param dims_len: length of each dimemsion for the total data array 
+ * @param dst_start: start index of the dst data array
+ * @param dst_count: count of teh dst data array
  * @param dst_data: pointer to the dst data array
- * @param src_start: start index of the src data array in the dst data array
+ * @param src_start: start index of the src data array
  * @param src_count: count of teh src data array
  * @param src_data: pointer to the src data array
  */
 static void _put_var(
-	int ndims, size_t ele_size,
-	size_t *dst_dims_len, char *dst_data, 
-	size_t *src_start, size_t *src_count,
-	char *src_data)
+	int ndims, size_t ele_size,size_t *dims_len, 
+	size_t *dst_start, size_t *dst_count, char *dst_data, 
+	size_t *src_start, size_t *src_count, char *src_data)
 {
-    size_t i;
+    int i;
     size_t src_len;
-    size_t dst_start, sub_size;
+    size_t dst_offset, sub_size;
     size_t *src_index;
 
-    assert(NULL != dst_dims_len);
+    //float *_data = src_data;
+    //for(i = 0; i < 4; i ++)
+    //{
+    //    printf("%f, ", _data[i]);
+    //}
+    //printf("\n");
+
+    assert(NULL != dst_start);
+    assert(NULL != dst_count);
     assert(NULL != dst_data);
     assert(NULL != src_start);
     assert(NULL != src_count);
@@ -148,18 +174,19 @@ static void _put_var(
     }
 
     sub_size = 1;
-    dst_start = 0;
-    for(i = 0; i < ndims; i ++)
+    dst_offset = 0;
+    for(i = ndims - 1; i >= 0; i --)
     {
-	dst_start += src_start[i] * sub_size;
-	sub_size *= dst_dims_len[i];
+	dst_offset += (src_start[i] - dst_start[i]) * sub_size;
+	sub_size *= dst_count[i];
     }
-    dst_data += ele_size * dst_start;
+    //debug(DEBUG_ID, "dst_offset = %d", dst_offset);
+    dst_data += ele_size * dst_offset;
 
     for(i = 0; i < src_len - 1; i ++)
     {
 	memcpy(dst_data, src_data, ele_size);
-	_inc_src_index(ndims, ele_size, dst_dims_len, &dst_data, 
+	_inc_src_index(ndims, ele_size, dst_count, &dst_data, 
 		src_count, src_index);
 	src_data += ele_size;
     }
@@ -307,7 +334,8 @@ int iofw_id_map_dim(
 int iofw_id_map_var(
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, int data_type)
+	int ndims, size_t *dims_len, 
+	int data_type, int client_num)
 {
     int i;
     size_t data_size;
@@ -328,18 +356,28 @@ int iofw_id_map_var(
     val->var->nc_id = server_nc_id;
     val->var->var_id = server_var_id;
     val->var->ndims = ndims;
+    val->var->client_num = client_num;
     if(ndims > 0)
-    val->var->dims_len = malloc(sizeof(size_t) * ndims);
-    memcpy(val->var->dims_len, dims_len, sizeof(size_t) * ndims);
+    {
+	val->var->dims_len = malloc(sizeof(size_t) * ndims);
+	memcpy(val->var->dims_len, dims_len, sizeof(size_t) * ndims);
+    }
+    val->var->start = malloc(sizeof(size_t) * ndims);
+    memset(val->var->start, 0, sizeof(size_t) * ndims);
+    val->var->count = malloc(sizeof(size_t) * ndims);
+    memset(val->var->count, 0, sizeof(size_t) * ndims);
+    val->var->recv_data = malloc(sizeof(iofw_id_data_t) * client_num);
+    memset(val->var->recv_data, 0, sizeof(iofw_id_data_t) * client_num);
     val->var->data_type = data_type;
     iofw_types_size(val->var->ele_size, data_type);
     
-    data_size = 1;
-    for(i = 0; i < ndims; i ++)
-    {
-	data_size *= dims_len[i];
-    }
-    val->var->data = malloc(val->var->ele_size * data_size); 
+    //data_size = 1;
+    //for(i = 0; i < ndims; i ++)
+    //{
+    //    data_size *= dims_len[i];
+    //}
+    //val->var->data = malloc(val->var->ele_size * data_size); 
+    val->var->data = NULL;
 
     qhash_add(map_table, &key, &(val->hash_link));
     
@@ -432,6 +470,7 @@ int iofw_id_get_var(
 
 int iofw_id_put_var(
 	int client_nc_id, int client_var_id,
+	int client_index,
 	size_t *start, size_t *count, 
 	char *data)
 {
@@ -459,15 +498,17 @@ int iofw_id_put_var(
     {
 	val = qlist_entry(link, iofw_id_val_t, hash_link);
 	var = val->var;
-	
+
 	for(i = 0; i < var->ndims; i ++)
 	{
-	    if(start[i] + count[i] > var->dims_len[i])
+	    if(start[i] + count[i] > var->start[i] + var->count[i] ||
+		    start[i] < var->start[i])
 	    {
-		debug(DEBUG_ID, "Index exceeds : (start[%d] = %lu) + "
-			"(count[%d] = %lu) > (var(%d, 0, %d)->dims_len[%d] "
-			"= %lu)", i, start[i], i, count[i],
-			client_nc_id, client_var_id, i, var->dims_len[i]);
+		debug(DEBUG_ID, "Index exceeds : (start[%d] = %lu), "
+			"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] = "
+			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
+			client_nc_id, client_var_id, 
+			i, var->start[i], var->count[i]);
 		return IOFW_ID_ERROR_EXCEED_BOUND;
 	    }
 	}
@@ -479,11 +520,71 @@ int iofw_id_put_var(
 	//}
 	//printf("\n");
 
-	_put_var(var->ndims, var->ele_size, var->dims_len, var->data,
-		start, count, data);
+	//_put_var(var->ndims, var->ele_size, var->dims_len, var->data,
+	//	start, count, data);
+	if(NULL != var->recv_data[client_index].buf)
+	{
+	    free(var->recv_data[client_index].buf);
+	}
+	if(NULL != var->recv_data[client_index].start)
+	{
+	    free(var->recv_data[client_index].start);
+	}
+	if(NULL != var->recv_data[client_index].count)
+	{
+	    free(var->recv_data[client_index].count);
+	}
+	var->recv_data[client_index].buf = data;
+	var->recv_data[client_index].start = start;
+	var->recv_data[client_index].count = count;
+	debug(DEBUG_ID, "client_index = %d", client_index);
 
 	debug(DEBUG_ID, "put var ((%d, 0, %d)", client_nc_id, client_var_id);
 	return IOFW_ID_ERROR_NONE;
     }
+}
+
+int iofw_id_merge_var_data(iofw_id_var_t *var)
+{
+    int i, j;
+    
+    for(i = 0; i < var->client_num; i++)
+    {
+	debug(DEBUG_ID, "merge data of client(%d)", i);
+
+	assert(NULL != var->recv_data[i].buf);
+	assert(NULL != var->recv_data[i].start);
+	assert(NULL != var->recv_data[i].count);
+
+	for(j = 0; j < var->ndims; j ++)
+	{
+	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", j, 
+		    var->recv_data[i].start[j],var->recv_data[i].count[j]);
+	}
+
+	_put_var(var->ndims, var->ele_size, var->dims_len, 
+		var->start, var->count, var->data,
+		var->recv_data[i].start, var->recv_data[i].count,
+		var->recv_data[i].buf);
+	//float *_data = var->recv_data[i].buf;
+	//for(j = 0; j < 4; j ++)
+	//{
+	//    printf("%f, ", _data[j]);
+	//}
+	//printf("\n");
+
+	free(var->recv_data[i].buf);	
+	free(var->recv_data[i].start);	
+	free(var->recv_data[i].count);	
+	
+	//_data = var->data;
+	//for(j = 0; j < 12; j ++)
+	//{
+	//    printf("%f, ", _data[j]);
+	//}
+	//printf("\n");
+    }
+
+    return IOFW_ID_ERROR_NONE;
 }
 	

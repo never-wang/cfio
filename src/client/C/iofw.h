@@ -29,17 +29,19 @@
 #define IOFW_ERROR_INIT		    2 /* error when init */
 #define IOFW_ERROR_NULL_DATA	    3 /* pointer to data is NULL */
 #define IOFW_ERROR_MALLOC	    4 /* malloc fail */
+#define IOFW_ERROR_ARGV		    5 /* wrong argv */
 
+#define SERVER_RATIO 0.3
 #define CLIENT_BUF_SIZE 1024*1024*256
 /**
  * @brief: init
  *
- * @param server_group_num: number of server group 
- * @param server_group_size: size of each server group 
+ * @param x_proc_num: client proc number of x axis
+ * @param y_proc_num: client proc number of y axis
  *
  * @return: error code
  */
-int iofw_init(int server_group_num, int *server_group_size);
+int iofw_init(int x_proc_num, int y_proc_num);
 
 /**
  * @brief iofw_Finalize : stop the iofw services, the function 
@@ -93,6 +95,22 @@ int iofw_nc_def_var(
 	int io_proc_id,
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int dimids[], int *varidp);
+/**
+ * @brief: def a var's output range in a compute proc
+ *
+ * @param ncid: netCDF ID
+ * @param varid: variable name
+ * @param ndims: number of dimensions for the variable
+ * @param start: a vector of size_t intergers specifying the index in the variable
+ *	where the first of the data values will be written
+ * @param count: a vector of size_t intergers specifying the edge lengths along 
+ *	each dimension of the block of data values to be written
+ *
+ * @return: error code
+ */
+int iofw_def_var_range(
+	int ncid, int varid, int ndims, 
+	const size_t *start, const size_t *count);
 
 /**
  * @brief:iofw_ nc_enddef

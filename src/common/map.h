@@ -22,16 +22,60 @@
  * @brief: iofw map var init, only be called in iofw_init adn iofw_server's main
  *	function
  *
- * @param _client_proc_num: 
+ * @param _client_num: 
  * @param _server_group_num: 
  * @param _server_group_size: 
  * @param _comm: 
  *
  * @return: error code
  */
+/**
+ * @brief: iofw map var init, only be called in iofw_init adn iofw_server's main
+ *	function
+ *
+ * @param _client_x_num: client proc num of x axis 
+ * @param _client_y_num: client proc num of y axis
+ * @param _server_amount: server proc num
+ * @param _comm: 
+ *
+ * @return: error cod
+ */
 int iofw_map_init(
-	int _client_proc_num, int _server_group_num,
-	int *_server_group_size, MPI_Comm *_comm);
+	int _client_x_num, int _client_y_num,
+	int _server_amount, MPI_Comm _comm);
+/**
+ * @brief: iofw map finalize
+ *
+ * @return: 
+ */
+int iofw_map_final();
+/**
+ * @brief: get server proc amount
+ *
+ * @param _server_amount: 
+ *
+ * @return: error code
+ */
+int iofw_map_get_server_amount(int *_server_amount);
+int iofw_map_get_client_amount();
+/**
+ * @brief: get client number of a server
+ *
+ * @param server_id: the server's id
+ * @param client_num: client number of the server
+ *
+ * @return: error code
+ */
+int iofw_map_get_client_num_of_server(int server_id, int *client_num);
+/**
+ * @brief: get client index in a server
+ *
+ * @param client_id: the client's id
+ * @param client_index: the client index in it's server
+ *
+ * @return: error code
+ */
+int iofw_map_get_client_index_of_server(int client_id, int *client_index);
 /**
  * @brief: map from client proc to server proc, store map information in msg struct 
  *
@@ -42,15 +86,15 @@ int iofw_map_init(
 int iofw_map_forwarding(
 	iofw_msg_t *msg);
 /**
- * @brief iofw_map_client_num 
+ * @brief: check whether a server's bitmap is full
  *
- * @param rank: the rank of the server
- * @param size : the size of group which the server is belong to 
- * @param clien_num: return of the number of client assigned to this server
+ * @param server_id: server's id
+ * @param bitmap: server's' bitmap
+ * @param is_full: 
  *
- * @return : error code
+ * @return: error code
  */
-int iofw_map_client_num(
-	int rank, int size, int *clien_num);
+int iofw_map_is_bitmap_full(
+	int server_id, uint8_t *bitmap, int *is_full);
 
 #endif

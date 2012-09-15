@@ -32,19 +32,20 @@ static int rank;
 /*  the number of the app proc*/
 int client_num;
 
-MPI_Comm inter_comm;
+static MPI_Comm inter_comm;
 
 
-int iofw_init(int server_group_num, int *server_group_size)
+int iofw_init(int x_proc_num, int y_proc_num)
 {
     int rc, i;
     int size;
     int root = 0;
     int error, ret;
+    int server_proc_num;
 
     char **argv;
 
-    //set_debug_mask(DEBUG_IOFW | DEBUG_MSG);
+    //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_MAP);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -56,12 +57,35 @@ int iofw_init(int server_group_num, int *server_group_size)
     MPI_Comm_size(MPI_COMM_WORLD, &client_num);
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
+    if(x_proc_num * y_proc_num != client_num)
+    {
+	error("Wrong argv");
+	return  -IOFW_ERROR_ARGV;
+    }
+    server_proc_num = (int)((double)client_num * SERVER_RATIO);
 
-    argv = malloc(2 * sizeof(char*));
-    argv[0] = malloc(128);
-    sprintf(argv[0], "%d", client_num);
-    argv[1] = NULL;
-    ret = MPI_Comm_spawn("iofw_server", argv, 1, 
+    argv = malloc(3 * sizeof(char*));
+    if(NULL == argv)
+    {
+	error("Malloc fail.");
+	return -IOFW_ERROR_MALLOC;
+    }
+    argv[0] = malloc(16);
+    if(NULL == argv[0])
+    {
+	error("Malloc fail.");
+	return -IOFW_ERROR_MALLOC;
+    }
+    sprintf(argv[0], "%d", x_proc_num);
+    argv[1] = malloc(16);
+    if(NULL == argv[1])
+    {
+	error("Malloc fail.");
+	return -IOFW_ERROR_MALLOC;
+    }
+    sprintf(argv[1], "%d", y_proc_num);
+    argv[2] = NULL;
+    ret = MPI_Comm_spawn("iofw_server", argv, server_proc_num,  
 	    MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
     free(argv[0]);
     free(argv);
@@ -77,17 +101,18 @@ int iofw_init(int server_group_num, int *server_group_size)
 	return -IOFW_ERROR_INIT;
     }
 
-    server_group_num = 1;
-    server_group_size = malloc(sizeof(int));
-    server_group_size[0] = 1;
-    iofw_map_init(client_num, server_group_num, server_group_size, &inter_comm);
-
     if(iofw_id_init(IOFW_ID_INIT_CLIENT) < 0)
     {
 	error("Id Init Fail.");
 	return -IOFW_ERROR_INIT;
     }
+    if(iofw_map_init(x_proc_num, y_proc_num, server_proc_num, inter_comm) < 0)
+    {
+	error("Map Init Fail.");
+	return -IOFW_ERROR_INIT;
+    }
 
+    debug(DEBUG_IOFW, "success return.");
     return 0;
 }
     
@@ -111,6 +136,7 @@ int iofw_finalize()
     iofw_msg_final();
     iofw_id_final();
 
+    debug(DEBUG_IOFW, "success return.");
     return 0;
 }
 
@@ -134,9 +160,7 @@ int iofw_nc_create(
     iofw_msg_t *msg;
     int ret;
 
-    debug_mark(DEBUG_MSG);
     ret = iofw_id_assign_nc(ncidp);
-    debug_mark(DEBUG_MSG);
     if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
     {
 	return -IOFW_ERROR_TOO_MANY_OPEN;
@@ -145,6 +169,7 @@ int iofw_nc_create(
     iofw_msg_pack_nc_create(&msg, rank, path, cmode, *ncidp);
     iofw_msg_isend(msg);
 
+    debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
 }
 /**
@@ -175,6 +200,7 @@ int iofw_nc_def_dim(
     iofw_msg_pack_nc_def_dim(&msg, rank, ncid, name, len, *idp);
     iofw_msg_isend(msg);
 
+    debug(DEBUG_IOFW, "success return.");
     return 0;
 }
 /**
@@ -196,7 +222,7 @@ int iofw_nc_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, int *varidp)
 {
-    debug(DEBUG_MSG, "ndims = %d", ndims);
+    debug(DEBUG_IOFW, "ndims = %d", ndims);
 
     assert(name != NULL);
     assert(varidp != NULL);
@@ -209,7 +235,25 @@ int iofw_nc_def_var(
 	    ncid, name, xtype, ndims, dimids, *varidp);
     iofw_msg_isend(msg);
     
+    debug(DEBUG_IOFW, "success return.");
     return 0;
+}
+
+int iofw_def_var_range(
+	int ncid, int varid, int ndims, 
+	const size_t *start, const size_t *count)
+{
+    assert(start != NULL);
+    assert(count != NULL);
+
+    iofw_msg_t *msg;
+
+    iofw_msg_pack_def_var_range(&msg, rank, ncid, varid, ndims, start, count);
+    iofw_msg_isend(msg);
+
+    debug(DEBUG_IOFW, "success return.");
+
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -229,6 +273,8 @@ int iofw_nc_enddef(
     iofw_msg_pack_nc_enddef(&msg, rank, ncid);
     iofw_msg_isend(msg);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    debug(DEBUG_IOFW, "success return.");
     return 0;
 }
 
@@ -322,7 +368,7 @@ static int _nc_put_vara(
     }
 
     //debug(DEBUG_TIME, "%f ms", times_end());
-
+    debug(DEBUG_IOFW, "success return.");
     return 0;
 }
 
@@ -397,9 +443,9 @@ int iofw_nc_close(
 /**
  *For Fortran Call
  **/
-int iofw_init_(int *server_group_num, int *server_group_size)
+int iofw_init_(int *x_proc_num, int *y_proc_num)
 {
-    return iofw_init(*server_group_num, server_group_size);
+    return iofw_init(*x_proc_num, *y_proc_num);
 }
 int iofw_finalize_()
 {

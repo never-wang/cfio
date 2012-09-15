@@ -33,6 +33,7 @@
 #define IOFW_ID_ERROR_WRONG_FLAG    -3  /* wrong flag in iofw_id_init */
 #define IOFW_ID_ERROR_EXCEED_BOUND  -4	/* data index exceeds dimension bound */
 #define IOFW_ID_ERROR_MALLOC	    -5	/* malloc fail */
+#define IOFW_ID_ERROR_VAR_NULL	    -6	/* var data pointer is NULL */
 
 #define DEFINE_MODE 0
 #define DATA_MODE   1
@@ -44,6 +45,13 @@
 #define IOFW_ID_NC_INVALID -1   
 #define IOFW_ID_DIM_INVALID -1
 #define IOFW_ID_VAR_INVALID -1
+/** @brief: store recv data in var */
+typedef struct
+{
+    char *buf;
+    size_t *start;
+    size_t *count;
+}iofw_id_data_t;
 /** @brief: store opened nc file 's information in client */
 typedef struct 
 {
@@ -75,7 +83,12 @@ typedef struct
     int var_id;		    /* id of var */
     
     int ndims;		    /* number of dimensions for the variable */
+    int client_num;	    /* number of clients */
     size_t *dims_len;	    /* vector of ndims dimension length for the variable */
+    size_t *start;	    /* vector of ndims start index of the variable */
+    size_t *count;	    /* vector of ndims count index of the variable */
+    iofw_id_data_t 
+	*recv_data;	    /* pointer to data vector recieved from client */
     int data_type;          /* type of data, define in iofw_types.h */
     size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
@@ -177,13 +190,15 @@ int iofw_id_map_dim(
  * @param ndims: number of dimensions for the variable 
  * @param dims_len: vector of ndims dimension length for the variable 
  * @param data_type: type of data 
+ * @param client_num: number of the server's client num
  *
  * @return: error code
  */
 int iofw_id_map_var(
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, int data_type);
+	int ndims, size_t *dims_len, 
+	int data_type, int client_num);
 /**
  * @brief: get server_nc_id by client_nc_id in server
  *
@@ -222,11 +237,12 @@ int iofw_id_get_var(
 	iofw_id_var_t **var);
 
 /**
- * @brief: put part of variable data in the whole var buf which is stored in the 
+ * @brief: put part of variable data in the recv data vector which is stored in the 
  *	hash table
  *
  * @param client_nc_id: the nc file id in client
  * @param client_var_id: the variable id in client
+ * @param client_index: client data index in the recv data vector
  * @param start: start index of the variable in the whole variable array
  * @param count: count of the variable
  * @param data: pointer to the date
@@ -235,7 +251,16 @@ int iofw_id_get_var(
  */
 int iofw_id_put_var(
 	int client_nc_id, int client_var_id,
+	int client_index,
 	size_t *start, size_t *count, 
 	char *data);
+/**
+ * @brief: merge a variable's recv data into its data
+ *
+ * @param var: the variable
+ *
+ * @return: error code
+ */
+int iofw_id_merge_var_data(iofw_id_var_t *var);
 
 #endif

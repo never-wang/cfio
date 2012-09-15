@@ -43,8 +43,20 @@ int main(int argc, char** argv)
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
+    size_t start[2],count[2];
+    start[0] = (rank / LAT_PROC) * (LAT / LAT_PROC);
+    start[1] = (rank % LON_PROC) * (LON / LON_PROC);
+    count[0] = LAT / LAT_PROC;
+    count[1] = LON / LON_PROC;
+    float *fp = malloc(count[0] * count[1] *sizeof(float));
 
-    iofw_init( size, NULL);
+    for( i = 0; i< count[0] * count[1]; i++)
+    {
+	fp[i] = i + rank * count[0] * count[1];
+    }
+
+
+    iofw_init( LAT_PROC, LON_PROC);
     char fileName[100];
     sprintf(fileName,"%s.nc",path);
     int dimids[2];
@@ -56,19 +68,8 @@ int main(int argc, char** argv)
     iofw_nc_def_dim(rank, ncidp, "lon", LON,&dimids[1]);
 
     iofw_nc_def_var(rank, ncidp,"time_v", NC_FLOAT, 2,dimids,&var1);
+    iofw_def_var_range(ncidp, var1, 2, start, count);
     iofw_nc_enddef(rank,ncidp);
-    size_t start[2],count[2];
-    start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
-    start[1] = (rank / LON_PROC) * (LON / LON_PROC);
-    count[0] = LAT / LAT_PROC;
-    count[1] = LON / LON_PROC;
-    float *fp = malloc(count[0] * count[1] *sizeof(float));
-
-    for( i = 0; i< count[0] * count[1]; i++)
-    {
-	fp[i] = i + rank * count[0] * count[1];
-    }
-
     iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
     //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
     //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
@@ -77,6 +78,8 @@ int main(int argc, char** argv)
     free(fp);
 
     iofw_finalize();
+    printf("fuck111111\n");
     MPI_Finalize();
+    printf("fuck22222\n");
     return 0;
 }

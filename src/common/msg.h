@@ -33,6 +33,7 @@
 #define FUNC_NC_CLOSE		((uint32_t)3)
 #define FUNC_NC_DEF_DIM		((uint32_t)11)
 #define FUNC_NC_DEF_VAR		((uint32_t)12)
+#define FUNC_DEF_VAR_RANGE	((uint32_t)13)
 #define FUNC_NC_PUT_VARA	((uint32_t)20)
 
 #define IOFW_MSG_ERROR_NONE	0
@@ -140,6 +141,30 @@ int iofw_msg_pack_nc_def_var(
 	iofw_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, int varid);
+
+/**
+ * @brief: pack iofw_def_var_range
+ *
+ * @param _msg: 
+ * @param client_proc_id: 
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_nc_put_vara_float
+ * @param varid: variable ID, arg of iofw_nc_put_vara_float
+ * @param ndims: the dimensionality fo variable
+ * @param start: a vector of size_t intergers specifying the index in 
+ *	the variable where the first of the data values will be written,
+ *	arg of iofw_nc_put_vara_float
+ * @param count: a vector of size_t intergers specifying the edge lengths
+ *	along each dimension of the block of data values to be written, 
+ *	arg of iofw_nc_put_vara_float
+ *
+ * @return: error code 
+ */
+int iofw_msg_pack_def_var_range(
+	iofw_msg_t **_msg, int client_proc_id,
+	int ncid, int varid,
+	int ndims, const size_t *start, const size_t *count);
 /**
  * @brief: pack iofw_nc_enddef into msg
  
@@ -255,6 +280,23 @@ int iofw_msg_unpack_nc_def_dim(
 int iofw_msg_unpack_nc_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids, int *varid);
+/**
+ * @brief: unpack arguments for iofw_def_var_range
+ *
+ * @param ncid: pointer to where netCDF ID is to be stored
+ * @param varid: pointer to where variable ID is to be stored 
+ * @param ndims: pointer to where the dimensionality of to be written variable
+ *	 is to be stored 
+ * @param start: pointer to where the start index of to be written data value 
+ *	to be stored
+ * @param count: pointer to where the size of to be written data dimension len
+ *	value to be stored
+ *
+ * @return: 
+ */
+int iofw_msg_unpack_def_var_range(
+	int *ncid, int *varid, 
+	int *ndims, size_t **start, size_t **count);
 /**
  * @brief: unpack arguments for the iofw_nc_enddef function 
  *
