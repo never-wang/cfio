@@ -187,6 +187,96 @@ static inline int _remove_client_io(
     return IOFW_IO_ERROR_NONE;
 }
 
+static inline int _handle_def(iofw_id_val_t *val)
+{
+    int ret, i;
+    iofw_id_nc_t *nc;
+    iofw_id_dim_t *dim;
+    iofw_id_var_t *var;
+    size_t data_size, ele_size;
+
+    if(NULL != val->dim)
+    {
+	dim = val->dim;
+	iofw_id_get_nc(val->client_nc_id, &nc);
+	assert(nc->nc_id != IOFW_ID_NC_INVALID);
+	dim->nc_id = nc->nc_id;
+	debug(DEBUG_IO, "dim_len = %d", dim->dim_len);
+        ret = nc_def_dim(nc->nc_id,dim->name,dim->dim_len,&dim->dim_id);
+        if( ret != NC_NOERR )
+        {
+	    debug(DEBUG_IO, "%d", dim->nc_id);
+            error("def dim(%s) error(%s)",dim->name,nc_strerror(ret));
+            return IOFW_IO_ERROR_NC;
+        }
+	return IOFW_IO_ERROR_NONE;
+    }
+
+    if(NULL != val->var)
+    {
+	var = val->var;
+	for(i = 0; i < var->ndims; i ++)
+	{
+	    iofw_id_get_dim(val->client_nc_id, var->dim_ids[i], &dim);
+	    var->dim_ids[i] = dim->dim_id;
+	}
+	var->nc_id = dim->nc_id;
+	ret = nc_def_var(var->nc_id, var->name, var->data_type, var->ndims,
+		var->dim_ids,&var->var_id);
+	if(ret != NC_NOERR)
+	{
+	    error("def var(%s) error(%s)",var->name,nc_strerror(ret));
+	    return IOFW_IO_ERROR_NC;
+	}
+	data_size = 1;
+	for(i = 0; i < var->ndims; i ++)
+	{
+	    data_size *= var->count[i];
+	    //debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
+	    //        i, var->start[i], var->count[i]);
+	}
+	iofw_types_size(ele_size, var->data_type);
+	var->data = malloc(ele_size * data_size);
+
+	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
+		ele_size ,  data_size);
+	return IOFW_IO_ERROR_NONE;
+    }
+
+    error("no def can do , this is impossible.");
+    return IOFW_IO_ERROR_NC;
+}
+/**
+ * @brief: update a var's start and count, still store in cur_start and cur_count
+ *
+ * @param ndims: number of dim for the var
+ * @param cur_start: current start of the var
+ * @param cur_count: current count of the var
+ * @param new_start: new start which is to be updated into cur_start 
+ * @param new_count: new count which is to be updated into cur_count
+ */
+void _updata_start_and_count(int ndims, 
+	size_t *cur_start, size_t *cur_count,
+	size_t *new_start, size_t *new_count)
+{
+    assert(NULL != cur_start);
+    assert(NULL != cur_count);
+    assert(NULL != new_start);
+    assert(NULL != new_count);
+
+    int min_start, max_end;
+    int i;
+
+    for(i = 0; i < ndims; i ++)
+    {
+	min_start = (cur_start[i] < new_start[i]) ? cur_start[i]:new_start[i];
+	max_end = cur_start[i] + cur_count[i] > new_start[i] + new_count[i] ? 
+	    cur_start[i] + cur_count[i] : new_start[i] + new_count[i];
+	cur_start[i] = min_start;
+	cur_count[i] = max_end - min_start;
+    }
+}
+
 int iofw_io_init()
 {
     io_table = qhash_init(_compare, _hash, IO_HASH_TABLE_SIZE);
@@ -222,7 +312,7 @@ int iofw_io_client_done(int client_id, int *server_done)
     return IOFW_IO_ERROR_NONE;	
 }
 
-int iofw_io_nc_create(int client_id)
+int iofw_io_create(int client_id)
 {
     int ret, cmode;
     char *_path = NULL;
@@ -233,10 +323,8 @@ int iofw_io_nc_create(int client_id)
     int func_code = FUNC_NC_CREATE;
     char *path;
 
-    iofw_msg_unpack_nc_create(&_path,&cmode, &client_nc_id);
+    iofw_msg_unpack_create(&_path,&cmode, &client_nc_id);
 
-    return 0;
- 
     /* TODO  */
     path = malloc(strlen(_path) + 32);
     sprintf(path, "%s-%d", _path, server_id);
@@ -285,7 +373,7 @@ RETURN:
     return return_code;
 }
 
-int iofw_io_nc_def_dim(int client_id)
+int iofw_io_def_dim(int client_id)
 {
     int ret = 0;
     int dim_id;
@@ -299,12 +387,10 @@ int iofw_io_nc_def_dim(int client_id)
     int func_code = FUNC_NC_DEF_DIM;
     int return_code;
 
-    iofw_msg_unpack_nc_def_dim(&client_nc_id, &name, &len, &client_dim_id);
+    iofw_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
 
-    return 0;
-
-    _recv_client_io(
-	    client_id, func_code, client_nc_id, client_dim_id, 0, &io_info);
+    //_recv_client_io(
+    //        client_id, func_code, client_nc_id, client_dim_id, 0, &io_info);
 	
     if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
@@ -314,68 +400,67 @@ int iofw_io_nc_def_dim(int client_id)
     }
 
     if(IOFW_ID_ERROR_GET_NULL == 
-	    iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
+            iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
     {
-	iofw_id_map_dim(client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
-		IOFW_ID_DIM_INVALID, len);
+        iofw_id_map_dim(name, client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
+        	IOFW_ID_DIM_INVALID);
+	debug_mark(DEBUG_IO);
+    }else
+    {
+	free(name);
     }
 
-    if(_bitmap_full(io_info->client_bitmap))
-    {
-	if(IOFW_ID_NC_INVALID == nc->nc_id)
-	{
-	    return_code = IOFW_IO_ERROR_INVALID_NC;
-	    debug(DEBUG_IO, "Invalid NC ID.");
-	    goto RETURN;
-	}
-	if(nc->nc_status != DEFINE_MODE)
-	{
-	    return_code = IOFW_IO_ERROR_NC_NOT_DEFINE;
-	    debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
-	    goto RETURN;
-	}
+    //if(_bitmap_full(io_info->client_bitmap))
+    //{
+    //    if(IOFW_ID_NC_INVALID == nc->nc_id)
+    //    {
+    //        return_code = IOFW_IO_ERROR_INVALID_NC;
+    //        debug(DEBUG_IO, "Invalid NC ID.");
+    //        goto RETURN;
+    //    }
+    //    if(nc->nc_status != DEFINE_MODE)
+    //    {
+    //        return_code = IOFW_IO_ERROR_NC_NOT_DEFINE;
+    //        debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
+    //        goto RETURN;
+    //    }
 
-	ret = nc_def_dim(nc->nc_id,name,len,&dim_id);
-	if( ret != NC_NOERR )
-	{
-	    error("def dim(%s) error(%s)",name,nc_strerror(ret));
-	    return_code = IOFW_IO_ERROR_NC;
-	    goto RETURN;
-	}
-	
-	if(IOFW_ID_ERROR_GET_NULL == 
-		iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
-	{
-	    iofw_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
-		    dim_id, len);
-	}else
-	{
-	    assert(IOFW_ID_DIM_INVALID == dim->dim_id);
-	    /**
-	     * TODO this should be a return error
-	     **/
-	    assert(dim->dim_len == len);
+    //    ret = def_dim(nc->nc_id,name,len,&dim_id);
+    //    if( ret != NC_NOERR )
+    //    {
+    //        error("def dim(%s) error(%s)",name,nc_strerror(ret));
+    //        return_code = IOFW_IO_ERROR_NC;
+    //        goto RETURN;
+    //    }
+    //    
+    //    if(IOFW_ID_ERROR_GET_NULL == 
+    //    	iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
+    //    {
+    //        iofw_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
+    //    	    dim_id, len);
+    //    }else
+    //    {
+    //        assert(IOFW_ID_DIM_INVALID == dim->dim_id);
+    //        /**
+    //         * TODO this should be a return error
+    //         **/
+    //        assert(dim->dim_len == len);
 
-	    dim->nc_id = nc->nc_id;
-	    dim->dim_id = dim_id;
-	}
+    //        dim->nc_id = nc->nc_id;
+    //        dim->dim_id = dim_id;
+    //    }
 
-	_remove_client_io(io_info);
-	debug(DEBUG_IO, "define dim(%s) success", name);
-    }
+    //    _remove_client_io(io_info);
+    //    debug(DEBUG_IO, "define dim(%s) success", name);
+    //}
 
     return_code = IOFW_IO_ERROR_NONE;
 
 RETURN :
-    if(NULL != name)
-    {
-	free(name);
-	name = NULL;
-    }
     return return_code;
 }
 
-int iofw_io_nc_def_var(int client_id)
+int iofw_io_def_var(int client_id)
 {
     int ret = 0, i;
     int nc_id, var_id, ndims;
@@ -387,16 +472,16 @@ int iofw_io_nc_def_var(int client_id)
     int *dim_ids = NULL, *client_dim_ids = NULL;
     size_t *dims_len = NULL;
     char *name = NULL;
+    size_t *start = NULL, *count = NULL;
     nc_type xtype;
     int client_num;
 
     int func_code = FUNC_NC_DEF_VAR;
     int return_code;
 
-    ret = iofw_msg_unpack_nc_def_var(&client_nc_id, &name, &xtype, &ndims, 
-	    &client_dim_ids, &client_var_id);
+    ret = iofw_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
+	    &client_dim_ids, &start, &count, &client_var_id);
 
-    return 0;
     if( ret < 0 )
     {
 	error("unpack_msg_def_var failed");
@@ -406,8 +491,8 @@ int iofw_io_nc_def_var(int client_id)
     dims_len = malloc(ndims * sizeof(size_t));
     dim_ids = malloc(ndims * sizeof(int));
 
-    _recv_client_io(
-	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
+    //_recv_client_io(
+    //        client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
     if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
@@ -430,227 +515,258 @@ int iofw_io_nc_def_var(int client_id)
     if(IOFW_ID_ERROR_GET_NULL == 
 	    iofw_id_get_var(client_nc_id, client_var_id, &var))
     {
-	for(i = 0; i < ndims; i ++)
-	{
-	    dims_len[i] = dims[i]->dim_len;
-	}
+	/**
+	 *the fisrst def var msg arrive
+	 **/
 	iofw_map_get_client_num_of_server(server_id, &client_num);
-	iofw_id_map_var(client_nc_id, client_var_id, IOFW_ID_NC_INVALID, 
-		IOFW_ID_VAR_INVALID, ndims, dims_len, xtype, client_num);
-    }
-
-    if(_bitmap_full(io_info->client_bitmap))
-    {
-	if(IOFW_ID_NC_INVALID == nc->nc_id)
-	{
-	    return_code = IOFW_IO_ERROR_INVALID_NC;
-	    debug(DEBUG_IO, "Invalid NC ID.");
-	    goto RETURN;
-	}
-
-	if(nc->nc_status != DEFINE_MODE)
-	{
-	    return_code = IOFW_IO_ERROR_NC_NOT_DEFINE;
-	    debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
-	    goto RETURN;
-	}
-
+	iofw_id_map_var(name, client_nc_id, client_var_id, 
+		IOFW_ID_NC_INVALID, IOFW_ID_VAR_INVALID, 
+		ndims, client_dim_ids, start, count, xtype, client_num);
+	/**
+	 *set each dim's len for the var
+	 **/
 	for(i = 0; i < ndims; i ++)
 	{
-	    assert(nc->nc_id == dims[i]->nc_id);
-
-	    dim_ids[i] = dims[i]->dim_id;
+	    if(count[i] > dims[i]->dim_len)
+	    {
+		dims[i]->dim_len = count[i];
+	    }
 	}
-	
-	ret = nc_def_var(nc->nc_id,name,xtype,ndims,dim_ids,&var_id);
-	if(ret != NC_NOERR)
+    }else
+    {
+	/**
+	 *update var's start, count and each dim's len
+	 **/
+	for(i = 0; i < ndims; i ++)
 	{
-	    error("def var(%s) error(%s)",name,nc_strerror(ret));
-	    return_code = IOFW_IO_ERROR_NC;
-	    goto RETURN;
+	    /**
+	     *TODO handle exceed
+	     **/
+	    debug(DEBUG_IO, "Pre var dim %d: start(%lu), count(%lu)", 
+		    i, var->start[i], var->count[i]);
+	    debug(DEBUG_IO, "New var dim %d: start(%lu), count(%lu)", 
+		    i, start[i], count[i]);
 	}
-
-	if(IOFW_ID_ERROR_GET_NULL ==
-		iofw_id_get_var(client_nc_id, client_var_id, &var))
+	_updata_start_and_count(ndims, var->start, var->count, start, count);
+	for(i = 0; i < ndims; i ++)
 	{
-	    iofw_map_get_client_num_of_server(server_id, &client_num);
-	    iofw_id_map_var(client_nc_id, client_var_id, nc->nc_id, var_id,
-		    ndims, dims_len, xtype, client_num);
-	}else
-	{
-	    assert(IOFW_ID_VAR_INVALID == var->var_id);
-	    assert(ndims == var->ndims);
-
-	    var->nc_id = nc->nc_id;
-	    var->var_id = var_id;
+	    if(var->count[i] > dims[i]->dim_len)
+	    {
+		dims[i]->dim_len = var->count[i];
+	    }
 	}
-
-	_remove_client_io(io_info);
-	debug(DEBUG_IO, "define var(%s) success", name);
+	for(i = 0; i < ndims; i ++)
+	{
+	    debug(DEBUG_IO, "Now var dim %d: start(%lu), count(%lu)", 
+		    i, var->start[i], var->count[i]);
+	}
+	free(start);
+	free(count);
+	free(client_dim_ids);
     }
+
+    //if(_bitmap_full(io_info->client_bitmap))
+    //{
+    //    if(IOFW_ID_NC_INVALID == nc->nc_id)
+    //    {
+    //        return_code = IOFW_IO_ERROR_INVALID_NC;
+    //        debug(DEBUG_IO, "Invalid NC ID.");
+    //        goto RETURN;
+    //    }
+
+    //    if(nc->nc_status != DEFINE_MODE)
+    //    {
+    //        return_code = IOFW_IO_ERROR_NC_NOT_DEFINE;
+    //        debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
+    //        goto RETURN;
+    //    }
+
+    //    for(i = 0; i < ndims; i ++)
+    //    {
+    //        assert(nc->nc_id == dims[i]->nc_id);
+
+    //        dim_ids[i] = dims[i]->dim_id;
+    //    }
+    //    
+    //    ret = def_var(nc->nc_id,name,xtype,ndims,dim_ids,&var_id);
+    //    if(ret != NC_NOERR)
+    //    {
+    //        error("def var(%s) error(%s)",name,nc_strerror(ret));
+    //        return_code = IOFW_IO_ERROR_NC;
+    //        goto RETURN;
+    //    }
+
+    //    if(IOFW_ID_ERROR_GET_NULL ==
+    //    	iofw_id_get_var(client_nc_id, client_var_id, &var))
+    //    {
+    //        iofw_map_get_client_num_of_server(server_id, &client_num);
+    //        iofw_id_map_var(client_nc_id, client_var_id, nc->nc_id, var_id,
+    //    	    ndims, dims_len, xtype, client_num);
+    //    }else
+    //    {
+    //        assert(IOFW_ID_VAR_INVALID == var->var_id);
+    //        assert(ndims == var->ndims);
+
+    //        var->nc_id = nc->nc_id;
+    //        var->var_id = var_id;
+    //    }
+
+    //    _remove_client_io(io_info);
+    //    debug(DEBUG_IO, "define var(%s) success", name);
+    //}
     return_code = IOFW_IO_ERROR_NONE;
 
 RETURN :
-    if(name != NULL)
-    {
-	free(name);
-	name = NULL;
-    }
     if(dims != NULL)
     {
 	free(dims);
 	dims = NULL;
-    }
-    if(client_dim_ids != NULL)
-    {
-	free(client_dim_ids);
-	client_dim_ids = NULL;
-    }
-    if(dims_len != NULL)
-    {
-	free(dims_len);
-	dims_len = NULL;
     }
     if(dim_ids != NULL)
     {
 	free(dim_ids);
 	dim_ids = NULL;
     }
+    if(dims_len != NULL)
+    {
+	free(dims_len);
+	dims_len = NULL;
+    }
     return return_code;
 }
 
-int iofw_io_def_var_range(int client_id)
-{
-    int i,ret = 0, ndims;
-    iofw_id_nc_t *nc;
-    iofw_id_var_t *var;
-    iofw_io_val_t *io_info;
-    int client_nc_id, client_var_id;
-    size_t *start, *count;
-    size_t data_size;
+//int iofw_io_def_var_range(int client_id)
+//{
+//    int i,ret = 0, ndims;
+//    iofw_id_nc_t *nc;
+//    iofw_id_var_t *var;
+//    iofw_io_val_t *io_info;
+//    int client_nc_id, client_var_id;
+//    size_t *start, *count;
+//    size_t data_size;
+//
+//    int func_code = FUNC_DEF_VAR_RANGE;
+//    int return_code;
+//
+//    //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
+//    ret = iofw_msg_unpack_def_var_range(
+//	    &client_nc_id, &client_var_id, &ndims, &start, &count);
+//    return 0;
+//
+//    //float *_data = data;
+//    //for(i = 0; i < 4; i ++)
+//    //{
+//    //    printf("%f, ", _data[i]);
+//    //}
+//    //printf("\n");
+//
+//    if( ret < 0 )
+//    {
+//	error("unpack_def_var_range");
+//	return IOFW_IO_ERROR_MSG_UNPACK;
+//    }
+//
+//    _recv_client_io(
+//	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
+//
+//    if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_var(
+//		client_nc_id, client_var_id, &var))
+//    {
+//	return_code = IOFW_IO_ERROR_INVALID_VAR;
+//	debug(DEBUG_IO, "Invalid var.");
+//	goto RETURN;
+//    }
+//
+//    for(i = 0; i < ndims; i ++)
+//    {
+//	/**
+//	 *TODO handle exceed
+//	 **/
+//	//debug(DEBUG_IO, 
+//	//	"start : %lu, count : %lu", var->start[i], var->count[i]);
+//	if(start[i] < var->start[i])
+//	{
+//	    var->start[i] = start[i];
+//	}
+//	if(start[i] + count[i] > var->start[i] + var->count[i])
+//	{
+//	    var->count[i] = start[i] + count[i] - var->start[i];
+//	}
+//	//debug(DEBUG_IO, 
+//	//	"start : %lu, count : %lu", start[i], count[i]);
+//	//debug(DEBUG_IO, 
+//	//	"dim %d: start(%lu), count(%lu)", var->start[i], var->count[i]);
+//    }
+//
+//    if(_bitmap_full(io_info->client_bitmap))
+//    {
+//
+//	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
+//		IOFW_ID_NC_INVALID == nc->nc_id)
+//	{
+//	    return_code = IOFW_IO_ERROR_INVALID_NC;
+//	    debug(DEBUG_IO, "Invalid nc.");
+//	    goto RETURN;
+//	}
+//	if(IOFW_ID_VAR_INVALID == var->var_id)
+//	{
+//	    return_code = IOFW_IO_ERROR_INVALID_VAR;
+//	    debug(DEBUG_IO, "Invalid var.");
+//	    goto RETURN;
+//	}
+//
+//	if(ndims != var->ndims)
+//	{
+//	    debug(DEBUG_IO, "wrong ndims.");
+//	    return_code = IOFW_IO_ERROR_WRONG_NDIMS;
+//	    goto RETURN;
+//	}
+//	
+//	data_size = 1;
+//	for(i = 0; i < var->ndims; i ++)
+//	{
+//	    data_size *= var->count[i];
+//	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
+//		    i, var->start[i], var->count[i]);
+//	}
+//	var->data = malloc(var->ele_size * data_size);
+//
+//	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
+//		var->ele_size ,  data_size);
+//	assert(NULL != var->data);
+//	
+//	_remove_client_io(io_info);
+//    }
+//
+//    return_code = IOFW_IO_ERROR_NONE;	
+//
+//RETURN :
+//
+//    if(NULL != start)
+//    {
+//	free(start);
+//	start = NULL;
+//    }
+//    if(NULL != count)
+//    {
+//	free(count);
+//	count = NULL;
+//    }
+//
+//    return return_code;
+//
+//}
 
-    int func_code = FUNC_DEF_VAR_RANGE;
-    int return_code;
-
-    //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
-    ret = iofw_msg_unpack_def_var_range(
-	    &client_nc_id, &client_var_id, &ndims, &start, &count);
-    return 0;
-
-    //float *_data = data;
-    //for(i = 0; i < 4; i ++)
-    //{
-    //    printf("%f, ", _data[i]);
-    //}
-    //printf("\n");
-
-    if( ret < 0 )
-    {
-	error("unpack_def_var_range");
-	return IOFW_IO_ERROR_MSG_UNPACK;
-    }
-
-    _recv_client_io(
-	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
-
-    if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_var(
-		client_nc_id, client_var_id, &var))
-    {
-	return_code = IOFW_IO_ERROR_INVALID_VAR;
-	debug(DEBUG_IO, "Invalid var.");
-	goto RETURN;
-    }
-
-    for(i = 0; i < ndims; i ++)
-    {
-	/**
-	 *TODO handle exceed
-	 **/
-	//debug(DEBUG_IO, 
-	//	"start : %lu, count : %lu", var->start[i], var->count[i]);
-	if(start[i] < var->start[i])
-	{
-	    var->start[i] = start[i];
-	}
-	if(start[i] + count[i] > var->start[i] + var->count[i])
-	{
-	    var->count[i] = start[i] + count[i] - var->start[i];
-	}
-	//debug(DEBUG_IO, 
-	//	"start : %lu, count : %lu", start[i], count[i]);
-	//debug(DEBUG_IO, 
-	//	"dim %d: start(%lu), count(%lu)", var->start[i], var->count[i]);
-    }
-
-    if(_bitmap_full(io_info->client_bitmap))
-    {
-
-	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
-		IOFW_ID_NC_INVALID == nc->nc_id)
-	{
-	    return_code = IOFW_IO_ERROR_INVALID_NC;
-	    debug(DEBUG_IO, "Invalid nc.");
-	    goto RETURN;
-	}
-	if(IOFW_ID_VAR_INVALID == var->var_id)
-	{
-	    return_code = IOFW_IO_ERROR_INVALID_VAR;
-	    debug(DEBUG_IO, "Invalid var.");
-	    goto RETURN;
-	}
-
-	if(ndims != var->ndims)
-	{
-	    debug(DEBUG_IO, "wrong ndims.");
-	    return_code = IOFW_IO_ERROR_WRONG_NDIMS;
-	    goto RETURN;
-	}
-	
-	data_size = 1;
-	for(i = 0; i < var->ndims; i ++)
-	{
-	    data_size *= var->count[i];
-	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
-		    i, var->start[i], var->count[i]);
-	}
-	var->data = malloc(var->ele_size * data_size);
-
-	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
-		var->ele_size ,  data_size);
-	assert(NULL != var->data);
-	
-	_remove_client_io(io_info);
-    }
-
-    return_code = IOFW_IO_ERROR_NONE;	
-
-RETURN :
-
-    if(NULL != start)
-    {
-	free(start);
-	start = NULL;
-    }
-    if(NULL != count)
-    {
-	free(count);
-	count = NULL;
-    }
-
-    return return_code;
-
-}
-
-int iofw_io_nc_enddef(int client_id)
+int iofw_io_enddef(int client_id)
 {
     int client_nc_id, ret;
     iofw_id_nc_t *nc;
     iofw_io_val_t *io_info;
+    iofw_id_val_t *iter, *nc_val;
 
     int func_code = FUNC_NC_ENDDEF;
 
-    ret = iofw_msg_unpack_nc_enddef(&client_nc_id);
-    return 0;
+    ret = iofw_msg_unpack_enddef(&client_nc_id);
     if( ret < 0 )
     {
 	error("unapck msg error");
@@ -670,10 +786,18 @@ int iofw_io_nc_enddef(int client_id)
 
 	if(DEFINE_MODE == nc->nc_status)
 	{
+	    iofw_id_get_val(client_nc_id, 0, 0, &nc_val);
+	    qlist_for_each_entry(iter, &(nc_val->link), link)
+	    {
+		if((ret = _handle_def(iter)) < 0)
+		{   
+		    return ret;
+		}
+	    }
 	    ret = nc_enddef(nc->nc_id);
 	    if(ret < 0)
 	    {
-		error("nc_enddef error(%s)",nc_strerror(ret));
+		error("enddef error(%s)",nc_strerror(ret));
 		return IOFW_IO_ERROR_NC;
 	    }
 
@@ -684,7 +808,7 @@ int iofw_io_nc_enddef(int client_id)
     return IOFW_IO_ERROR_NONE;
 }
 
-int iofw_io_nc_put_vara(int client_id)
+int iofw_io_put_vara(int client_id)
 {
     int i,ret = 0, ndims;
     iofw_id_nc_t *nc;
@@ -700,11 +824,10 @@ int iofw_io_nc_put_vara(int client_id)
     int return_code;
 
     //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
-    ret = iofw_msg_unpack_nc_put_vara(
+    ret = iofw_msg_unpack_put_vara(
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
 
-    return 0;
     //float *_data = data;
     //for(i = 0; i < 4; i ++)
     //{
@@ -773,6 +896,11 @@ int iofw_io_nc_put_vara(int client_id)
 	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
 		    i, var->start[i], var->count[i]);
 	}
+	
+	for(i = 0; i < var->ndims; i ++)
+	{
+	    start[i] = 0;
+	}
 
 	switch(var->data_type)
 	{
@@ -782,19 +910,19 @@ int iofw_io_nc_put_vara(int client_id)
 		break;
 	    case IOFW_SHORT :
 		ret = nc_put_vara_short(nc->nc_id, var->var_id, 
-			var->start, var->count, (short*)var->data);
+			start, var->count, (short*)var->data);
 		break;
 	    case IOFW_INT :
 		ret = nc_put_vara_int(nc->nc_id, var->var_id, 
-			var->start, var->count, (int*)var->data);
+			start, var->count, (int*)var->data);
 		break;
 	    case IOFW_FLOAT :
 		ret = nc_put_vara_float(nc->nc_id, var->var_id, 
-			var->start, var->count, (float*)var->data);
+			start, var->count, (float*)var->data);
 		break;
 	    case IOFW_DOUBLE :
 		ret = nc_put_vara_double(nc->nc_id, var->var_id, 
-			var->start, var->count, (double*)var->data);
+			start, var->count, (double*)var->data);
 		break;
 	}
 
@@ -814,16 +942,15 @@ RETURN :
 
 }
 
-int iofw_io_nc_close(int client_id)
+int iofw_io_close(int client_id)
 {
     int client_nc_id, nc_id, ret;
     iofw_id_nc_t *nc;
     iofw_io_val_t *io_info;
     int func_code = FUNC_NC_CLOSE;
+    iofw_id_val_t *iter, *nc_val;
 
-    ret = iofw_msg_unpack_nc_close(&client_nc_id);
-
-    return 0;
+    ret = iofw_msg_unpack_close(&client_nc_id);
 
     if( ret < 0 )
     {
@@ -844,8 +971,6 @@ int iofw_io_nc_close(int client_id)
 	    return IOFW_IO_ERROR_INVALID_NC;
 	}
 	ret = nc_close(nc->nc_id);
-	debug_mark(DEBUG_IO);
-
 
 	if( ret != NC_NOERR )
 	{
@@ -853,6 +978,16 @@ int iofw_io_nc_close(int client_id)
 	    return IOFW_IO_ERROR_NC;
 	}
 	_remove_client_io(io_info);
+	
+	iofw_id_get_val(client_nc_id, 0, 0, &nc_val);
+	qlist_for_each_entry(iter, &(nc_val->link), link)
+	{
+	    qlist_del(&(iter->link));
+	    qhash_del(&(iter->hash_link));
+	    iofw_id_val_free(iter);
+	}
+	qhash_del(&(nc_val->hash_link));
+	free(nc_val);
     }
     debug_mark(DEBUG_IO);
     return IOFW_IO_ERROR_NONE;

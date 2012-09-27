@@ -68,6 +68,17 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error)
     return buf_p;
 }
 
+int iofw_buf_close(iofw_buf_t *buf_p)
+{
+    if(buf_p)
+    {
+	free(buf_p);
+	buf_p = NULL;
+    }
+
+    return IOFW_BUF_ERROR_NONE;
+}
+
 int iofw_buf_clear(iofw_buf_t *buf_p)
 {
     assert(NULL != buf_p);
@@ -124,7 +135,7 @@ size_t iofw_buf_pack_array_size(
 
 
 int iofw_buf_pack_data_array(
-	const void *data, size_t len,
+	const void *data, int len,
 	size_t size, iofw_buf_t *buf_p)
 {
     
@@ -180,7 +191,7 @@ int iofw_buf_unpack_data_array(
 
     assert(used_buf_size(buf_p) >= data_size);
 
-    debug(DEBUG_MSG, "data_size = %lu", data_size);
+    //debug(DEBUG_BUF, "data_size = %lu", data_size);
 
     get_buf_data(buf_p, *data, data_size);
     free_buf(buf_p, data_size);

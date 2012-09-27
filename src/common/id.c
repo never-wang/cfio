@@ -60,11 +60,6 @@ static void _val_free(iofw_id_val_t *val)
     {
 	if(NULL != val->var)
 	{
-	    if(NULL != val->var->dims_len)
-	    {
-		free(val->var->dims_len);
-		val->var->dims_len = NULL;
-	    }
 	    if(NULL != val->var->start)
 	    {
 		free(val->var->start);
@@ -123,7 +118,6 @@ static void _inc_src_index(
  *
  * @param ndims: number of dimensions for the variable
  * @param ele_size: size of each element in the variable array
- * @param dims_len: length of each dimemsion for the total data array 
  * @param dst_start: start index of the dst data array
  * @param dst_count: count of teh dst data array
  * @param dst_data: pointer to the dst data array
@@ -132,7 +126,7 @@ static void _inc_src_index(
  * @param src_data: pointer to the src data array
  */
 static void _put_var(
-	int ndims, size_t ele_size,size_t *dims_len, 
+	int ndims, size_t ele_size,
 	size_t *dst_start, size_t *dst_count, char *dst_data, 
 	size_t *src_start, size_t *src_count, char *src_data)
 {
@@ -296,6 +290,7 @@ int iofw_id_map_nc(
     val->nc->nc_status = DEFINE_MODE;
 
     qhash_add(map_table, &key, &(val->hash_link));
+    INIT_QLIST_HEAD(&(val->link));
 
     debug(DEBUG_ID, "map ((%d, 0, 0)->(%d, 0, 0)", 
 	     client_nc_id, server_nc_id);
@@ -304,14 +299,21 @@ int iofw_id_map_nc(
 }
 
 int iofw_id_map_dim(
+	char *name, 
 	int client_nc_id, int client_dim_id, 
-	int server_nc_id, int server_dim_id, int dim_len)
+	int server_nc_id, int server_dim_id)
 {
     iofw_id_key_t key;
     iofw_id_val_t *val;
+    iofw_id_val_t *nc_val;
+    struct qhash_head *link;
 
     memset(&key, 0, sizeof(iofw_id_key_t));
     key.client_nc_id = client_nc_id;
+
+    link = qhash_search(map_table, &key);
+    nc_val = qlist_entry(link, iofw_id_val_t, hash_link);
+    
     key.client_dim_id = client_dim_id;
 
     val = malloc(sizeof(iofw_id_val_t));
@@ -319,11 +321,13 @@ int iofw_id_map_dim(
     val->client_nc_id = client_nc_id;
     val->client_dim_id = client_dim_id;
     val->dim = malloc(sizeof(iofw_id_dim_t));
+    memset(val->dim, 0, sizeof(iofw_id_dim_t));
+    val->dim->name = name;
     val->dim->nc_id = server_nc_id;
     val->dim->dim_id = server_dim_id;
-    val->dim->dim_len = dim_len;
 
     qhash_add(map_table, &key, &(val->hash_link));
+    qlist_add_tail(&(val->link), &(nc_val->link));
     
     debug(DEBUG_ID, "map ((%d, %d, 0)->(%d, %d, 0))",
 	    client_nc_id, client_dim_id, server_nc_id, server_dim_id);
@@ -332,19 +336,27 @@ int iofw_id_map_dim(
 }
 
 int iofw_id_map_var(
+	char *name, 
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, 
+	int ndims, int *dim_ids,
+	size_t *start, size_t *count,
 	int data_type, int client_num)
 {
     int i;
     size_t data_size;
+    iofw_id_val_t *nc_val;
 
     iofw_id_key_t key;
     iofw_id_val_t *val;
+    struct qhash_head *link;
 
     memset(&key, 0, sizeof(iofw_id_key_t));
     key.client_nc_id = client_nc_id;
+    
+    link = qhash_search(map_table, &key);
+    nc_val = qlist_entry(link, iofw_id_val_t, hash_link);
+    
     key.client_var_id = client_var_id;
 
     val = malloc(sizeof(iofw_id_val_t));
@@ -353,39 +365,52 @@ int iofw_id_map_var(
     val->client_var_id = client_var_id;
 
     val->var = malloc(sizeof(iofw_id_var_t));
+    val->var->name = name;
     val->var->nc_id = server_nc_id;
     val->var->var_id = server_var_id;
     val->var->ndims = ndims;
     val->var->client_num = client_num;
-    if(ndims > 0)
-    {
-	val->var->dims_len = malloc(sizeof(size_t) * ndims);
-	memcpy(val->var->dims_len, dims_len, sizeof(size_t) * ndims);
-    }
-    val->var->start = malloc(sizeof(size_t) * ndims);
-    memset(val->var->start, 0, sizeof(size_t) * ndims);
-    val->var->count = malloc(sizeof(size_t) * ndims);
-    memset(val->var->count, 0, sizeof(size_t) * ndims);
+    val->var->dim_ids = dim_ids;
+    val->var->start = start;
+    val->var->count = count;
+
+    assert(client_num > 0);
     val->var->recv_data = malloc(sizeof(iofw_id_data_t) * client_num);
     memset(val->var->recv_data, 0, sizeof(iofw_id_data_t) * client_num);
     val->var->data_type = data_type;
-    iofw_types_size(val->var->ele_size, data_type);
     
-    //data_size = 1;
-    //for(i = 0; i < ndims; i ++)
-    //{
-    //    data_size *= dims_len[i];
-    //}
-    //val->var->data = malloc(val->var->ele_size * data_size); 
     val->var->data = NULL;
 
     qhash_add(map_table, &key, &(val->hash_link));
+    qlist_add_tail(&(val->link), &(nc_val->link));
     
-    debug(DEBUG_ID, "map ((%d, 0, %d)->(%d, 0, %d)), ele_size = %lu",  
-	    client_nc_id, client_var_id, server_nc_id, server_var_id, 
-	    val->var->ele_size);
+    debug(DEBUG_ID, "map ((%d, 0, %d)->(%d, 0, %d))",  
+	    client_nc_id, client_var_id, server_nc_id, server_var_id);
 
     return IOFW_ID_ERROR_NONE;
+}
+
+int iofw_id_get_val(
+	int client_nc_id, int client_var_id, int client_dim_id,
+	iofw_id_val_t **val)
+{
+    iofw_id_key_t key;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = client_nc_id;
+    key.client_var_id = client_var_id;
+    key.client_dim_id = client_dim_id;
+
+    if(NULL == (link = qhash_search(map_table, &key)))
+    {
+	debug(DEBUG_ID, "get nc (%d, 0, 0) null", client_nc_id);
+	return IOFW_ID_ERROR_GET_NULL;
+    }else
+    {
+	*val = qlist_entry(link, iofw_id_val_t, hash_link);
+	return IOFW_ID_ERROR_NONE;
+    }
 }
 
 int iofw_id_get_nc(
@@ -508,7 +533,7 @@ int iofw_id_put_var(
 			"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] = "
 			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
 			client_nc_id, client_var_id, 
-			i, var->start[i], var->count[i]);
+			i, var->start[i], i, var->count[i]);
 		return IOFW_ID_ERROR_EXCEED_BOUND;
 	    }
 	}
@@ -520,8 +545,6 @@ int iofw_id_put_var(
 	//}
 	//printf("\n");
 
-	//_put_var(var->ndims, var->ele_size, var->dims_len, var->data,
-	//	start, count, data);
 	if(NULL != var->recv_data[client_index].buf)
 	{
 	    free(var->recv_data[client_index].buf);
@@ -547,6 +570,7 @@ int iofw_id_put_var(
 int iofw_id_merge_var_data(iofw_id_var_t *var)
 {
     int i, j;
+    size_t ele_size;
     
     for(i = 0; i < var->client_num; i++)
     {
@@ -561,8 +585,9 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
 	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", j, 
 		    var->recv_data[i].start[j],var->recv_data[i].count[j]);
 	}
-
-	_put_var(var->ndims, var->ele_size, var->dims_len, 
+    
+	iofw_types_size(ele_size, var->data_type);
+	_put_var(var->ndims, ele_size, 
 		var->start, var->count, var->data,
 		var->recv_data[i].start, var->recv_data[i].count,
 		var->recv_data[i].buf);
@@ -574,8 +599,11 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
 	//printf("\n");
 
 	free(var->recv_data[i].buf);	
+	var->recv_data[i].buf = NULL;	
 	free(var->recv_data[i].start);	
+	var->recv_data[i].start = NULL;	
 	free(var->recv_data[i].count);	
+	var->recv_data[i].count = NULL;	
 	
 	//_data = var->data;
 	//for(j = 0; j < 12; j ++)
@@ -586,5 +614,86 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
     }
 
     return IOFW_ID_ERROR_NONE;
+}
+
+void iofw_id_val_free(iofw_id_val_t *val)
+{
+    int i;
+    iofw_id_data_t *recv_data;
+
+    if(NULL != val)
+    {
+	if(NULL != val->nc)
+	{
+	    free(val->nc);
+	    val->nc = NULL;
+	}
+	if(NULL != val->dim)
+	{
+	    if(NULL != val->dim->name)
+	    {
+		free(val->dim->name);
+		val->dim->name = NULL;
+	    }
+	    free(val->dim);
+	    val->dim = NULL;
+	}
+	if(NULL != val->var)
+	{
+	    if(NULL != val->var->name)
+	    {
+		free(val->var->name);
+		val->var->name = NULL;
+	    }
+	    if(NULL != val->var->dim_ids)
+	    {
+		free(val->var->dim_ids);
+		val->var->dim_ids = NULL;
+	    }
+	    if(NULL != val->var->start)
+	    {
+		free(val->var->start);
+		val->var->start = NULL;
+	    }
+	    if(NULL != val->var->count)
+	    {
+		free(val->var->count);
+		val->var->count = NULL;
+	    }
+	    recv_data = val->var->recv_data;
+	    if(NULL != recv_data)
+	    {
+		for(i = 0; i < val->var->client_num; i ++)
+		{
+		    if(NULL != recv_data[i].buf)
+		    {
+			free(recv_data[i].buf);
+			recv_data[i].buf = NULL;
+		    }
+		    if(NULL != recv_data[i].start)
+		    {
+			free(recv_data[i].start);
+			recv_data[i].start = NULL;
+		    }
+		    if(NULL != recv_data[i].count)
+		    {
+			free(recv_data[i].count);
+			recv_data[i].count = NULL;
+		    }
+		}
+		free(recv_data);
+		recv_data = NULL;
+	    }
+	    if(NULL != val->var->data)
+	    {
+		free(val->var->data);
+		val->var->data = NULL;
+	    }
+	    free(val->var);
+	    val->var = NULL;
+	}
+	free(val);
+	val = NULL;
+    }
 }
 	

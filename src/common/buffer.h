@@ -79,7 +79,6 @@ static inline void free_buf(iofw_buf_t *buf_p, size_t size)
     }
 }
 
-
 /**
  * get the free space size in a buffer
  **/
@@ -161,7 +160,14 @@ static inline int check_used_addr(char *addr, iofw_buf_t *buf_p)
  * @return: pointer to the new buffer
  */
 iofw_buf_t *iofw_buf_open(size_t size, int *error);
-
+/**
+ * @brief: free the buffer
+ *
+ * @param buf_p: pointer to the buffer
+ *
+ * @return: error code
+ */
+int iofw_buf_close(iofw_buf_t *buf_p);
 /**
  * @brief: clear the buffer's data
  *
@@ -205,7 +211,7 @@ int iofw_buf_unpack_data(
  * @return: error code
  */
 int iofw_buf_pack_data_array(
-	const void *data, size_t len,
+	const void *data, int len,
 	size_t size, iofw_buf_t *buf_p);
 
 /**

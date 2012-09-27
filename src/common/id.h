@@ -45,12 +45,15 @@
 #define IOFW_ID_NC_INVALID -1   
 #define IOFW_ID_DIM_INVALID -1
 #define IOFW_ID_VAR_INVALID -1
+
+#define iofw_id_val_entry(ptr, member) \
+    (iofw_id_val_t *)((char *)ptr - (size_t)&(((iofw_id_val_t *)0)->member)) 
 /** @brief: store recv data in var */
 typedef struct
 {
-    char *buf;
-    size_t *start;
-    size_t *count;
+    char *buf;		    /* pointer to the data */
+    size_t *start;	    /* vector of ndims start index of the variable */
+    size_t *count;	    /* vector of ndims count index of the variable */
 }iofw_id_data_t;
 /** @brief: store opened nc file 's information in client */
 typedef struct 
@@ -71,6 +74,7 @@ typedef struct
 /** @brief: store a dimension information in server */
 typedef struct
 {
+    char *name;		    /* name of the dimension */
     int nc_id;		    /* id of nc file which the dimension belong to */
     int dim_id;		    /* id of the dimension */
     
@@ -79,18 +83,20 @@ typedef struct
 /** @brief: store a variable information in server */
 typedef struct
 {
+    char *name;		    /* name of the dimension */
     int nc_id;		    /* id of nc file which the variable is belong to */
     int var_id;		    /* id of var */
     
     int ndims;		    /* number of dimensions for the variable */
     int client_num;	    /* number of clients */
-    size_t *dims_len;	    /* vector of ndims dimension length for the variable */
+    //size_t *dims_len;	    /* vector of ndims dimension length for the variable */
+    int *dim_ids;	    /* vector of ndims dimension ids for the variable */
     size_t *start;	    /* vector of ndims start index of the variable */
     size_t *count;	    /* vector of ndims count index of the variable */
     iofw_id_data_t 
 	*recv_data;	    /* pointer to data vector recieved from client */
     int data_type;          /* type of data, define in iofw_types.h */
-    size_t ele_size;	    /* size of each element in the variable array */
+    //size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
 
 }iofw_id_var_t;
@@ -113,6 +119,7 @@ typedef struct
     iofw_id_dim_t *dim; /* dim infomation in server */
     iofw_id_var_t *var; /* nc var infomation in server */
     qlist_head_t hash_link;	
+    qlist_head_t link; /* link for interator */
 }iofw_id_val_t;
 
 /**
@@ -177,8 +184,9 @@ int iofw_id_map_nc(int client_nc_id, int server_nc_id);
  * @return: error code
  */
 int iofw_id_map_dim(
+	char *name,
 	int client_nc_id, int client_dim_id, 
-	int server_nc_id, int server_dim_id, int dim_len);
+	int server_nc_id, int server_dim_id);
 /**
  * @brief: add a new map((client_nc_id, client_var_id)->(server_nc_id,
  *	server_dim_id)) in server
@@ -188,17 +196,24 @@ int iofw_id_map_dim(
  * @param server_nc_id: the nc file id in server
  * @param client_var_id: the var id in server
  * @param ndims: number of dimensions for the variable 
- * @param dims_len: vector of ndims dimension length for the variable 
+ * @param dim_dis: id of dimensions for the variable
+ * @param start: start index of the variable in the whole variable array
+ * @param count: count of the variable
  * @param data_type: type of data 
  * @param client_num: number of the server's client num
  *
  * @return: error code
  */
 int iofw_id_map_var(
+	char *name, 
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
-	int ndims, size_t *dims_len, 
+	int ndims, int *dim_ids,
+	size_t *start, size_t *count,
 	int data_type, int client_num);
+int iofw_id_get_val(
+	int client_nc_id, int client_var_id, int client_dim_id,
+	iofw_id_val_t **val);
 /**
  * @brief: get server_nc_id by client_nc_id in server
  *
@@ -262,5 +277,6 @@ int iofw_id_put_var(
  * @return: error code
  */
 int iofw_id_merge_var_data(iofw_id_var_t *var);
+
 
 #endif

@@ -31,8 +31,8 @@
 #define IOFW_ERROR_MALLOC	    4 /* malloc fail */
 #define IOFW_ERROR_ARGV		    5 /* wrong argv */
 
-#define SERVER_RATIO 0.3
-#define CLIENT_BUF_SIZE 1024*1024*256
+#define SERVER_RATIO 0.2
+#define CLIENT_BUF_SIZE 1024*1024
 /**
  * @brief: init
  *
@@ -51,22 +51,19 @@ int iofw_init(int x_proc_num, int y_proc_num);
  */
 int iofw_finalize();
 /**
- * @brief: iofw_nc_create
+ * @brief: iofw_create
  *
- * @param io_proc_id: id of IO proc
  * @param path: the file anme of the new netCDF dataset
  * @param cmode: the creation mode flag
  * @param ncidp: pointer to location where returned netCDF ID is to be stored
  *
  * @return: 0 if success
  */
-int iofw_nc_create(
-	int io_proc_id,
+int iofw_create(
 	const char *path, int cmode, int *ncidp);
 /**
- * @brief: iofw_nc_def_dim
+ * @brief: iofw_def_dim
  *
- * @param io_proc_id: id of IO proc 
  * @param ncid: NetCDF group ID
  * @param name: Dimension name
  * @param len: Length of dimension
@@ -74,11 +71,10 @@ int iofw_nc_create(
  *
  * @return: 0 if success
  */
-int iofw_nc_def_dim(
-	int io_proc_id,
+int iofw_def_dim(
 	int ncid, const char *name, size_t len, int *idp);
 /**
- * @brief: iofw_nc_def_var
+ * @brief: iofw_def_var
  *
  * @param io_proc_id: id of proc id 
  * @param ncid: netCDF ID
@@ -87,46 +83,31 @@ int iofw_nc_def_dim(
  * @param ndims: number of dimensions for the variable
  * @param dimids[]: vector of ndims dimension IDs corresponding to the 
  *	variable dimensions
- * @param varidp: pointer to location for the returned variable ID
- *
- * @return: 0 if success
- */
-int iofw_nc_def_var(
-	int io_proc_id,
-	int ncid, const char *name, nc_type xtype,
-	int ndims, const int dimids[], int *varidp);
-/**
- * @brief: def a var's output range in a compute proc
- *
- * @param ncid: netCDF ID
- * @param varid: variable name
- * @param ndims: number of dimensions for the variable
  * @param start: a vector of size_t intergers specifying the index in the variable
  *	where the first of the data values will be written
  * @param count: a vector of size_t intergers specifying the edge lengths along 
  *	each dimension of the block of data values to be written
+ * @param varidp: pointer to location for the returned variable ID
  *
- * @return: error code
+ * @return: 0 if success
  */
-int iofw_def_var_range(
-	int ncid, int varid, int ndims, 
-	const size_t *start, const size_t *count);
-
+int iofw_def_var(
+	int ncid, const char *name, nc_type xtype,
+	int ndims, const int *dimids, 
+	const size_t *start, const size_t *count, 
+	int *varidp);
 /**
- * @brief:iofw_ nc_enddef
+ * @brief:iofw_ enddef
  *
- * @param io_proc_id: id of io proc
  * @param ncid: netCDF ID
  *
  * @return: 0 if success
  */
-int iofw_nc_enddef(
-	int io_proc_id,
+int iofw_enddef(
 	int ncid);
 /**
- * @brief: iofw_nc_put_vara_float
+ * @brief: iofw_put_vara_float
  *
- * @param io_proc_id: id of IO proc
  * @param ncid: netCDF ID
  * @param varid: variable ID
  * @param dim: the dimensionality fo variable
@@ -138,20 +119,34 @@ int iofw_nc_enddef(
  *
  * @return: 
  */
-int iofw_nc_put_vara_float(
-	int io_proc_id,
+int iofw_put_vara_float(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp);
 /**
- * @brief: iofw_nc_close
+ * @brief: iofw_put_vara_double
  *
- * @param io_proc_id: 
+ * @param ncid: netCDF ID
+ * @param varid: variable ID
+ * @param dim: the dimensionality fo variable
+ * @param start: a vector of size_t intergers specifying the index in the variable
+ *	where the first of the data values will be written
+ * @param count: a vector of size_t intergers specifying the edge lengths along 
+ *	each dimension of the block of data values to be written
+ * @param fp: pinter to the data value to be written
+ *
+ * @return: 
+ */
+int iofw_put_vara_double(
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count, const double *fp);
+/**
+ * @brief: iofw_close
+ *
  * @param ncid: netCDF ID
  *
  * @return: 0 if success
  */
-int iofw_nc_close(
-	int io_proc_id,
+int iofw_close(
 	int ncid);
 
 #endif

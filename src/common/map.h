@@ -22,17 +22,6 @@
  * @brief: iofw map var init, only be called in iofw_init adn iofw_server's main
  *	function
  *
- * @param _client_num: 
- * @param _server_group_num: 
- * @param _server_group_size: 
- * @param _comm: 
- *
- * @return: error code
- */
-/**
- * @brief: iofw map var init, only be called in iofw_init adn iofw_server's main
- *	function
- *
  * @param _client_x_num: client proc num of x axis 
  * @param _client_y_num: client proc num of y axis
  * @param _server_amount: server proc num

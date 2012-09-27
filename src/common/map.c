@@ -51,6 +51,7 @@ int iofw_map_get_server_amount(int *_server_amount)
 }
 int iofw_map_get_client_amount()
 {
+    debug(DEBUG_MAP, "client_amount : %d", client_amount);
     return client_amount;
 }
 

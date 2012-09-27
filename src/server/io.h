@@ -78,11 +78,11 @@ int iofw_io_init();
  */
 int iofw_io_final();
 int iofw_io_client_done(int client_id, int *server_done);
-int iofw_io_nc_create(int client_proc);
-int iofw_io_nc_def_dim(int client_proc);
-int iofw_io_nc_def_var(int client_proc);
-int iofw_io_nc_enddef(int client_proc);
-int iofw_io_nc_put_vara(int client_proc);
-int iofw_io_nc_close(int client_proc);
+int iofw_io_create(int client_proc);
+int iofw_io_def_dim(int client_proc);
+int iofw_io_def_var(int client_proc);
+int iofw_io_enddef(int client_proc);
+int iofw_io_put_vara(int client_proc);
+int iofw_io_close(int client_proc);
 
 #endif
