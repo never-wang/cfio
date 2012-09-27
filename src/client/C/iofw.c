@@ -45,7 +45,7 @@ int iofw_init(int x_proc_num, int y_proc_num)
 
     char **argv;
 
-    set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_MAP);
+    //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_MAP);
 
     rc = MPI_Initialized(&i); 
     if( !i )
