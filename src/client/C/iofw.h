@@ -31,8 +31,8 @@
 #define IOFW_ERROR_MALLOC	    4 /* malloc fail */
 #define IOFW_ERROR_ARGV		    5 /* wrong argv */
 
-#define SERVER_RATIO 0.4
-#define CLIENT_BUF_SIZE 1024*1024
+#define SERVER_RATIO 0.125
+#define CLIENT_BUF_SIZE 1024*1024*2
 /**
  * @brief: init
  *

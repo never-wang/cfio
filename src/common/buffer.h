@@ -101,6 +101,9 @@ static inline void ensure_free_space(iofw_buf_t *buf_p, size_t size, void(*free)
 {
     size_t left_space = buf_p->start_addr + buf_p->size - buf_p->free_addr;
     volatile size_t free_size;
+
+    debug(DEBUG_BUF, "free_size = %lu; left_space = %lu; size = %lu", 
+	    free_buf_size(buf_p), left_space, size);
     
     while((free_size = free_buf_size(buf_p)) < size)
     {

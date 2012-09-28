@@ -94,6 +94,9 @@ static void iofw_msg_client_buf_free()
     int done;
     MPI_Status status;
 
+    debug(DEBUG_MSG, "should not be here");
+    assert(0);
+
     msg = qlist_entry(qlist_pop(&msg_head->link), iofw_msg_t, link);
     MPI_Wait(&msg->req, &status);
 
@@ -126,8 +129,9 @@ int iofw_msg_isend(
 
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, tag, msg->comm, &(msg->req));
-
     MPI_Wait(&(msg->req), &status);
+    assert(check_used_addr(msg->addr, buffer));
+    buffer->used_addr = msg->addr;
     free_buf(buffer, msg->size);
 
     /**

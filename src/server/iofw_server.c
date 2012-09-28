@@ -171,7 +171,7 @@ static int _server_init(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &server_proc_num);
     debug(DEBUG_USER, "rank = %d; size = %d", rank, server_proc_num);
 
-    if(rank == 1)
+    if(rank == 0)
     {
 	//set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID | DEBUG_MAP);
 	//set_debug_mask(DEBUG_ID);
