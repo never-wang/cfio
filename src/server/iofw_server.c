@@ -70,13 +70,6 @@ static int decode(iofw_msg_t *msg)
 	    debug(DEBUG_USER, "server %d done nc_def_var for client %d\n",
 		    rank,client_id);
 	    return IOFW_SERVER_ERROR_NONE;
-	//case FUNC_DEF_VAR_RANGE:
-	//    debug(DEBUG_USER,"server %d recv def_var_range from client %d",
-	//	    rank, client_id);
-	//    iofw_io_def_var_range(client_id);
-	//    debug(DEBUG_USER, "server %d done def_var_range for client %d\n",
-	//	    rank,client_id);
-	//    return IOFW_SERVER_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
 	    debug(DEBUG_USER,"server %d recv nc_enddef from client %d",
 		    rank, client_id);
@@ -144,11 +137,14 @@ int iofw_server()
 {
     int ret = 0;
 
+#ifndef SVR_RECV_ONLY
     if( (ret = pthread_create(&writer,NULL,iofw_writer,NULL))<0  )
     {
         error("Tread Writer create error()");
         return ret;
     }
+#endif
+
     if( (ret = pthread_create(&reader,NULL,iofw_reader,NULL))<0  )
     {
         error("Tread Reader create error()");

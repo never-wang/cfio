@@ -43,6 +43,7 @@
 #define IOFW_IO_ERROR_NC_NOT_DEFINE -8  /* nc file is not in DEFINE_MODE, some IO
 					   function only can be called in 
 					   DEFINE_MODE*/
+#define IOFW_IO_ERROR_MALLOC	    -9	/* Malloc fail */
 
 typedef struct
 {

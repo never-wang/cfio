@@ -174,7 +174,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     msg->src = status.MPI_SOURCE;
     msg->dst = rank;
 
+#ifndef SVR_RECV_ONLY
     use_buf(buffer, size);
+#endif
     
     /* need lock */
     pthread_mutex_lock(&mutex);
@@ -182,10 +184,6 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     pthread_cond_signal(&empty_cond);
     pthread_mutex_unlock(&mutex);
     
-    if(msg->addr == buffer->start_addr)
-    {
-	debug_mark(DEBUG_MSG);
-    }
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_MSG, "success return");
     return IOFW_MSG_ERROR_NONE;

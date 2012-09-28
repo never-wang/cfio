@@ -298,6 +298,9 @@ int iofw_id_map_nc(
     return IOFW_ID_ERROR_NONE;
 }
 
+/**
+ * name : addr_copy
+ **/
 int iofw_id_map_dim(
 	char *name, 
 	int client_nc_id, int client_dim_id, 
@@ -335,6 +338,9 @@ int iofw_id_map_dim(
     return IOFW_ID_ERROR_NONE;
 }
 
+/**
+ * name, start, count , dim_ids : addr_copy
+ **/
 int iofw_id_map_var(
 	char *name, 
 	int client_nc_id, int client_var_id,
@@ -492,6 +498,9 @@ int iofw_id_get_var(
 	return IOFW_ID_ERROR_NONE;
     }
 }
+/**
+ * start, count , data : addr_copy
+ **/
 
 int iofw_id_put_var(
 	int client_nc_id, int client_var_id,
