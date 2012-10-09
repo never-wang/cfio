@@ -1,10 +1,10 @@
 /****************************************************************************
- *       Filename:  iofw_server.h
+ *       Filename:  define.h
  *
- *    Description:  
+ *    Description:  define for some macro
  *
  *        Version:  1.0
- *        Created:  04/19/2012 01:57:25 PM
+ *        Created:  10/10/2012 05:48:07 AM
  *       Revision:  none
  *       Compiler:  gcc
  *
@@ -12,13 +12,6 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
-#ifndef _IOFW_SERVER_H
-#define _IOFW_SERVER_H
-
-#define IOFW_SERVER_ERROR_NONE               0
-#define IOFW_SERVER_ERROR_UNEXPECTED_MSG    -1
-#define IOFW_SERVER_ERROR_INIT_FAIL         -2
-
-#define SERVER_BUF_SIZE 1024*1024*1024
-
-#endif
+#undef SVR_RECV_ONLY
+#undef SVR_UNPACK_ONLY
+#undef SVR_META_ONLY

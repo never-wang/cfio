@@ -1,4 +1,4 @@
-AC_INIT([iofw], [1.02], [never.wencan@gmail.com])
+AC_INIT([iofw], [1.03], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
 CC=mpiicc
@@ -132,7 +132,7 @@ AC_PROG_RANLIB
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile src/common/Makefile src/client/Makefile src/client/C/Makefile \
 		 src/client/Fortran/Makefile src/server/Makefile test/Makefile test/common/Makefile \
-		 test/client/Makefile test/client/C/Makefile])
+		 test/client/Makefile test/client/C/Makefile test/client/Fortran/Makefile])
 AC_OUTPUT
 
 

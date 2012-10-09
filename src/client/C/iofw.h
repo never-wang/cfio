@@ -32,16 +32,18 @@
 #define IOFW_ERROR_ARGV		    5 /* wrong argv */
 
 #define SERVER_RATIO 0.125
-#define CLIENT_BUF_SIZE 1024*1024*2
+#define CLIENT_BUF_SIZE 1024*1024*1024
 /**
  * @brief: init
  *
  * @param x_proc_num: client proc number of x axis
  * @param y_proc_num: client proc number of y axis
+ * @param server_ratio: server ratio, which means server_amount/client_amount = 
+ *	server_ratio
  *
  * @return: error code
  */
-int iofw_init(int x_proc_num, int y_proc_num);
+int iofw_init(int x_proc_num, int y_proc_num, int server_ratio);
 
 /**
  * @brief iofw_Finalize : stop the iofw services, the function 

@@ -28,6 +28,7 @@
 #include "quickhash.h"
 #include "iofw_types.h"
 #include "mpi.h"
+#include "define.h"
 
 static struct qhash_table *io_table;
 static int server_id;
@@ -684,7 +685,7 @@ int iofw_io_put_vara(int client_id)
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
 
-#ifdef SVR_UNPACK_ONLY
+#if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
     free(start);
     free(count);
     free(data);

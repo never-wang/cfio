@@ -23,6 +23,7 @@
 #include "pthread.h"
 #include "id.h"
 #include "iofw_types.h"
+#include "define.h"
 
 static iofw_msg_t *msg_head;
 iofw_buf_t *buffer;

@@ -35,7 +35,7 @@ int client_num;
 static MPI_Comm inter_comm;
 
 
-int iofw_init(int x_proc_num, int y_proc_num)
+int iofw_init(int x_proc_num, int y_proc_num, int server_ratio)
 {
     int rc, i;
     int size;
@@ -62,7 +62,7 @@ int iofw_init(int x_proc_num, int y_proc_num)
 	error("Wrong argv");
 	return  -IOFW_ERROR_ARGV;
     }
-    server_proc_num = (int)((double)client_num * SERVER_RATIO);
+    server_proc_num = (int)((double)client_num * server_ratio);
     if(server_proc_num <= 0)
     {
 	server_proc_num = 1;

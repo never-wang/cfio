@@ -22,6 +22,7 @@
 #include "debug.h"
 #include "msg.h"
 #include "times.h"
+#include "define.h"
 
 /* the thread read the buffer and write to the real io node */
 static pthread_t writer;
@@ -151,7 +152,11 @@ int iofw_server()
         return ret;
     }
 
+#ifndef SVR_RECV_ONLY
+    pthread_join(writer, NULL);
+#else
     pthread_join(reader, NULL);
+#endif
 
     return 0;
 }
@@ -169,7 +174,7 @@ static int _server_init(int argc, char** argv)
 
     if(rank == 0)
     {
-	//set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID | DEBUG_MAP);
+	set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID | DEBUG_MAP);
 	//set_debug_mask(DEBUG_ID);
 	//set_debug_mask(DEBUG_TIME);
     }
@@ -243,7 +248,7 @@ int main(int argc, char** argv)
 
     iofw_server();
 
-    debug(DEBUG_TIME, "iofw_server total time : %f", times_end());
+    debug(DEBUG_TIME, "Proc %d : iofw_server total time : %f", rank, times_end());
     times_final();
 
     debug(DEBUG_USER, "Proc %d : wait for final", rank);
