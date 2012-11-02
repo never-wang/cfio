@@ -5,6 +5,8 @@ CC=mpiicc
 AC_PROG_FC
 FC=mpiifort
 
+AM_PATH_CHECK
+
 #CPPFLAGS="$CPPFLAGS -mcmodel=large -shared-intel -g"
 CPPFLAGS="$CPPFLAGS"
 
@@ -128,7 +130,7 @@ AC_CHECK_LIB([pthread], [pthread_create],,AC_MSG_ERROR([invalid pthread library]
 
 #AC_MSG_ERROR([$LIBS]);
 
-AC_PROG_RANLIB
+AC_PROG_LIBTOOL
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile src/common/Makefile src/client/Makefile src/client/C/Makefile \
 		 src/client/Fortran/Makefile src/server/Makefile test/Makefile test/common/Makefile \

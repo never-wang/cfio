@@ -1,5 +1,5 @@
 /****************************************************************************
- *       Filename:  iofw_server.h
+ *       Filename:  server.h
  *
  *    Description:  
  *
@@ -12,13 +12,28 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
-#ifndef _IOFW_SERVER_H
-#define _IOFW_SERVER_H
-
-#define IOFW_SERVER_ERROR_NONE               0
-#define IOFW_SERVER_ERROR_UNEXPECTED_MSG    -1
-#define IOFW_SERVER_ERROR_INIT_FAIL         -2
+#ifndef _SERVER_H
+#define _SERVER_H
 
 #define SERVER_BUF_SIZE 1024*1024*1024
+
+/**
+ * @brief: init
+ *
+ * @return: error code
+ */
+int iofw_server_init();
+/**
+ * @brief: final 
+ *
+ * @return: error code
+ */
+int iofw_server_final();
+/**
+ * @brief: start iofw server
+ *
+ * @return: error code
+ */
+int iofw_server_start();
 
 #endif

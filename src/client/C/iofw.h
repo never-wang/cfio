@@ -22,28 +22,27 @@
 #include <netcdf.h>
 
 #include "mpi.h"
+#include "map.h"
 #include "iofw_types.h"
-
-#define IOFW_ERROR_NONE		    0
-#define IOFW_ERROR_TOO_MANY_OPEN    1 /* Too Many Open NC File */
-#define IOFW_ERROR_INIT		    2 /* error when init */
-#define IOFW_ERROR_NULL_DATA	    3 /* pointer to data is NULL */
-#define IOFW_ERROR_MALLOC	    4 /* malloc fail */
-#define IOFW_ERROR_ARGV		    5 /* wrong argv */
 
 #define SERVER_RATIO 0.125
 #define CLIENT_BUF_SIZE 1024*1024*1024
+
+#define IOFW_START(rank) \
+    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
+
+#define IOFW_END()	\
+    }			
+	
 /**
- * @brief: init
+ * @brief: init 
  *
  * @param x_proc_num: client proc number of x axis
  * @param y_proc_num: client proc number of y axis
- * @param server_ratio: server ratio, which means server_amount/client_amount = 
- *	server_ratio
  *
  * @return: error code
  */
-int iofw_init(int x_proc_num, int y_proc_num, int server_ratio);
+int iofw_init(int x_proc_num, int y_proc_num);
 
 /**
  * @brief iofw_Finalize : stop the iofw services, the function 

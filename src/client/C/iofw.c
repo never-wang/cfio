@@ -18,6 +18,8 @@
 #include <assert.h>
 #include <pthread.h>
 
+#include "mpi.h"
+
 #include "iofw.h"
 #include "map.h"
 #include "id.h"
@@ -25,25 +27,30 @@
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
-#include "mpi.h"
+#include "error.h"
 
 /* my real rank in mpi_comm_world */
 static int rank;
-/*  the number of the app proc*/
-int client_num;
-
+/*  the num of the app proc*/
+static int client_num;
 static MPI_Comm inter_comm;
 
-
-int iofw_init(int x_proc_num, int y_proc_num, int server_ratio)
+/**
+ * @brief: init 
+ *
+ * @param x_proc_num: client proc num of x axis
+ * @param y_proc_num: client proc num of y axis
+ *
+ * @return: error code
+ */
+int iofw_init(int x_proc_num, int y_proc_num)
 {
     int rc, i;
     int size;
     int root = 0;
     int error, ret;
     int server_proc_num;
-
-    char **argv;
+    int best_server_amount;
 
     //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_BUF);
 
@@ -54,75 +61,62 @@ int iofw_init(int x_proc_num, int y_proc_num, int server_ratio)
 	return -1;
     }
 
-    MPI_Comm_size(MPI_COMM_WORLD, &client_num);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if(x_proc_num * y_proc_num != client_num)
+    client_num = x_proc_num * y_proc_num;
+    if(client_num >= size) // client num >= total proc num
     {
-	error("Wrong argv");
-	return  -IOFW_ERROR_ARGV;
+	error("Process number should be client number + server number");
+	return IOFW_ERROR_INVALID_INIT_ARG;
     }
-    server_proc_num = (int)((double)client_num * server_ratio);
-    if(server_proc_num <= 0)
+    server_proc_num = size - client_num;
+    
+    best_server_amount = (int)((double)client_num * SERVER_RATIO);
+    if(best_server_amount <= 0)
     {
-	server_proc_num = 1;
-    }
-
-    argv = malloc(3 * sizeof(char*));
-    if(NULL == argv)
-    {
-	error("Malloc fail.");
-	return -IOFW_ERROR_MALLOC;
-    }
-    argv[0] = malloc(16);
-    memset(argv[0], 0, 16);
-    if(NULL == argv[0])
-    {
-	error("Malloc fail.");
-	return -IOFW_ERROR_MALLOC;
-    }
-    sprintf(argv[0], "%d", x_proc_num);
-    argv[1] = malloc(16);
-    memset(argv[1], 0, 16);
-    if(NULL == argv[1])
-    {
-	error("Malloc fail.");
-	return -IOFW_ERROR_MALLOC;
-    }
-    sprintf(argv[1], "%d", y_proc_num);
-    argv[2] = NULL;
-    ret = MPI_Comm_spawn("iofw_server", argv, server_proc_num,  
-	    MPI_INFO_NULL, root, MPI_COMM_WORLD, &inter_comm, &error);
-    free(argv[0]);
-    free(argv[1]);
-    free(argv);
-    if(ret != MPI_SUCCESS)
-    {
-	error("Spwan iofw server fail.");
-	return -IOFW_ERROR_INIT;
+	best_server_amount = 1;
     }
 
-    if(iofw_msg_init(CLIENT_BUF_SIZE) < 0)
-    {
-	error("Msg Init Fail.");
-	return -IOFW_ERROR_INIT;
-    }
-
-    if(iofw_id_init(IOFW_ID_INIT_CLIENT) < 0)
-    {
-	error("Id Init Fail.");
-	return -IOFW_ERROR_INIT;
-    }
-    if(iofw_map_init(x_proc_num, y_proc_num, server_proc_num, inter_comm) < 0)
+    if((ret = iofw_map_init(
+		    x_proc_num, y_proc_num, server_proc_num, 
+		    best_server_amount, MPI_COMM_WORLD)) < 0)
     {
 	error("Map Init Fail.");
-	return -IOFW_ERROR_INIT;
+	return ret;
+    }
+
+    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    {
+	if((ret = iofw_server_init()) < 0)
+	{
+	    error("");
+	    return ret;
+	}
+	if((ret = iofw_server_start()) < 0)
+	{
+	    error("");
+	    return ret;
+	}
+    }else if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    {
+	if((ret = iofw_msg_init(CLIENT_BUF_SIZE)) < 0)
+	{
+	    error("");
+	    return ret;
+	}
+
+	if((ret = iofw_id_init(IOFW_ID_INIT_CLIENT)) < 0)
+	{
+	    error("");
+	    return ret;
+	}
     }
 
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
-    
+
 int iofw_finalize()
 {
     int ret,flag;
@@ -132,18 +126,24 @@ int iofw_finalize()
     if(flag)
     {
 	error("***You should not call MPI_Finalize before iofw_Finalized*****\n");
-	return -1;
+	return IOFW_ERROR_FINAL_AFTER_MPI;
+    }
+    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    {
+	iofw_msg_pack_io_done(&msg, rank);
+	iofw_msg_isend(msg);
+    }
+    
+    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    {
+	iofw_server_final();
+    }else if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    {
+	iofw_id_final();
+	iofw_msg_final();
     }
 
-    iofw_msg_pack_io_done(&msg, rank);
-    iofw_msg_isend(msg);
-    
-    debug(DEBUG_IOFW, "Finish iofw_finalize");
-
     iofw_map_final();
-    iofw_id_final();
-    iofw_msg_final();
-
     debug(DEBUG_IOFW, "success return.");
     return 0;
 }

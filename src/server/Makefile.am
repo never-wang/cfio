@@ -1,4 +1,4 @@
-bin_PROGRAMS = iofw_server
-iofw_server_SOURCES = iofw_server.c iofw_server.h io.c io.h
-iofw_server_LDADD=../common/libcommon.a
-iofw_server_CFLAGS = -I../common
+noinst_LTLIBRARIES = libserver.la
+libserver_la_SOURCES = server.c server.h io.c io.h
+libserver_la_CFLAGS = -I../common
+libserver_la_LIBADD=../common/libcommon.la

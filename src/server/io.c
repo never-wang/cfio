@@ -19,15 +19,16 @@
 #include <netcdf.h>
 #include <assert.h>
 
+#include "mpi.h"
+
 #include "io.h"
 #include "id.h"
 #include "msg.h"
 #include "buffer.h"
 #include "debug.h"
-#include "mpi.h"
 #include "quickhash.h"
 #include "iofw_types.h"
-#include "mpi.h"
+#include "map.h"
 #include "define.h"
 
 static struct qhash_table *io_table;
@@ -82,12 +83,15 @@ static void _free(iofw_io_val_t *val)
 static inline void _add_bitmap(uint8_t *bitmap, int client_id)
 {
     int i, j;
+    int client_index;
 
     assert(client_id < iofw_map_get_client_amount());
     assert(bitmap != NULL);
 
-    i = client_id >> 3;
-    j = client_id - (i << 3);
+    client_index = iofw_map_get_client_index_of_server(client_id);
+
+    i = client_index >> 3;
+    j = client_index - (i << 3);
 
     bitmap[i] |= (1 << j);
 }
@@ -98,18 +102,33 @@ static inline void _add_bitmap(uint8_t *bitmap, int client_id)
  *
  * @param bitmap: 
  *
- * @return: error code
+ * @return: 1 if bitmap is full
  */
 static inline int _bitmap_full(uint8_t *bitmap)
 {
     int is_full;
-    int rank;
+    int i;
+    int head, tail;
+    int client_num;
+    
+    client_num = iofw_map_get_client_num_of_server(server_id);
+    head = client_num >> 3;
+    tail = client_num - (head << 3);
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    for(i = 0; i < head; i ++)
+    {
+	if(bitmap[i] != 255)
+	{
+	    return 0;
+	}
+    }
+    
+    if(bitmap[head] != ((1 << tail) - 1))
+    {
+	return 0;
+    }
 
-    iofw_map_is_bitmap_full(rank, bitmap, &is_full);
-
-    return is_full;
+    return 1;
 }
 
 /**
@@ -142,7 +161,7 @@ static inline int _recv_client_io(
     key.client_dim_id = client_dim_id;
     key.client_var_id = client_var_id;
 
-    client_num = iofw_map_get_client_amount();
+    client_num = iofw_map_get_client_num_of_server(server_id);
 
     if(NULL == (link = qhash_search(io_table, &key)))
     {
@@ -157,7 +176,8 @@ static inline int _recv_client_io(
     {
 	val = qlist_entry(link, iofw_io_val_t, hash_link);
     }
-    _add_bitmap(val->client_bitmap, client_id);
+    _add_bitmap(val->client_bitmap, 
+	    iofw_map_get_client_index_of_server(client_id));
     *io_info = val;
 
     return IOFW_IO_ERROR_NONE;
@@ -542,7 +562,7 @@ int iofw_io_def_var(int client_id)
 	 * the fisrst def var msg arrive, not need to free the name, start, count
 	 * and client_dim_ids
 	 **/
-	iofw_map_get_client_num_of_server(server_id, &client_num);
+	client_num = iofw_map_get_client_num_of_server(server_id);
 	iofw_id_map_var(name, client_nc_id, client_var_id, 
 		IOFW_ID_NC_INVALID, IOFW_ID_VAR_INVALID, 
 		ndims, client_dim_ids, start, count, xtype, client_num);
@@ -707,7 +727,7 @@ int iofw_io_put_vara(int client_id)
     _recv_client_io(
 	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
-    iofw_map_get_client_index_of_server(client_id, &client_index);
+    client_index = iofw_map_get_client_index_of_server(client_id);
     //TODO  check whether data_type is right
     if(IOFW_ID_ERROR_GET_NULL == iofw_id_put_var(
 		client_nc_id, client_var_id, client_index, 

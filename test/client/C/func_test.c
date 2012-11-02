@@ -39,9 +39,9 @@ int main(int argc, char** argv)
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
-    //set_debug_mask(DEBUG_ID); 
+    //assert(size == LAT_PROC * LON_PROC);
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_MAP | DEBUG_ID); 
+    set_debug_mask(DEBUG_MAP); 
     //set_debug_mask(DEBUG_TIME); 
     size_t start[2],count[2];
     start[0] = (rank / LAT_PROC) * (LAT / LAT_PROC);
@@ -56,7 +56,9 @@ int main(int argc, char** argv)
     }
 
 
-    iofw_init( LAT_PROC, LON_PROC, 0.1);
+    iofw_init( LAT_PROC, LON_PROC);
+    IOFW_START(rank);
+
     char fileName[100];
     memset(fileName, 0, sizeof(fileName));
     sprintf(fileName,"%s.nc",path);
@@ -70,15 +72,14 @@ int main(int argc, char** argv)
     iofw_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
     iofw_enddef(ncidp);
     iofw_put_vara_float(ncidp,var1, 2,start, count,fp); 
-    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-    //iofw_nc_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
     iofw_close(ncidp);
     free(fp);
 
+    IOFW_END();
     iofw_finalize();
-    //printf("fuck111111\n");
+    printf("Proc %d : fuck111111\n", rank);
     MPI_Finalize();
-    //printf("fuck22222\n");
+    printf("Proc %d : fuck22222\n", rank);
     return 0;
 }

@@ -37,9 +37,9 @@ int main(int argc, char** argv)
     char var_name[16];
     int var[valn];
 
-    if(4 != argc)
+    if(3 != argc)
     {
-	printf("Usage : perform_test LAT_PROC output_dir server_ratio\n");
+	printf("Usage : perform_test LAT_PROC output_dir\n");
 	return -1;
     }
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     times_start();
     times_start();
 
-    assert(size == LAT_PROC * LON_PROC);
+    //assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
@@ -71,12 +71,14 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( LAT_PROC, LON_PROC, atoi(argv[3]));
+    iofw_init( LAT_PROC, LON_PROC);
+    IOFW_START(rank);
     for(i = 0; i < 10; i ++)
     {
 	//sleep(4);
 	times_start();
 	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
+	printf("Proc %d : open file (%s)\n", rank, fileName);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
 	iofw_create(fileName, 0, &ncidp);
@@ -105,6 +107,7 @@ int main(int argc, char** argv)
     }
     free(fp);
 
+    IOFW_END();
     iofw_finalize();
     printf("proc %d iofw time : %f\n", rank, times_end());
     MPI_Finalize();

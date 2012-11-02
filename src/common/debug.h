@@ -18,11 +18,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define ENABLE_DEBUG
 //#define SVR_RECV_ONLY	/* server only do recieve */
 //#define SVR_UNPACK_ONLY	/* server recieve and unpack data from buffer, 
 //			   but handle client done only */
-
-#define ENABLE_DEBUG
 
 #define DEBUG_NONE  ((uint32_t)0)
 #define DEBUG_USER  ((uint32_t)1 << 0)

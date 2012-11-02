@@ -392,6 +392,8 @@ int iofw_id_map_var(
     
     debug(DEBUG_ID, "map ((%d, 0, %d)->(%d, 0, %d))",  
 	    client_nc_id, client_var_id, server_nc_id, server_var_id);
+    debug(DEBUG_ID, "client_num = %d",  
+	    client_num);
 
     return IOFW_ID_ERROR_NONE;
 }
