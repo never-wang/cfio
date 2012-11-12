@@ -34,8 +34,7 @@ static pthread_t reader;
 static int rank;
 static int server_proc_num;	    /* server group size */
 
-/* all the client report done */
-static int server_done = 0;
+static int reader_done, writer_done;
 
 static int decode(iofw_msg_t *msg)
 {	
@@ -49,54 +48,54 @@ static int decode(iofw_msg_t *msg)
     switch(code)
     {
 	case FUNC_NC_CREATE: 
-	    debug(DEBUG_USER,"server %d recv nc_create from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_create from client %d",
 		    rank, client_id);
 	    iofw_io_create(client_id);
-	    debug(DEBUG_USER, "server %d done nc_create for client %d\n",
+	    debug(DEBUG_SERVER, "server %d done nc_create for client %d\n",
 		    rank,client_id);
 	    return IOFW_ERROR_NONE;
 	case FUNC_NC_DEF_DIM:
-	    debug(DEBUG_USER,"server %d recv nc_def_dim from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_def_dim from client %d",
 		    rank, client_id);
 	    iofw_io_def_dim(client_id);
-	    debug(DEBUG_USER, "server %d done nc_def_dim for client %d\n",
+	    debug(DEBUG_SERVER, "server %d done nc_def_dim for client %d\n",
 		    rank,client_id);
 	    return IOFW_ERROR_NONE;
 	case FUNC_NC_DEF_VAR:
-	    debug(DEBUG_USER,"server %d recv nc_def_var from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_def_var from client %d",
 		    rank, client_id);
 	    iofw_io_def_var(client_id);
-	    debug(DEBUG_USER, "server %d done nc_def_var for client %d\n",
+	    debug(DEBUG_SERVER, "server %d done nc_def_var for client %d\n",
 		    rank,client_id);
 	    return IOFW_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
-	    debug(DEBUG_USER,"server %d recv nc_enddef from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_enddef from client %d",
 		    rank, client_id);
 	    iofw_io_enddef(client_id);
-	    debug(DEBUG_USER, "server %d done nc_enddef for client %d\n",
+	    debug(DEBUG_SERVER, "server %d done nc_enddef for client %d\n",
 		    rank,client_id);
 	    return IOFW_ERROR_NONE;
 	case FUNC_NC_PUT_VARA:
-	    debug(DEBUG_USER,"server %d recv nc_put_vara from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_put_vara from client %d",
 		    rank, client_id);
 	    iofw_io_put_vara(client_id);
-	    debug(DEBUG_USER, 
+	    debug(DEBUG_SERVER, 
 		    "server %d done nc_put_vara_float from client %d\n", 
 		    rank, client_id);
 	    return IOFW_ERROR_NONE;
 	case FUNC_NC_CLOSE:
-	    debug(DEBUG_USER,"server %d recv nc_close from client %d",
+	    debug(DEBUG_SERVER,"server %d recv nc_close from client %d",
 		    rank, client_id);
 	    iofw_io_close(client_id);
-	    debug(DEBUG_USER,"server %d received nc_close from client %d\n",
+	    debug(DEBUG_SERVER,"server %d received nc_close from client %d\n",
 		    rank, client_id);
 	    return IOFW_ERROR_NONE;
-	case CLIENT_END_IO:
-	    debug(DEBUG_USER,"server %d recv client_end_io from client %d",
-		    rank, client_id);
-	    iofw_io_client_done(client_id, &server_done);
-	    debug(DEBUG_USER, "server %d done client_end_io for client %d\n",
-		    rank,client_id);
+	case FUNC_END_IO:
+	    debug(DEBUG_SERVER,"server %d recv client_end_io from client %d",
+		    rank, msg->src);
+	    iofw_io_reader_done(msg->src, &reader_done);
+	    debug(DEBUG_SERVER, "server %d done client_end_io for client %d\n",
+		    rank,msg->src);
 	    return IOFW_ERROR_NONE;
 	default:
 	    error("server %d received unexpected msg from client %d",
@@ -105,37 +104,40 @@ static int decode(iofw_msg_t *msg)
     }	
 }
 
-static void * iofw_writer(void *argv)
+static void * iofw_reader(void *argv)
 {
     int ret = 0;
     iofw_msg_t *msg;
-    int count = 0;
-    while(!server_done)
+    
+    while(!reader_done)
     {
-	msg = iofw_msg_get_first();
-	if(NULL != msg)
-	{
-	    decode(msg);
-	}
+        msg = iofw_msg_get_first();
+        if(NULL != msg)
+        {
+            decode(msg);
+        }
     }
-
-    ret = pthread_cancel(reader);
-    if(ret < 0)
-    {
-	printf("cancel : %s\n", strerror(ret));
-    }else
-    {
-	printf("you are right\n");
-    }
-    debug(DEBUG_USER, "Server(%d) Writer done", rank);
+    
+    debug(DEBUG_SERVER, "Server(%d) Reader done", rank);
     return ((void *)0);
 }
-static void* iofw_reader(void *argv)
+static void* iofw_writer(void *argv)
 {
-    while(1)
+    iofw_msg_t *msg;
+
+    while(!writer_done)
     {
-	iofw_msg_recv(rank, iofw_map_get_comm());
+	iofw_msg_recv(rank, iofw_map_get_comm(), &msg);
+	if(msg->func_code == FUNC_END_IO)
+	{
+	    debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
+		    rank, msg->src);
+	    iofw_io_writer_done(msg->src, &writer_done);
+	    debug(DEBUG_SERVER, "server(writer) %d done client_end_io for client %d\n",
+		    rank,msg->src);
+	}
     }
+    debug(DEBUG_SERVER, "Server(%d) Writer done", rank);
     return ((void *)0);
 }
 
@@ -144,24 +146,24 @@ int iofw_server_start()
     int ret = 0;
 
 #ifndef SVR_RECV_ONLY
-    if( (ret = pthread_create(&writer,NULL,iofw_writer,NULL))<0  )
+    if( (ret = pthread_create(&reader,NULL,iofw_writer,NULL))<0  )
     {
-        error("Tread Writer create error()");
+        error("Thread Writer create error()");
         return IOFW_ERROR_PTHREAD_CREATE;
     }
 #endif
 
-    if( (ret = pthread_create(&reader,NULL,iofw_reader,NULL))<0  )
+    if( (ret = pthread_create(&writer,NULL,iofw_reader,NULL))<0  )
     {
-        error("Tread Reader create error()");
+        error("Thread Reader create error()");
         return IOFW_ERROR_PTHREAD_CREATE;
     }
 
 #ifndef SVR_RECV_ONLY
-    pthread_join(writer, NULL);
-#else
     pthread_join(reader, NULL);
 #endif
+
+    pthread_join(writer, NULL);
     return IOFW_ERROR_NONE;
 }
 
@@ -172,22 +174,14 @@ int iofw_server_init()
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if(rank == 0)
-    {
-	//set_debug_mask(DEBUG_MSG | DEBUG_USER | DEBUG_IO | DEBUG_ID | DEBUG_MAP);
-	//set_debug_mask(DEBUG_ID);
-	//set_debug_mask(DEBUG_TIME);
-    }
-
     if((ret = iofw_msg_init(SERVER_BUF_SIZE)) < 0)
     {
 	error("");
 	return ret;
     }
-    /**
-     * init for client and server num
-     **/
-    server_done = 0;
+    
+    reader_done = 0;
+    writer_done = 0;
     
     if((ret = iofw_id_init(IOFW_ID_INIT_SERVER)) < 0)
     {

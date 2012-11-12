@@ -148,7 +148,7 @@ int iofw_msg_isend(
     return IOFW_MSG_ERROR_NONE;
 }
 
-int iofw_msg_recv(int rank, MPI_Comm comm)
+int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
 {
     MPI_Status status;
     int size;
@@ -174,6 +174,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     msg->size = size;
     msg->src = status.MPI_SOURCE;
     msg->dst = rank;
+    // get the func_code but not unpack it
+    msg->func_code = *((uint32_t*)msg->addr); 
+    *_msg = msg;
 
 #ifndef SVR_RECV_ONLY
     use_buf(buffer, size);
@@ -187,6 +190,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm)
     
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_MSG, "success return");
+    
     return IOFW_MSG_ERROR_NONE;
 }
 
@@ -494,7 +498,7 @@ int iofw_msg_pack_close(
 int iofw_msg_pack_io_done(
 	iofw_msg_t **_msg, int client_proc_id)
 {
-    uint32_t code = CLIENT_END_IO;
+    uint32_t code = FUNC_END_IO;
     iofw_msg_t *msg;
     
     msg = create_msg();

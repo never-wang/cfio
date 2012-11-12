@@ -19,11 +19,7 @@
 #include "iofw.h"
 #include "debug.h"
 #include "times.h"
-
-#define LAT 4096
-#define LON 2048
-
-#define valn 8
+#include "test_def.h"
 
 int main(int argc, char** argv)
 {
@@ -35,19 +31,19 @@ int main(int argc, char** argv)
     size_t start[2],count[2];
     char fileName[100];
     char var_name[16];
-    int var[valn];
-
-    if(3 != argc)
-    {
-	printf("Usage : perform_test LAT_PROC output_dir\n");
-	return -1;
-    }
+    int var[VALN];
 
     LAT_PROC = LON_PROC = atoi(argv[1]);
 
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
 
+    if(3 != argc)
+    {
+	printf("Usage : perform_test LAT_PROC output_dir\n");
+	return -1;
+    }
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
@@ -57,7 +53,7 @@ int main(int argc, char** argv)
     times_start();
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
+    //set_debug_mask(DEBUG_SERVER | DEBUG_MSG); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
@@ -73,21 +69,18 @@ int main(int argc, char** argv)
 
     iofw_init( LAT_PROC, LON_PROC);
     IOFW_START(rank);
-    for(i = 0; i < 10; i ++)
+    for(i = 0; i < LOOP; i ++)
     {
-	//sleep(4);
+	sleep(SLEEP_TIME);
 	times_start();
 	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
-	printf("Proc %d : open file (%s)\n", rank, fileName);
 	int dimids[2];
-	debug_mark(DEBUG_USER);
 	iofw_create(fileName, 0, &ncidp);
-	debug_mark(DEBUG_USER);
 	int lat = LAT;
 	iofw_def_dim(ncidp, "lat", LAT,&dimids[0]);
 	iofw_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-	for(j = 0; j < valn; j++)
+	for(j = 0; j < VALN; j++)
 	{
 	    sprintf(var_name, "time_v%d", j);
 	    iofw_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, 
@@ -95,7 +88,7 @@ int main(int argc, char** argv)
 	}
 	iofw_enddef(ncidp);
 
-	for(j = 0; j < valn; j++)
+	for(j = 0; j < VALN; j++)
 	{
 	    iofw_put_vara_double(ncidp,var[j], 2,start, count,fp);
 	}

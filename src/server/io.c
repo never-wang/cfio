@@ -317,16 +317,32 @@ int iofw_io_final()
     return IOFW_IO_ERROR_NONE;
 }
 
-int iofw_io_client_done(int client_id, int *server_done)
+int iofw_io_reader_done(int client_id, int *server_done)
 {
-    int func_code = CLIENT_END_IO;
+    int func_code = FUNC_READER_END_IO;
     iofw_io_val_t *io_info;
 
     _recv_client_io(client_id, func_code, 0, 0, 0, &io_info);
 
     if(_bitmap_full(io_info->client_bitmap))
     {
-	debug(DEBUG_IO, "bit map full");
+	_remove_client_io(io_info);
+	*server_done = 1;
+    }
+
+    return IOFW_IO_ERROR_NONE;	
+}
+
+int iofw_io_writer_done(int client_id, int *server_done)
+{
+    int func_code = FUNC_WRITER_END_IO;
+    iofw_io_val_t *io_info;
+
+    _recv_client_io(client_id, func_code, 0, 0, 0, &io_info);
+
+    if(_bitmap_full(io_info->client_bitmap))
+    {
+	_remove_client_io(io_info);
 	*server_done = 1;
     }
 

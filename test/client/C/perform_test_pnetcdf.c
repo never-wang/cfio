@@ -19,32 +19,37 @@
 #include "debug.h"
 #include "pnetcdf.h"
 #include "times.h"
-
-#define LAT 8192
-#define LON 8192
+#include "test_def.h"
 
 int main(int argc, char** argv)
 {
     int rank, size;
     char *path = "./output/test";
     int ncidp;
-    int dim1,var1,i;
+    int dim1,var1,i, j;
 
     int LAT_PROC, LON_PROC;
     MPI_Offset start[2],count[2];
-
-    LAT_PROC = LON_PROC = atoi(argv[1]);
+    int var[VALN];
+    char var_name[16];
 
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
 
+    if(3 != argc)
+    {
+	printf("Usage : perform_test_pnetcdf LAT_PROC output_dir\n");
+	return -1;
+    }
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
-
+    
     times_init();
     times_start();
-
+    
+    LAT_PROC = LON_PROC = atoi(argv[1]);
     assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
@@ -60,9 +65,9 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    for(i = 0; i < 10; i ++)
+    for(i = 0; i < LOOP; i ++)
     {
-	sleep(1);
+	sleep(SLEEP_TIME);
 	times_start();
 	char fileName[100];
 	sprintf(fileName,"%s/pnetcdf-%d.nc", argv[2], i);
@@ -75,9 +80,18 @@ int main(int argc, char** argv)
 	ncmpi_def_dim(ncidp, "lon", LON,&dimids[1]);
 
 	ncmpi_def_var(ncidp,"time_v", NC_DOUBLE, 2,dimids,&var1);
+	for(j = 0; j < VALN; j++)
+	{
+	    sprintf(var_name, "time_v%d", j);
+	    ncmpi_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, &var[j]);
+	}
 	ncmpi_enddef(ncidp);
 
-	ncmpi_put_vara_double_all(ncidp,var1, start, count,fp);
+	for(j = 0; j < VALN; j++)
+	{
+	    ncmpi_put_vara_double_all(ncidp,var[j], start, count,fp);
+	}
+
 	ncmpi_close(ncidp);
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }

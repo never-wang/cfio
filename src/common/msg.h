@@ -23,7 +23,6 @@
 
 #define MSG_MAX_SIZE 1024*1024*256
 /* define for control messge */
-#define CLIENT_END_IO 201
 
 /**
  *define for nc function code
@@ -35,6 +34,10 @@
 #define FUNC_NC_DEF_VAR		((uint32_t)12)
 #define FUNC_DEF_VAR_RANGE	((uint32_t)13)
 #define FUNC_NC_PUT_VARA	((uint32_t)20)
+#define FUNC_END_IO		((uint32_t)40)
+/* below two are only used in io.c */
+#define FUNC_READER_END_IO		((uint32_t)41)
+#define FUNC_WRITER_END_IO		((uint32_t)42)
 
 #define IOFW_MSG_ERROR_NONE	0
 #define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
@@ -43,6 +46,7 @@
 
 typedef struct
 {
+    uint32_t func_code;	/* function code , like FUNC_NC_CREATE */
     size_t size;	/* size of the msg */
     char *addr;		/* pointer to the data buffer of the msg */   
     int src;		/* id of sending msg proc */
@@ -79,10 +83,11 @@ int iofw_msg_isend(iofw_msg_t *msg);
  *
  * @param rank: the rank of server who recv the msg
  * @param comm: MPI communicator
+ * @param _msg: point to the msg which is recieved
  *
  * @return: error code
  */
-int iofw_msg_recv(int rank, MPI_Comm comm);
+int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg);
 
 /**
  * @brief: get the first msg in msg queue

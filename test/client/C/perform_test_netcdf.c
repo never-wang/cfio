@@ -18,11 +18,7 @@
 #include "debug.h"
 #include "netcdf.h"
 #include "times.h"
-
-#define LAT 4096
-#define LON 2048
-
-#define valn 8
+#include "test_def.h"
 
 int main(int argc, char** argv)
 {
@@ -34,7 +30,13 @@ int main(int argc, char** argv)
 
     size_t len = 10;
     char var_name[16];
-    int var[valn];
+    int var[VALN];
+    
+    if(2 != argc)
+    {
+	printf("Usage : perform_test_netcdf output_dir\n");
+	return -1;
+    }
 
     times_init();
 
@@ -54,7 +56,7 @@ int main(int argc, char** argv)
     }
 
     times_start();
-    for(i = 0; i < 10; i ++)
+    for(i = 0; i < LOOP; i ++)
     {
 	times_start();
 	char fileName[100];
@@ -67,14 +69,15 @@ int main(int argc, char** argv)
 	nc_def_dim(ncidp, "lat", lat,&dimids[0]);
 	nc_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-	for(j = 0; j < valn; j++)
+	for(j = 0; j < VALN; j++)
 	{
 	    sprintf(var_name, "time_v%d", j);
 	    nc_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids,&var[j]);
 	}
 	nc_enddef(ncidp);
 
-	for(j = 0; j < valn; j++)
+
+	for(j = 0; j < VALN; j++)
 	{
 	    nc_put_vara_double(ncidp,var[j], start, count,fp);
 	}

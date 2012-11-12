@@ -164,7 +164,6 @@ int iofw_map_init(
 {
     assert(_client_x_num > 0);
     assert(_client_y_num > 0);
-    assert(_server_amount > 0);
     assert(best_server_amount > 0);
 
     int i, ret;

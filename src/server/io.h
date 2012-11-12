@@ -78,7 +78,8 @@ int iofw_io_init();
  * @return: error code
  */
 int iofw_io_final();
-int iofw_io_client_done(int client_id, int *server_done);
+int iofw_io_reader_done(int client_id, int *server_done);
+int iofw_io_writer_done(int client_id, int *server_done);
 int iofw_io_create(int client_proc);
 int iofw_io_def_dim(int client_proc);
 int iofw_io_def_var(int client_proc);

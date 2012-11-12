@@ -65,12 +65,11 @@ int iofw_init(int x_proc_num, int y_proc_num)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     client_num = x_proc_num * y_proc_num;
-    if(client_num >= size) // client num >= total proc num
-    {
-	error("Process number should be client number + server number");
-	return IOFW_ERROR_INVALID_INIT_ARG;
-    }
     server_proc_num = size - client_num;
+    if(server_proc_num < 0)
+    {
+	server_proc_num = 0;
+    }
     
     best_server_amount = (int)((double)client_num * SERVER_RATIO);
     if(best_server_amount <= 0)
