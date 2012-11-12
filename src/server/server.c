@@ -146,14 +146,14 @@ int iofw_server_start()
     int ret = 0;
 
 #ifndef SVR_RECV_ONLY
-    if( (ret = pthread_create(&reader,NULL,iofw_writer,NULL))<0  )
+    if( (ret = pthread_create(&reader,NULL,iofw_reader,NULL))<0  )
     {
         error("Thread Writer create error()");
         return IOFW_ERROR_PTHREAD_CREATE;
     }
 #endif
 
-    if( (ret = pthread_create(&writer,NULL,iofw_reader,NULL))<0  )
+    if( (ret = pthread_create(&writer,NULL,iofw_writer,NULL))<0  )
     {
         error("Thread Reader create error()");
         return IOFW_ERROR_PTHREAD_CREATE;
