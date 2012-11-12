@@ -22,19 +22,12 @@
 #define MAX_OPEN_NC_NUM 1024
 #define MAP_HASH_TABLE_SIZE 1024
 
-#define IOFW_ID_INIT_CLIENT 0
-#define IOFW_ID_INIT_SERVER 1
+#define IOFW_ID_INIT_CLIENT	    0
+#define IOFW_ID_INIT_SERVER	    1
 
-#define IOFW_ID_ERROR_NONE	     0
-#define IOFW_ID_ERROR_TOO_MANY_OPEN -1	/* the opened nc file amount exceed 
-					   MAX_OPEN_NC_NUM */
-#define IOFW_ID_ERROR_GET_NULL	    -2	/* can't find the client id in Map Hash 
+/* return value of iofw_id_get_* */
+#define IOFW_ID_HASH_GET_NULL	    1	/* can't find the client id in Map Hash 
 					   Table*/
-#define IOFW_ID_ERROR_WRONG_FLAG    -3  /* wrong flag in iofw_id_init */
-#define IOFW_ID_ERROR_EXCEED_BOUND  -4	/* data index exceeds dimension bound */
-#define IOFW_ID_ERROR_MALLOC	    -5	/* malloc fail */
-#define IOFW_ID_ERROR_VAR_NULL	    -6	/* var data pointer is NULL */
-
 #define DEFINE_MODE 0
 #define DATA_MODE   1
 

@@ -19,11 +19,17 @@
 
 #define IOFW_ERROR_MALLOC	    -1
 #define IOFW_ERROR_INVALID_INIT_ARG -2
-#define IOFW_ERROR_TOO_MANY_OPEN    -3 /* Too Many Open NC File */
+#define IOFW_ERROR_TOO_MANY_OPEN    -3	    /* Too Many Open NC File */
 /* In server.c */
 #define IOFW_ERROR_PTHREAD_CREATE   -100
 #define IOFW_ERROR_UNEXPECTED_MSG   -101
 /* In iofw.c */
-#define IOFW_ERROR_FINAL_AFTER_MPI  -200
+#define IOFW_ERROR_FINAL_AFTER_MPI  -200    /* iofw_final should be called before
+					       mpi_final*/
+#define IOFW_ERROR_RANK_INVALID	    -201    
+/* In msg.c */
+#define IOFW_ERROR_MPI_RECV	    -300    /* MPI_Recv error */
+/* In id.c */
+#define IOFW_ERROR_EXCEED_BOUND	    -400    /* data index exceeds dimension bound */
 
 #endif

@@ -17,7 +17,7 @@
 #include "mpi.h"
 #include "map.h"
 #include "debug.h"
-#include "error.h"
+#include "iofw_error.h"
 
 static int client_amount;
 static int client_x_num;

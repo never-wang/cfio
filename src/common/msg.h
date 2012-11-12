@@ -39,11 +39,6 @@
 #define FUNC_READER_END_IO		((uint32_t)41)
 #define FUNC_WRITER_END_IO		((uint32_t)42)
 
-#define IOFW_MSG_ERROR_NONE	0
-#define IOFW_MSG_ERROR_BUFFER	1   /* buffer error */
-#define IOFW_MSG_ERROR_MALLOC	2   /* malloc error */
-#define IOFW_MSG_ERROR_MPI	3   /* mpi recv error */
-
 typedef struct
 {
     uint32_t func_code;	/* function code , like FUNC_NC_CREATE */

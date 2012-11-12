@@ -27,7 +27,7 @@
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
-#include "error.h"
+#include "iofw_error.h"
 
 /* my real rank in mpi_comm_world */
 static int rank;
@@ -147,6 +147,17 @@ int iofw_finalize()
     return 0;
 }
 
+int iofw_proc_type(int rank)
+{
+    if(rank < 0)
+    {
+	error("rank should be positive.");
+	return IOFW_ERROR_RANK_INVALID;
+    }
+
+    return iofw_map_proc_type(rank);
+}
+
 /**
  * @brief: create
  *
@@ -166,7 +177,7 @@ int iofw_create(
     int ret;
 
     ret = iofw_id_assign_nc(ncidp);
-    if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
+    if(IOFW_ERROR_TOO_MANY_OPEN == ret)
     {
 	return -IOFW_ERROR_TOO_MANY_OPEN;
     }

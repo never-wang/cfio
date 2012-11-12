@@ -28,6 +28,10 @@
 #define SERVER_RATIO 0.125
 #define CLIENT_BUF_SIZE 1024*1024*1024
 
+#define IOFW_PROC_CLIENT IOFW_MAP_TYPE_CLIENT
+#define IOFW_PROC_SERVER IOFW_MAP_TYPE_SERVER
+#define IOFW_PROC_BLANK
+
 #define IOFW_START(rank) \
     if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
 
@@ -51,6 +55,14 @@ int iofw_init(int x_proc_num, int y_proc_num);
  * @return 
  */
 int iofw_finalize();
+/**
+ * @brief: get the process type, client, server or blank
+ *
+ * @param rank: rank of the proccess
+ *
+ * @return: the proccess type
+ */
+int iofw_proc_type(int rank);
 /**
  * @brief: iofw_create
  *

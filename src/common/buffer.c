@@ -16,6 +16,7 @@
 
 #include "debug.h"
 #include "buffer.h"
+#include "iofw_error.h"
 
 /**
  * @brief: 
@@ -55,7 +56,8 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error)
 
     if(NULL == buf_p)
     {
-	SET_ERROR(error, IOFW_BUF_ERROR_SBRK);
+	SET_ERROR(error, IOFW_ERROR_MALLOC);
+	error("malloc for buf fail.");
 	return NULL;
     }
 
@@ -76,7 +78,7 @@ int iofw_buf_close(iofw_buf_t *buf_p)
 	buf_p = NULL;
     }
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_buf_clear(iofw_buf_t *buf_p)
@@ -87,7 +89,7 @@ int iofw_buf_clear(iofw_buf_t *buf_p)
 
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 size_t iofw_buf_pack_size(
@@ -109,7 +111,7 @@ int iofw_buf_pack_data(
     put_buf_data(buf_p, data, size);
     use_buf(buf_p, size);
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 int iofw_buf_unpack_data(
 	void *data, size_t size, iofw_buf_t *buf_p)
@@ -124,7 +126,7 @@ int iofw_buf_unpack_data(
 
     get_buf_data(buf_p, data, size);
     free_buf(buf_p, size);
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 size_t iofw_buf_pack_array_size(
@@ -156,7 +158,7 @@ int iofw_buf_pack_data_array(
     put_buf_data(buf_p, data, data_size);
     use_buf(buf_p, data_size);
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_buf_unpack_data_array(
@@ -183,7 +185,7 @@ int iofw_buf_unpack_data_array(
 
     if(0 == _len)
     {
-	return IOFW_BUF_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 
     data_size = _len * size;
@@ -196,7 +198,7 @@ int iofw_buf_unpack_data_array(
     get_buf_data(buf_p, *data, data_size);
     free_buf(buf_p, data_size);
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_buf_unpack_data_array_ptr(
@@ -227,5 +229,5 @@ int iofw_buf_unpack_data_array_ptr(
 
     (*data) = buf_p->used_addr;
 
-    return IOFW_BUF_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
