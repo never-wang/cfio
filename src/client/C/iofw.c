@@ -144,7 +144,7 @@ int iofw_finalize()
 
     iofw_map_final();
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_proc_type(int rank)
@@ -170,16 +170,19 @@ int iofw_proc_type(int rank)
 int iofw_create(
 	const char *path, int cmode, int *ncidp)
 {
-    assert(path != NULL);
-    assert(ncidp != NULL);
+    if(path == NULL || ncidp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
 
     iofw_msg_t *msg;
     int ret;
 
-    ret = iofw_id_assign_nc(ncidp);
-    if(IOFW_ERROR_TOO_MANY_OPEN == ret)
+    if((ret = iofw_id_assign_nc(ncidp)) < 0)
     {
-	return -IOFW_ERROR_TOO_MANY_OPEN;
+	error("");
+	return ret;
     }
 
     iofw_msg_pack_create(&msg, rank, path, cmode, *ncidp);
@@ -201,21 +204,30 @@ int iofw_create(
 int iofw_def_dim(
 	int ncid, const char *name, size_t len, int *idp)
 {
-    assert(name != NULL);
-    assert(idp != NULL);
+    if(name == NULL || idp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+    
+    int ret;
 
     debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
 	    ncid, name, len);
     
     iofw_msg_t *msg;
 
-    iofw_id_assign_dim(ncid, idp);
+    if((ret = iofw_id_assign_dim(ncid, idp)) < 0)
+    {
+	error("");
+	return ret;
+    }
 
     iofw_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_def_var(
@@ -224,23 +236,29 @@ int iofw_def_var(
 	const size_t *start, const size_t *count, 
 	int *varidp)
 {
+    if(name == NULL || varidp == NULL || start == NULL || count == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+    
     debug(DEBUG_IOFW, "ndims = %d", ndims);
 
-    assert(name != NULL);
-    assert(varidp != NULL);
-    assert(start != NULL);
-    assert(count != NULL);
-
     iofw_msg_t *msg;
+    int ret;
 
-    iofw_id_assign_var(ncid, varidp);
+    if((ret = iofw_id_assign_var(ncid, varidp)) < 0)
+    {
+	error("");
+	return ret;
+    }
     
     iofw_msg_pack_def_var(&msg, rank, ncid, name, xtype, 
 	    ndims, dimids, start, count, *varidp);
     iofw_msg_isend(msg);
     
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_enddef(
@@ -252,7 +270,7 @@ int iofw_enddef(
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 //TODO Maybe can rewrite so better performance
@@ -347,14 +365,19 @@ int iofw_enddef(
 //
 //    //debug(DEBUG_TIME, "%f ms", times_end());
 //    debug(DEBUG_IOFW, "success return.");
-//    return 0;
+//    return IOFW_ERROR_NONE;
 //}
 
 int iofw_put_vara_float(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp)
 {
-    //size_t head_size;
+    if(start == NULL || count == NULL || fp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+
     iofw_msg_t *msg;
 
     //times_start();
@@ -371,14 +394,19 @@ int iofw_put_vara_float(
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_put_vara_double(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const double *fp)
 {
-    //size_t head_size;
+    if(start == NULL || count == NULL || fp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+
     iofw_msg_t *msg;
 
 	//times_start();
@@ -397,7 +425,7 @@ int iofw_put_vara_double(
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_close(
@@ -405,14 +433,20 @@ int iofw_close(
 {
 
     iofw_msg_t *msg;
+    int ret;
     //times_start();
 
+    if((ret = iofw_id_remove_nc(ncid)) < 0)
+    {
+	error("");
+	return ret;
+    }
     iofw_msg_pack_close(&msg, rank, ncid);
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "Finish iofw_close");
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 /**

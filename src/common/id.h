@@ -19,8 +19,8 @@
 
 #include "quicklist.h"
 
-#define MAX_OPEN_NC_NUM 1024
 #define MAP_HASH_TABLE_SIZE 1024
+#define ASSIGN_HASH_TABLE_SIZE 1024
 
 #define IOFW_ID_INIT_CLIENT	    0
 #define IOFW_ID_INIT_SERVER	    1
@@ -108,6 +108,8 @@ typedef struct
     int client_nc_id;	/* id of nc file in client */
     int client_dim_id;	/* id of nc dim in client */
     int client_var_id;	/* id of nc var in client */
+    int client_var_a;	/* amount of defined var in client*/
+    int client_dim_a;	/* amount of defined dim in client*/
     iofw_id_nc_t *nc;   /* nc file infomation in server */
     iofw_id_dim_t *dim; /* dim infomation in server */
     iofw_id_var_t *var; /* nc var infomation in server */
@@ -137,6 +139,14 @@ int iofw_id_final();
  * @return: error code
  */
 int iofw_id_assign_nc(int *nc_id);
+/**
+ * @brief: remove a nc_id from the assign_table, it will be called in iofw_close
+ *
+ * @param nc_id: the nc_id
+ *
+ * @return: error code
+ */
+int iofw_id_remove_nc(int nc_id);
 /**
  * @brief: assign a nc dim id in client
  *

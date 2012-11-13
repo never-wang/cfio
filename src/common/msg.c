@@ -633,7 +633,7 @@ int iofw_msg_unpack_put_vara(
 
     debug(DEBUG_MSG, "ncid = %d, varid = %d, ndims = %d, data_len = %u", 
 	    *ncid, *varid, *ndims, *data_len);
-    debug(DEBUG_MSG, "fp[0] = %f", (*fp)[0]); 
+    //debug(DEBUG_MSG, "fp[0] = %f", (*fp)[0]); 
     
     return IOFW_ERROR_NONE;
 }

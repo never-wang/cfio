@@ -1,5 +1,5 @@
 /****************************************************************************
- *       Filename:  error.h
+ *       Filename:  iofw_error.h
  *
  *    Description:  macro define for errors
  *
@@ -12,14 +12,15 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
-#ifndef _ERROR_H
-#define _ERROR_H
+#ifndef _IOFW_ERROR_H
+#define _IOFW_ERROR_H
 
 #define IOFW_ERROR_NONE               0
 
 #define IOFW_ERROR_MALLOC	    -1
-#define IOFW_ERROR_INVALID_INIT_ARG -2
-#define IOFW_ERROR_TOO_MANY_OPEN    -3	    /* Too Many Open NC File */
+#define IOFW_ERROR_HASH_TABLE_INIT  -2    /* data index exceeds dimension bound */
+#define IOFW_ERROR_INVALID_INIT_ARG -3
+#define IOFW_ERROR_ARG_NULL	    -4	    /* some arg is NULL */
 /* In server.c */
 #define IOFW_ERROR_PTHREAD_CREATE   -100
 #define IOFW_ERROR_UNEXPECTED_MSG   -101
@@ -31,5 +32,6 @@
 #define IOFW_ERROR_MPI_RECV	    -300    /* MPI_Recv error */
 /* In id.c */
 #define IOFW_ERROR_EXCEED_BOUND	    -400    /* data index exceeds dimension bound */
+#define IOFW_ERROR_NC_NO_EXIST	    -401    /* nc_id not found in assign_table */
 
 #endif

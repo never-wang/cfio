@@ -23,9 +23,9 @@
 #include "quickhash.h"
 #include "map.h"
 
-static int open_nc_a;  /* amount of opened nc file */
-static struct qhash_table *
-static struct qhash_table *map_table;
+static int open_nc_a;  /* amount of opened nc file , assigned as new nc id*/
+static struct qhash_table *assign_table; /* used for assign id in client*/
+static struct qhash_table *map_table;	/* used for map id in server */
 
 static int _compare(void *key, struct qhash_head *link)
 {
@@ -191,17 +191,27 @@ static int _put_var(
 
 int iofw_id_init(int flag)
 {
-    open_nc = NULL;
+    open_nc_a = 0;
+    assign_table = NULL;
     map_table = NULL;
 
     switch(flag)
     {
 	case IOFW_ID_INIT_CLIENT :
-	    open_nc = malloc(MAX_OPEN_NC_NUM * sizeof(iofw_nc_t));
-	    memset(open_nc, 0, MAX_OPEN_NC_NUM * sizeof(iofw_nc_t));
+	    assign_table = qhash_init(_compare, _hash, ASSIGN_HASH_TABLE_SIZE);
+	    if(assign_table == NULL)
+	    {
+		error("assign_table init fail.");
+		return IOFW_ERROR_HASH_TABLE_INIT;
+	    }
 	    break;
 	case IOFW_ID_INIT_SERVER :
 	    map_table = qhash_init(_compare,_hash, MAP_HASH_TABLE_SIZE);
+	    if(map_table == NULL)
+	    {
+		error("map_table init fail.");
+		return IOFW_ERROR_HASH_TABLE_INIT;
+	    }
 	    break;
 	default :
 	    error("This should not happen.");
@@ -213,10 +223,11 @@ int iofw_id_init(int flag)
 
 int iofw_id_final()
 {
-    if(NULL != open_nc)
+    if(NULL != assign_table)
     {
-	free(open_nc);
-	open_nc = NULL;
+	qhash_destroy_and_finalize(assign_table, iofw_id_val_t, 
+		hash_link, _val_free);
+	assign_table = NULL;
     }
 
     if(NULL != map_table)
@@ -225,55 +236,107 @@ int iofw_id_final()
 	map_table = NULL;
     }
 
+    debug(DEBUG_ID, "success return.");
     return IOFW_ERROR_NONE;
 }
 
 int iofw_id_assign_nc(int *nc_id)
 {
+    assert(nc_id != NULL);
+
     int i;
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
 
     open_nc_a ++;
-    if(open_nc_a > MAX_OPEN_NC_NUM)
-    {
-	open_nc_a --;
-	return IOFW_ERROR_TOO_MANY_OPEN;
-    }
-
-    for(i = 0; i < MAX_OPEN_NC_NUM; i ++)
-    {
-	if(!open_nc[i].used)
-	{
-	    open_nc[i].used = 1;
-	    open_nc[i].var_a = 0;
-	    open_nc[i].dim_a = 0;
-	    *nc_id = open_nc[i].id = i + 1;
-	    break;
-	}
-    }
     
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = open_nc_a;
+
+    val = malloc(sizeof(iofw_id_val_t));
+    if(val == NULL)
+    {
+	error("malloc fail.");
+	return IOFW_ERROR_MALLOC;
+    }
+    memset(val, 0, sizeof(iofw_id_val_t));
+    val->client_nc_id = open_nc_a;
+    qhash_add(assign_table, &key, &(val->hash_link));
+    *nc_id = open_nc_a;
     debug(DEBUG_ID, "assign nc_id = %d", *nc_id);
 
-    assert(i != MAX_OPEN_NC_NUM);
-
+    debug(DEBUG_ID, "success return.");
     return IOFW_ERROR_NONE;
+}
+
+int iofw_id_remove_nc(int nc_id)
+{
+    iofw_id_key_t key;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
+
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	qhash_del(link);
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_assign_dim(int nc_id, int *dim_id)
 {
-    assert(open_nc[nc_id - 1].id == nc_id);
+    assert(dim_id != NULL);
     
-    *dim_id = (++ open_nc[nc_id - 1].dim_a);
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
 
-    return IOFW_ERROR_NONE;
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val->client_dim_a ++;
+	*dim_id = val->client_dim_a;
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_assign_var(int nc_id, int *var_id)
 {
-    assert(open_nc[nc_id - 1].id == nc_id);
-    
-    *var_id = (++ open_nc[nc_id - 1].var_a);
+    assert(var_id != NULL);
 
-    return IOFW_ERROR_NONE;
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
+
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val->client_var_a ++;
+	*var_id = val->client_var_a;
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_map_nc(
