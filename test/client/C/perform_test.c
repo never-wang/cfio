@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( LAT_PROC, LON_PROC);
+    iofw_init( LAT_PROC, LON_PROC, IOFW_RATIO);
     IOFW_START(rank);
     for(i = 0; i < LOOP; i ++)
     {

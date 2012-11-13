@@ -35,15 +35,7 @@ static int rank;
 static int client_num;
 static MPI_Comm inter_comm;
 
-/**
- * @brief: init 
- *
- * @param x_proc_num: client proc num of x axis
- * @param y_proc_num: client proc num of y axis
- *
- * @return: error code
- */
-int iofw_init(int x_proc_num, int y_proc_num)
+int iofw_init(int x_proc_num, int y_proc_num, int ratio)
 {
     int rc, i;
     int size;
@@ -71,7 +63,7 @@ int iofw_init(int x_proc_num, int y_proc_num)
 	server_proc_num = 0;
     }
     
-    best_server_amount = (int)((double)client_num * SERVER_RATIO);
+    best_server_amount = (int)((double)client_num / ratio);
     if(best_server_amount <= 0)
     {
 	best_server_amount = 1;

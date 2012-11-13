@@ -125,7 +125,7 @@ static int _gen_server_x_and_y(int best_server_amount)
 	}
     }
 
-    if(((double)(min_sub) / (double)(best_server_amount)) < 0.1)
+    if(((double)(min_sub) / (double)(best_server_amount)) < GEN_SERVER_ERROR)
     {
 	best_server_amount = factor_x[min_index_x] * factor_y[min_index_y];
 	debug(DEBUG_MAP, "best_server_amount : %d(%d*%d); client_amount : %d",

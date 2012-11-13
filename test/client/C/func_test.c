@@ -25,6 +25,8 @@
 #define LAT_PROC 3
 #define LON_PROC 3
 
+#define ratio 8
+
 int main(int argc, char** argv)
 {
     int rank, size;
@@ -43,7 +45,7 @@ int main(int argc, char** argv)
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_MAP | DEBUG_ID); 
     //set_debug_mask(DEBUG_MAP); 
     //set_debug_mask(DEBUG_TIME); 
-    set_debug_mask(DEBUG_SERVER); 
+    //set_debug_mask(DEBUG_SERVER); 
     size_t start[2],count[2];
     start[0] = (rank / LAT_PROC) * (LAT / LAT_PROC);
     start[1] = (rank % LON_PROC) * (LON / LON_PROC);
@@ -57,7 +59,7 @@ int main(int argc, char** argv)
     }
 
 
-    iofw_init( LAT_PROC, LON_PROC);
+    iofw_init( LAT_PROC, LON_PROC, ratio);
     IOFW_START(rank);
 
     char fileName[100];
