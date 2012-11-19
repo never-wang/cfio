@@ -33,8 +33,6 @@ int main(int argc, char** argv)
     char var_name[16];
     int var[VALN];
 
-    LAT_PROC = LON_PROC = atoi(argv[1]);
-
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -43,6 +41,8 @@ int main(int argc, char** argv)
 	printf("Usage : perform_test LAT_PROC output_dir\n");
 	return -1;
     }
+    
+    LAT_PROC = LON_PROC = atoi(argv[1]);
     
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( LAT_PROC, LON_PROC);
+    iofw_init( LAT_PROC, LON_PROC, IOFW_RATIO);
     IOFW_START(rank);
     for(i = 0; i < LOOP; i ++)
     {

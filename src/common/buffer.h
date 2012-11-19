@@ -19,12 +19,6 @@
 
 #include "debug.h"
 
-#define IOFW_BUF_ERROR_NONE	0
-#define IOFW_BUF_ERROR_NO_MEM	1 /* the buffer has no available memory */
-#define IOFW_BUF_ERROR_NO_DATA	2 /* the buffer has no enough data to unpack */
-#define IOFW_BUF_ERROR_SBRK	3 /* sbrk fail */
-#define IOFW_BUF_ERROR_OVER	4 /* the iofw_buf_t struct was overwritten */
-
 #define IOFW_BUF_MAGIC 0xABCD
 
 #define SET_ERROR(pnt, val) \

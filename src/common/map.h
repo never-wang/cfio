@@ -16,6 +16,8 @@
 #define _MAP_H
 #include "msg.h"
 
+#define GEN_SERVER_ERROR	0.4
+
 #define IOFW_MAP_TYPE_SERVER	1
 #define IOFW_MAP_TYPE_CLIENT	2
 #define IOFW_MAP_TYPE_BLANK	3 /* the proc who do nothing, because someon may 

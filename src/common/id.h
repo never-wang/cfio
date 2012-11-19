@@ -19,22 +19,15 @@
 
 #include "quicklist.h"
 
-#define MAX_OPEN_NC_NUM 1024
 #define MAP_HASH_TABLE_SIZE 1024
+#define ASSIGN_HASH_TABLE_SIZE 1024
 
-#define IOFW_ID_INIT_CLIENT 0
-#define IOFW_ID_INIT_SERVER 1
+#define IOFW_ID_INIT_CLIENT	    0
+#define IOFW_ID_INIT_SERVER	    1
 
-#define IOFW_ID_ERROR_NONE	     0
-#define IOFW_ID_ERROR_TOO_MANY_OPEN -1	/* the opened nc file amount exceed 
-					   MAX_OPEN_NC_NUM */
-#define IOFW_ID_ERROR_GET_NULL	    -2	/* can't find the client id in Map Hash 
+/* return value of iofw_id_get_* */
+#define IOFW_ID_HASH_GET_NULL	    1	/* can't find the client id in Map Hash 
 					   Table*/
-#define IOFW_ID_ERROR_WRONG_FLAG    -3  /* wrong flag in iofw_id_init */
-#define IOFW_ID_ERROR_EXCEED_BOUND  -4	/* data index exceeds dimension bound */
-#define IOFW_ID_ERROR_MALLOC	    -5	/* malloc fail */
-#define IOFW_ID_ERROR_VAR_NULL	    -6	/* var data pointer is NULL */
-
 #define DEFINE_MODE 0
 #define DATA_MODE   1
 
@@ -115,6 +108,8 @@ typedef struct
     int client_nc_id;	/* id of nc file in client */
     int client_dim_id;	/* id of nc dim in client */
     int client_var_id;	/* id of nc var in client */
+    int client_var_a;	/* amount of defined var in client*/
+    int client_dim_a;	/* amount of defined dim in client*/
     iofw_id_nc_t *nc;   /* nc file infomation in server */
     iofw_id_dim_t *dim; /* dim infomation in server */
     iofw_id_var_t *var; /* nc var infomation in server */
@@ -144,6 +139,14 @@ int iofw_id_final();
  * @return: error code
  */
 int iofw_id_assign_nc(int *nc_id);
+/**
+ * @brief: remove a nc_id from the assign_table, it will be called in iofw_close
+ *
+ * @param nc_id: the nc_id
+ *
+ * @return: error code
+ */
+int iofw_id_remove_nc(int nc_id);
 /**
  * @brief: assign a nc dim id in client
  *

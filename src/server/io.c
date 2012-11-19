@@ -373,7 +373,7 @@ int iofw_io_create(int client_id)
 
     _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
     
-    if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
 	iofw_id_map_nc(client_nc_id, IOFW_ID_NC_INVALID);
     }
@@ -390,7 +390,7 @@ int iofw_io_create(int client_id)
 	    goto RETURN;
 	}
 
-	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
 	    iofw_id_map_nc(client_nc_id, nc_id);
 	}else
@@ -435,6 +435,9 @@ int iofw_io_def_dim(int client_id)
     int return_code;
 
     iofw_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
+    
+    debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
+	    client_nc_id, name, len);
 
 #ifdef SVR_UNPACK_ONLY
     free(name);
@@ -444,14 +447,14 @@ int iofw_io_def_dim(int client_id)
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, client_dim_id, 0, &io_info);
 	
-    if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
 	return_code = IOFW_IO_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
 
-    if(IOFW_ID_ERROR_GET_NULL == 
+    if(IOFW_ID_HASH_GET_NULL == 
             iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
     {
         iofw_id_map_dim(name, client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
@@ -485,7 +488,7 @@ int iofw_io_def_dim(int client_id)
     //        goto RETURN;
     //    }
     //    
-    //    if(IOFW_ID_ERROR_GET_NULL == 
+    //    if(IOFW_ID_HASH_GET_NULL == 
     //    	iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
     //    {
     //        iofw_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
@@ -533,7 +536,7 @@ int iofw_io_def_var(int client_id)
 
     ret = iofw_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
 	    &client_dim_ids, &start, &count, &client_var_id);
-
+    
 #ifdef SVR_UNPACK_ONLY
     free(name);
     free(start);
@@ -553,7 +556,7 @@ int iofw_io_def_var(int client_id)
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
-    if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
 	return_code = IOFW_IO_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
@@ -562,7 +565,7 @@ int iofw_io_def_var(int client_id)
 	
     for(i = 0; i < ndims; i ++)
     {
-	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_dim(
+	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_dim(
 		    client_nc_id, client_dim_ids[i], &dims[i]))
 	{
 	    debug(DEBUG_IO, "Invalid Dim.");
@@ -571,7 +574,7 @@ int iofw_io_def_var(int client_id)
 	}
     }
 
-    if(IOFW_ID_ERROR_GET_NULL == 
+    if(IOFW_ID_HASH_GET_NULL == 
 	    iofw_id_get_var(client_nc_id, client_var_id, &var))
     {
 	/**
@@ -670,7 +673,7 @@ int iofw_io_enddef(int client_id)
     if(_bitmap_full(io_info->client_bitmap))
     {
 
-	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
 	    return IOFW_IO_ERROR_INVALID_NC;
@@ -745,7 +748,7 @@ int iofw_io_put_vara(int client_id)
 
     client_index = iofw_map_get_client_index_of_server(client_id);
     //TODO  check whether data_type is right
-    if(IOFW_ID_ERROR_GET_NULL == iofw_id_put_var(
+    if(IOFW_ID_HASH_GET_NULL == iofw_id_put_var(
 		client_nc_id, client_var_id, client_index, 
 		start, count, (char*)data))
     {
@@ -758,14 +761,14 @@ int iofw_io_put_vara(int client_id)
     {
         debug(DEBUG_IO, "bit map full");
 
-        if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
+        if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
         	IOFW_ID_NC_INVALID == nc->nc_id)
         {
             return_code = IOFW_IO_ERROR_INVALID_NC;
             debug(DEBUG_IO, "Invalid nc.");
             goto RETURN;
         }
-        if(IOFW_ID_ERROR_GET_NULL == 
+        if(IOFW_ID_HASH_GET_NULL == 
         	iofw_id_get_var(client_nc_id, client_var_id, &var) ||
         	IOFW_ID_VAR_INVALID == var->var_id)
         {
@@ -874,7 +877,7 @@ int iofw_io_close(int client_id)
     {
 	/*TODO handle memory free*/
 
-	if(IOFW_ID_ERROR_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
 	    return IOFW_IO_ERROR_INVALID_NC;

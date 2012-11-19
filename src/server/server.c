@@ -24,7 +24,7 @@
 #include "msg.h"
 #include "times.h"
 #include "define.h"
-#include "error.h"
+#include "iofw_error.h"
 
 /* the thread read the buffer and write to the real io node */
 static pthread_t writer;

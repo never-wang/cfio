@@ -17,14 +17,15 @@
 
 #include "id.h"
 #include "iofw_types.h"
+#include "iofw_error.h"
 #include "debug.h"
 #include "times.h"
 #include "quickhash.h"
 #include "map.h"
 
-static int open_nc_a;  /* amount of opened nc file */
-static iofw_nc_t *open_nc;
-static struct qhash_table *map_table;
+static int open_nc_a;  /* amount of opened nc file , assigned as new nc id*/
+static struct qhash_table *assign_table; /* used for assign id in client*/
+static struct qhash_table *map_table;	/* used for map id in server */
 
 static int _compare(void *key, struct qhash_head *link)
 {
@@ -125,7 +126,7 @@ static void _inc_src_index(
  * @param src_count: count of teh src data array
  * @param src_data: pointer to the src data array
  */
-static void _put_var(
+static int _put_var(
 	int ndims, size_t ele_size,
 	size_t *dst_start, size_t *dst_count, char *dst_data, 
 	size_t *src_start, size_t *src_count, char *src_data)
@@ -158,9 +159,8 @@ static void _put_var(
     src_index = malloc(sizeof(size_t) * ndims);
     if(NULL == src_index)
     {
-	debug(DEBUG_ID, "malloc for src_index fail.");
-	return;
-	//return IOFW_ID_ERROR_MALLOC;
+	error("malloc for src_index fail.");
+	return IOFW_ERROR_MALLOC;
     }
     for(i = 0; i < ndims; i ++)
     {
@@ -185,35 +185,49 @@ static void _put_var(
 	src_data += ele_size;
     }
     memcpy(dst_data, src_data, ele_size);
+
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_id_init(int flag)
 {
-    open_nc = NULL;
+    open_nc_a = 0;
+    assign_table = NULL;
     map_table = NULL;
 
     switch(flag)
     {
 	case IOFW_ID_INIT_CLIENT :
-	    open_nc = malloc(MAX_OPEN_NC_NUM * sizeof(iofw_nc_t));
-	    memset(open_nc, 0, MAX_OPEN_NC_NUM * sizeof(iofw_nc_t));
+	    assign_table = qhash_init(_compare, _hash, ASSIGN_HASH_TABLE_SIZE);
+	    if(assign_table == NULL)
+	    {
+		error("assign_table init fail.");
+		return IOFW_ERROR_HASH_TABLE_INIT;
+	    }
 	    break;
 	case IOFW_ID_INIT_SERVER :
 	    map_table = qhash_init(_compare,_hash, MAP_HASH_TABLE_SIZE);
+	    if(map_table == NULL)
+	    {
+		error("map_table init fail.");
+		return IOFW_ERROR_HASH_TABLE_INIT;
+	    }
 	    break;
 	default :
-	    return IOFW_ID_ERROR_WRONG_FLAG;
+	    error("This should not happen.");
+	    break;
     }
 
-    return IOFW_ID_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_id_final()
 {
-    if(NULL != open_nc)
+    if(NULL != assign_table)
     {
-	free(open_nc);
-	open_nc = NULL;
+	qhash_destroy_and_finalize(assign_table, iofw_id_val_t, 
+		hash_link, _val_free);
+	assign_table = NULL;
     }
 
     if(NULL != map_table)
@@ -222,55 +236,107 @@ int iofw_id_final()
 	map_table = NULL;
     }
 
-    return IOFW_ID_ERROR_NONE;
+    debug(DEBUG_ID, "success return.");
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_id_assign_nc(int *nc_id)
 {
+    assert(nc_id != NULL);
+
     int i;
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
 
     open_nc_a ++;
-    if(open_nc_a > MAX_OPEN_NC_NUM)
-    {
-	open_nc_a --;
-	return - IOFW_ID_ERROR_TOO_MANY_OPEN;
-    }
-
-    for(i = 0; i < MAX_OPEN_NC_NUM; i ++)
-    {
-	if(!open_nc[i].used)
-	{
-	    open_nc[i].used = 1;
-	    open_nc[i].var_a = 0;
-	    open_nc[i].dim_a = 0;
-	    *nc_id = open_nc[i].id = i + 1;
-	    break;
-	}
-    }
     
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = open_nc_a;
+
+    val = malloc(sizeof(iofw_id_val_t));
+    if(val == NULL)
+    {
+	error("malloc fail.");
+	return IOFW_ERROR_MALLOC;
+    }
+    memset(val, 0, sizeof(iofw_id_val_t));
+    val->client_nc_id = open_nc_a;
+    qhash_add(assign_table, &key, &(val->hash_link));
+    *nc_id = open_nc_a;
     debug(DEBUG_ID, "assign nc_id = %d", *nc_id);
 
-    assert(i != MAX_OPEN_NC_NUM);
+    debug(DEBUG_ID, "success return.");
+    return IOFW_ERROR_NONE;
+}
 
-    return IOFW_ID_ERROR_NONE;
+int iofw_id_remove_nc(int nc_id)
+{
+    iofw_id_key_t key;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
+
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	qhash_del(link);
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_assign_dim(int nc_id, int *dim_id)
 {
-    assert(open_nc[nc_id - 1].id == nc_id);
+    assert(dim_id != NULL);
     
-    *dim_id = (++ open_nc[nc_id - 1].dim_a);
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
 
-    return IOFW_ID_ERROR_NONE;
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val->client_dim_a ++;
+	*dim_id = val->client_dim_a;
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_assign_var(int nc_id, int *var_id)
 {
-    assert(open_nc[nc_id - 1].id == nc_id);
-    
-    *var_id = (++ open_nc[nc_id - 1].var_a);
+    assert(var_id != NULL);
 
-    return IOFW_ID_ERROR_NONE;
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = nc_id;
+
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return IOFW_ERROR_NC_NO_EXIST;
+    }else
+    {
+	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val->client_var_a ++;
+	*var_id = val->client_var_a;
+	debug(DEBUG_ID, "success return.");
+	return IOFW_ERROR_NONE;
+    }
 }
 
 int iofw_id_map_nc(
@@ -295,7 +361,7 @@ int iofw_id_map_nc(
     debug(DEBUG_ID, "map ((%d, 0, 0)->(%d, 0, 0)", 
 	     client_nc_id, server_nc_id);
 
-    return IOFW_ID_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -335,7 +401,7 @@ int iofw_id_map_dim(
     debug(DEBUG_ID, "map ((%d, %d, 0)->(%d, %d, 0))",
 	    client_nc_id, client_dim_id, server_nc_id, server_dim_id);
 
-    return IOFW_ID_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -395,7 +461,7 @@ int iofw_id_map_var(
     debug(DEBUG_ID, "client_num = %d",  
 	    client_num);
 
-    return IOFW_ID_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_id_get_val(
@@ -413,11 +479,11 @@ int iofw_id_get_val(
     if(NULL == (link = qhash_search(map_table, &key)))
     {
 	debug(DEBUG_ID, "get nc (%d, 0, 0) null", client_nc_id);
-	return IOFW_ID_ERROR_GET_NULL;
+	return IOFW_ID_HASH_GET_NULL;
     }else
     {
 	*val = qlist_entry(link, iofw_id_val_t, hash_link);
-	return IOFW_ID_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 }
 
@@ -434,7 +500,7 @@ int iofw_id_get_nc(
     if(NULL == (link = qhash_search(map_table, &key)))
     {
 	debug(DEBUG_ID, "get nc (%d, 0, 0) null", client_nc_id);
-	return IOFW_ID_ERROR_GET_NULL;
+	return IOFW_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, iofw_id_val_t, hash_link);
@@ -443,7 +509,7 @@ int iofw_id_get_nc(
     
 	debug(DEBUG_ID, "get (%d, 0, 0)", client_nc_id);
 	
-	return IOFW_ID_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 }
 
@@ -463,14 +529,14 @@ int iofw_id_get_dim(
     {
 	debug(DEBUG_ID, "get dim (%d, %d, 0) null" ,
 		client_nc_id, client_dim_id);
-	return IOFW_ID_ERROR_GET_NULL;
+	return IOFW_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, iofw_id_val_t, hash_link);
 	*dim = val->dim;
 	assert(val->dim != NULL);
 	debug(DEBUG_ID, "get (%d, %d, 0)", client_nc_id, client_dim_id);
-	return IOFW_ID_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 }
 
@@ -490,14 +556,14 @@ int iofw_id_get_var(
     {
 	debug(DEBUG_ID, "get var (%d, 0, %d) null",
 		client_nc_id, client_var_id);
-	return IOFW_ID_ERROR_GET_NULL;
+	return IOFW_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, iofw_id_val_t, hash_link);
 	assert(val->var != NULL);
 	*var = val->var;
 	debug(DEBUG_ID, "get (%d, 0, %d)", client_nc_id, client_var_id);
-	return IOFW_ID_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 }
 /**
@@ -529,7 +595,7 @@ int iofw_id_put_var(
     {
 	debug(DEBUG_ID, "Can't find var (%d, 0, %d)", 
 		client_nc_id, client_var_id);
-	return IOFW_ID_ERROR_GET_NULL;
+	return IOFW_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, iofw_id_val_t, hash_link);
@@ -545,7 +611,7 @@ int iofw_id_put_var(
 			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
 			client_nc_id, client_var_id, 
 			i, var->start[i], i, var->count[i]);
-		return IOFW_ID_ERROR_EXCEED_BOUND;
+		return IOFW_ERROR_EXCEED_BOUND;
 	    }
 	}
 
@@ -574,13 +640,14 @@ int iofw_id_put_var(
 	debug(DEBUG_ID, "client_index = %d", client_index);
 
 	debug(DEBUG_ID, "put var ((%d, 0, %d)", client_nc_id, client_var_id);
-	return IOFW_ID_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 }
 
 int iofw_id_merge_var_data(iofw_id_var_t *var)
 {
     int i, j;
+    int ret;
     size_t ele_size;
     
     for(i = 0; i < var->client_num; i++)
@@ -598,10 +665,14 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
 	}
     
 	iofw_types_size(ele_size, var->data_type);
-	_put_var(var->ndims, ele_size, 
+	if((ret = _put_var(var->ndims, ele_size, 
 		var->start, var->count, var->data,
 		var->recv_data[i].start, var->recv_data[i].count,
-		var->recv_data[i].buf);
+		var->recv_data[i].buf)) < 0)
+	{
+	    error("");
+	    return ret;
+	}
 	//float *_data = var->recv_data[i].buf;
 	//for(j = 0; j < 4; j ++)
 	//{
@@ -624,7 +695,7 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
 	//printf("\n");
     }
 
-    return IOFW_ID_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 void iofw_id_val_free(iofw_id_val_t *val)

@@ -25,8 +25,11 @@
 #include "map.h"
 #include "iofw_types.h"
 
-#define SERVER_RATIO 0.125
 #define CLIENT_BUF_SIZE 1024*1024*1024
+
+#define IOFW_PROC_CLIENT IOFW_MAP_TYPE_CLIENT
+#define IOFW_PROC_SERVER IOFW_MAP_TYPE_SERVER
+#define IOFW_PROC_BLANK	 IOFW_MAP_TYPE_BLANK
 
 #define IOFW_START(rank) \
     if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
@@ -35,14 +38,18 @@
     }			
 	
 /**
- * @brief: init 
+ * @brief: init, the x and y is	------>x
+ *			       	|[0 1 2]
+ *			       	|[3 4 5]
+ *			       	y[6 7 8]
  *
  * @param x_proc_num: client proc number of x axis
  * @param y_proc_num: client proc number of y axis
+ * @param ratio: client : server = ratio
  *
  * @return: error code
  */
-int iofw_init(int x_proc_num, int y_proc_num);
+int iofw_init(int x_proc_num, int y_proc_num, int ratio);
 
 /**
  * @brief iofw_Finalize : stop the iofw services, the function 
@@ -51,6 +58,14 @@ int iofw_init(int x_proc_num, int y_proc_num);
  * @return 
  */
 int iofw_finalize();
+/**
+ * @brief: get the process type, client, server or blank
+ *
+ * @param rank: rank of the proccess
+ *
+ * @return: the proccess type
+ */
+int iofw_proc_type(int rank);
 /**
  * @brief: iofw_create
  *

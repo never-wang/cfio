@@ -27,7 +27,7 @@
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
-#include "error.h"
+#include "iofw_error.h"
 
 /* my real rank in mpi_comm_world */
 static int rank;
@@ -35,15 +35,7 @@ static int rank;
 static int client_num;
 static MPI_Comm inter_comm;
 
-/**
- * @brief: init 
- *
- * @param x_proc_num: client proc num of x axis
- * @param y_proc_num: client proc num of y axis
- *
- * @return: error code
- */
-int iofw_init(int x_proc_num, int y_proc_num)
+int iofw_init(int x_proc_num, int y_proc_num, int ratio)
 {
     int rc, i;
     int size;
@@ -53,6 +45,7 @@ int iofw_init(int x_proc_num, int y_proc_num)
     int best_server_amount;
 
     //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_BUF);
+    //set_debug_mask(DEBUG_IOFW | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -71,7 +64,7 @@ int iofw_init(int x_proc_num, int y_proc_num)
 	server_proc_num = 0;
     }
     
-    best_server_amount = (int)((double)client_num * SERVER_RATIO);
+    best_server_amount = (int)((double)client_num / ratio);
     if(best_server_amount <= 0)
     {
 	best_server_amount = 1;
@@ -144,7 +137,18 @@ int iofw_finalize()
 
     iofw_map_final();
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
+}
+
+int iofw_proc_type(int rank)
+{
+    if(rank < 0)
+    {
+	error("rank should be positive.");
+	return IOFW_ERROR_RANK_INVALID;
+    }
+
+    return iofw_map_proc_type(rank);
 }
 
 /**
@@ -159,16 +163,19 @@ int iofw_finalize()
 int iofw_create(
 	const char *path, int cmode, int *ncidp)
 {
-    assert(path != NULL);
-    assert(ncidp != NULL);
+    if(path == NULL || ncidp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
 
     iofw_msg_t *msg;
     int ret;
 
-    ret = iofw_id_assign_nc(ncidp);
-    if(IOFW_ID_ERROR_TOO_MANY_OPEN == ret)
+    if((ret = iofw_id_assign_nc(ncidp)) < 0)
     {
-	return -IOFW_ERROR_TOO_MANY_OPEN;
+	error("");
+	return ret;
     }
 
     iofw_msg_pack_create(&msg, rank, path, cmode, *ncidp);
@@ -190,21 +197,30 @@ int iofw_create(
 int iofw_def_dim(
 	int ncid, const char *name, size_t len, int *idp)
 {
-    assert(name != NULL);
-    assert(idp != NULL);
+    if(name == NULL || idp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+    
+    int ret;
 
     debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
 	    ncid, name, len);
     
     iofw_msg_t *msg;
 
-    iofw_id_assign_dim(ncid, idp);
+    if((ret = iofw_id_assign_dim(ncid, idp)) < 0)
+    {
+	error("");
+	return ret;
+    }
 
     iofw_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_def_var(
@@ -213,23 +229,29 @@ int iofw_def_var(
 	const size_t *start, const size_t *count, 
 	int *varidp)
 {
+    if(name == NULL || varidp == NULL || start == NULL || count == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+    
     debug(DEBUG_IOFW, "ndims = %d", ndims);
 
-    assert(name != NULL);
-    assert(varidp != NULL);
-    assert(start != NULL);
-    assert(count != NULL);
-
     iofw_msg_t *msg;
+    int ret;
 
-    iofw_id_assign_var(ncid, varidp);
+    if((ret = iofw_id_assign_var(ncid, varidp)) < 0)
+    {
+	error("");
+	return ret;
+    }
     
     iofw_msg_pack_def_var(&msg, rank, ncid, name, xtype, 
 	    ndims, dimids, start, count, *varidp);
     iofw_msg_isend(msg);
     
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_enddef(
@@ -241,7 +263,7 @@ int iofw_enddef(
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 //TODO Maybe can rewrite so better performance
@@ -336,14 +358,19 @@ int iofw_enddef(
 //
 //    //debug(DEBUG_TIME, "%f ms", times_end());
 //    debug(DEBUG_IOFW, "success return.");
-//    return 0;
+//    return IOFW_ERROR_NONE;
 //}
 
 int iofw_put_vara_float(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp)
 {
-    //size_t head_size;
+    if(start == NULL || count == NULL || fp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+
     iofw_msg_t *msg;
 
     //times_start();
@@ -360,14 +387,19 @@ int iofw_put_vara_float(
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_put_vara_double(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const double *fp)
 {
-    //size_t head_size;
+    if(start == NULL || count == NULL || fp == NULL)
+    {
+	error("args should not be NULL.");
+	return IOFW_ERROR_ARG_NULL;
+    }
+
     iofw_msg_t *msg;
 
 	//times_start();
@@ -386,7 +418,7 @@ int iofw_put_vara_double(
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_close(
@@ -394,95 +426,134 @@ int iofw_close(
 {
 
     iofw_msg_t *msg;
+    int ret;
     //times_start();
 
+    if((ret = iofw_id_remove_nc(ncid)) < 0)
+    {
+	error("");
+	return ret;
+    }
     iofw_msg_pack_close(&msg, rank, ncid);
     iofw_msg_isend(msg);
 
     debug(DEBUG_IOFW, "Finish iofw_close");
 
-    return 0;
+    return IOFW_ERROR_NONE;
 }
 
 /**
  *For Fortran Call
  **/
-//int iofw_init_(int *x_proc_num, int *y_proc_num)
-//{
-//    return iofw_init(*x_proc_num, *y_proc_num);
-//}
-//int iofw_finalize_()
-//{
-//    return iofw_finalize();
-//}
-//int iofw_create_(
-//	int *io_proc_id, 
-//	const char *path, int *cmode, int *ncidp)
-//{
-//    debug(DEBUG_IOFW, "io_proc_id = %d, path = %s, cmode = %d",
-//	    *io_proc_id, path, *cmode);
-//
-//    return iofw_create(*io_proc_id, path, *cmode, ncidp);
-//}
-//int iofw_def_dim_(
-//	int *io_proc_id, 
-//	int *ncid, const char *name, int *len, int *idp)
-//{
-//
-//    return iofw_def_dim(*io_proc_id, *ncid, name, *len, idp);
-//}
-//
-//int iofw_def_var_(
-//	int *io_proc_id, 
-//	int *ncid, const char *name, int *xtype,
-//	int *ndims, const int *dimids, int *varidp)
-//{
-//    return iofw_def_var(*io_proc_id, *ncid, name, *xtype, *ndims, dimids, varidp);
-//}
-//
-//int iofw_put_vara_double_(
-//	int *io_proc_id,
-//	int *ncid, int *varid, int *dim,
-//	const int *start, const int *count, const double *fp)
-//{
-//    size_t *_start, *_count;
-//    int i, ret;
-//
-//    _start = malloc((*dim) * sizeof(size_t));
-//    if(NULL == _start)
-//    {
-//	debug(DEBUG_IOFW, "malloc fail");
-//	return IOFW_ERROR_MALLOC;
-//    }
-//    _count = malloc((*dim) * sizeof(size_t));
-//    if(NULL == _count)
-//    {
-//	free(_start);
-//	debug(DEBUG_IOFW, "malloc fail");
-//	return IOFW_ERROR_MALLOC;
-//    }
-//    for(i = 0; i < (*dim); i ++)
-//    {
-//	_start[i] = start[i] - 1;
-//	_count[i] = count[i];
-//    }
-//    ret = iofw_put_vara_double(
-//	    *io_proc_id, *ncid, *varid, *dim, _start, _count, fp);
-//    
-//    free(_start);
-//    free(_count);
-//    return ret;
-//}
-//
-//int iofw_enddef_(
-//	int *io_proc_id, int *ncid)
-//{
-//    return iofw_enddef(*io_proc_id, *ncid);
-//}
-//
-//int iofw_close_(
-//	int *io_proc_id, int *ncid)
-//{
-//    return iofw_close(*io_proc_id, *ncid);
-//}
-//
+int iofw_init_(int *x_proc_num, int *y_proc_num, int *ratio)
+{
+    return iofw_init(*x_proc_num, *y_proc_num, *ratio);
+}
+
+int iofw_finalize_()
+{
+    return iofw_finalize();
+}
+
+int iofw_proc_type_(int *rank)
+{
+    return iofw_proc_type(*rank);
+}
+
+int iofw_create_(
+	const char *path, int *cmode, int *ncidp)
+{
+    debug(DEBUG_IOFW, "path = %s, cmode = %d", path, *cmode);
+
+    return iofw_create(path, *cmode, ncidp);
+}
+int iofw_def_dim_(
+	int *ncid, const char *name, int *len, int *idp)
+{
+    size_t _len;
+
+    _len = (int)(*len);
+
+    return iofw_def_dim(*ncid, name, _len, idp);
+}
+
+int iofw_def_var_(
+	int *ncid, const char *name, int *xtype,
+	int *ndims, const int *dimids, 
+	const int *start, const int *count, int *varidp)
+{
+    size_t *_start, *_count;
+    int i, ret;
+
+    _start = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    _count = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    for(i = 0; i < (*ndims); i ++)
+    {
+	_start[i] = start[i] - 1;
+	_count[i] = count[i];
+    }
+
+    ret = iofw_def_var(*ncid, name, *xtype, *ndims, dimids, 
+	    _start, _count, varidp);
+    
+    free(_start);
+    free(_count);
+    return ret;
+}
+
+int iofw_put_vara_double_(
+	int *ncid, int *varid, int *dim,
+	const int *start, const int *count, const double *fp)
+{
+    size_t *_start, *_count;
+    int i, ret;
+
+    _start = malloc((*dim) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    _count = malloc((*dim) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    for(i = 0; i < (*dim); i ++)
+    {
+	_start[i] = start[i] - 1;
+	_count[i] = count[i];
+    }
+    ret = iofw_put_vara_double(
+	    *ncid, *varid, *dim, _start, _count, fp);
+    
+    free(_start);
+    free(_count);
+    return ret;
+}
+
+int iofw_enddef_(
+	int *ncid)
+{
+    return iofw_enddef(*ncid);
+}
+
+int iofw_close_(
+	int *ncid)
+{
+    return iofw_close(*ncid);
+}
+

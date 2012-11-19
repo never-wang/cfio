@@ -23,6 +23,7 @@
 #include "pthread.h"
 #include "id.h"
 #include "iofw_types.h"
+#include "iofw_error.h"
 #include "define.h"
 
 static iofw_msg_t *msg_head;
@@ -48,21 +49,24 @@ static inline iofw_msg_t *create_msg()
 
 int iofw_msg_init(int buffer_size)
 {
+    int error;
+
     msg_head = malloc(sizeof(iofw_msg_t));
     if(NULL == msg_head)
     {
-	return -IOFW_MSG_ERROR_MALLOC;
+	return IOFW_ERROR_MALLOC;
     }
     INIT_QLIST_HEAD(&(msg_head->link));
 
-    buffer = iofw_buf_open(buffer_size, NULL);
+    buffer = iofw_buf_open(buffer_size, &error);
 
     if(NULL == buffer)
     {
-	return -IOFW_MSG_ERROR_BUFFER;
+	error("");
+	return error;
     }
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_final()
@@ -81,7 +85,7 @@ int iofw_msg_final()
 
     iofw_buf_close(buffer);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -145,7 +149,7 @@ int iofw_msg_isend(
     //debug(DEBUG_TIME, "%f ms", times_end());
     debug(DEBUG_MSG, "success return.");
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
@@ -167,7 +171,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
 
     if(status.MPI_SOURCE != status.MPI_TAG)
     {
-	return -IOFW_MSG_ERROR_MPI;
+	return IOFW_ERROR_MPI_RECV;
     }
 
     msg = create_msg();
@@ -191,7 +195,7 @@ int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_MSG, "success return");
     
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 iofw_msg_t *iofw_msg_get_first()
@@ -253,7 +257,7 @@ int iofw_msg_pack_create(
     
     debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -290,7 +294,7 @@ int iofw_msg_pack_def_dim(
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, len = %lu", ncid, name, len);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_pack_def_var(
@@ -334,7 +338,7 @@ int iofw_msg_pack_def_var(
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", ncid, name, ndims);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_pack_enddef(
@@ -362,7 +366,7 @@ int iofw_msg_pack_enddef(
     
     debug(DEBUG_MSG, "ncid = %d", ncid);
     
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_pack_put_vara(
@@ -464,7 +468,7 @@ int iofw_msg_pack_put_vara(
     debug(DEBUG_MSG, "ncid = %d, varid = %d, ndims = %d, data_len = %lu", 
 	    ncid, varid, ndims, data_len);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_pack_close(
@@ -492,7 +496,7 @@ int iofw_msg_pack_close(
     *_msg = msg;
     //debug(DEBUG_TIME, "%f", times_end());
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_pack_io_done(
@@ -513,7 +517,7 @@ int iofw_msg_pack_io_done(
     iofw_map_forwarding(msg);
     *_msg = msg;
     
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 /**
  *unpack msg function
@@ -530,7 +534,7 @@ int iofw_msg_unpack_func_code(iofw_msg_t *msg, uint32_t *func_code)
     buffer->used_addr = msg->addr;
     iofw_buf_unpack_data(func_code, sizeof(uint32_t), buffer);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_create(
@@ -542,7 +546,7 @@ int iofw_msg_unpack_create(
 
     debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", *path, *cmode, *ncid);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_def_dim(
@@ -555,7 +559,7 @@ int iofw_msg_unpack_def_dim(
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, len = %lu", *ncid, *name, *len);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_def_var(
@@ -576,7 +580,7 @@ int iofw_msg_unpack_def_var(
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", *ncid, *name, *ndims);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_enddef(
@@ -585,7 +589,7 @@ int iofw_msg_unpack_enddef(
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
     debug(DEBUG_MSG, "ncid = %d", *ncid);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_put_vara(
@@ -629,9 +633,9 @@ int iofw_msg_unpack_put_vara(
 
     debug(DEBUG_MSG, "ncid = %d, varid = %d, ndims = %d, data_len = %u", 
 	    *ncid, *varid, *ndims, *data_len);
-    debug(DEBUG_MSG, "fp[0] = %f", (*fp)[0]); 
+    //debug(DEBUG_MSG, "fp[0] = %f", (*fp)[0]); 
     
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_msg_unpack_close(int *ncid)
@@ -639,6 +643,6 @@ int iofw_msg_unpack_close(int *ncid)
     iofw_buf_unpack_data(ncid, sizeof(int), buffer);
     debug(DEBUG_MSG, "ncid = %d", *ncid);
 
-    return IOFW_MSG_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
