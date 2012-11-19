@@ -435,6 +435,9 @@ int iofw_io_def_dim(int client_id)
     int return_code;
 
     iofw_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
+    
+    debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
+	    client_nc_id, name, len);
 
 #ifdef SVR_UNPACK_ONLY
     free(name);
@@ -533,7 +536,7 @@ int iofw_io_def_var(int client_id)
 
     ret = iofw_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
 	    &client_dim_ids, &start, &count, &client_var_id);
-
+    
 #ifdef SVR_UNPACK_ONLY
     free(name);
     free(start);

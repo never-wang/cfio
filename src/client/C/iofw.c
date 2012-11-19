@@ -45,6 +45,7 @@ int iofw_init(int x_proc_num, int y_proc_num, int ratio)
     int best_server_amount;
 
     //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_BUF);
+    //set_debug_mask(DEBUG_IOFW | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -444,82 +445,115 @@ int iofw_close(
 /**
  *For Fortran Call
  **/
-//int iofw_init_(int *x_proc_num, int *y_proc_num)
-//{
-//    return iofw_init(*x_proc_num, *y_proc_num);
-//}
-//int iofw_finalize_()
-//{
-//    return iofw_finalize();
-//}
-//int iofw_create_(
-//	int *io_proc_id, 
-//	const char *path, int *cmode, int *ncidp)
-//{
-//    debug(DEBUG_IOFW, "io_proc_id = %d, path = %s, cmode = %d",
-//	    *io_proc_id, path, *cmode);
-//
-//    return iofw_create(*io_proc_id, path, *cmode, ncidp);
-//}
-//int iofw_def_dim_(
-//	int *io_proc_id, 
-//	int *ncid, const char *name, int *len, int *idp)
-//{
-//
-//    return iofw_def_dim(*io_proc_id, *ncid, name, *len, idp);
-//}
-//
-//int iofw_def_var_(
-//	int *io_proc_id, 
-//	int *ncid, const char *name, int *xtype,
-//	int *ndims, const int *dimids, int *varidp)
-//{
-//    return iofw_def_var(*io_proc_id, *ncid, name, *xtype, *ndims, dimids, varidp);
-//}
-//
-//int iofw_put_vara_double_(
-//	int *io_proc_id,
-//	int *ncid, int *varid, int *dim,
-//	const int *start, const int *count, const double *fp)
-//{
-//    size_t *_start, *_count;
-//    int i, ret;
-//
-//    _start = malloc((*dim) * sizeof(size_t));
-//    if(NULL == _start)
-//    {
-//	debug(DEBUG_IOFW, "malloc fail");
-//	return IOFW_ERROR_MALLOC;
-//    }
-//    _count = malloc((*dim) * sizeof(size_t));
-//    if(NULL == _count)
-//    {
-//	free(_start);
-//	debug(DEBUG_IOFW, "malloc fail");
-//	return IOFW_ERROR_MALLOC;
-//    }
-//    for(i = 0; i < (*dim); i ++)
-//    {
-//	_start[i] = start[i] - 1;
-//	_count[i] = count[i];
-//    }
-//    ret = iofw_put_vara_double(
-//	    *io_proc_id, *ncid, *varid, *dim, _start, _count, fp);
-//    
-//    free(_start);
-//    free(_count);
-//    return ret;
-//}
-//
-//int iofw_enddef_(
-//	int *io_proc_id, int *ncid)
-//{
-//    return iofw_enddef(*io_proc_id, *ncid);
-//}
-//
-//int iofw_close_(
-//	int *io_proc_id, int *ncid)
-//{
-//    return iofw_close(*io_proc_id, *ncid);
-//}
-//
+int iofw_init_(int *x_proc_num, int *y_proc_num, int *ratio)
+{
+    return iofw_init(*x_proc_num, *y_proc_num, *ratio);
+}
+
+int iofw_finalize_()
+{
+    return iofw_finalize();
+}
+
+int iofw_proc_type_(int *rank)
+{
+    return iofw_proc_type(*rank);
+}
+
+int iofw_create_(
+	const char *path, int *cmode, int *ncidp)
+{
+    debug(DEBUG_IOFW, "path = %s, cmode = %d", path, *cmode);
+
+    return iofw_create(path, *cmode, ncidp);
+}
+int iofw_def_dim_(
+	int *ncid, const char *name, int *len, int *idp)
+{
+    size_t _len;
+
+    _len = (int)(*len);
+
+    return iofw_def_dim(*ncid, name, _len, idp);
+}
+
+int iofw_def_var_(
+	int *ncid, const char *name, int *xtype,
+	int *ndims, const int *dimids, 
+	const int *start, const int *count, int *varidp)
+{
+    size_t *_start, *_count;
+    int i, ret;
+
+    _start = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    _count = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    for(i = 0; i < (*ndims); i ++)
+    {
+	_start[i] = start[i] - 1;
+	_count[i] = count[i];
+    }
+
+    ret = iofw_def_var(*ncid, name, *xtype, *ndims, dimids, 
+	    _start, _count, varidp);
+    
+    free(_start);
+    free(_count);
+    return ret;
+}
+
+int iofw_put_vara_double_(
+	int *ncid, int *varid, int *dim,
+	const int *start, const int *count, const double *fp)
+{
+    size_t *_start, *_count;
+    int i, ret;
+
+    _start = malloc((*dim) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    _count = malloc((*dim) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_IOFW, "malloc fail");
+	return IOFW_ERROR_MALLOC;
+    }
+    for(i = 0; i < (*dim); i ++)
+    {
+	_start[i] = start[i] - 1;
+	_count[i] = count[i];
+    }
+    ret = iofw_put_vara_double(
+	    *ncid, *varid, *dim, _start, _count, fp);
+    
+    free(_start);
+    free(_count);
+    return ret;
+}
+
+int iofw_enddef_(
+	int *ncid)
+{
+    return iofw_enddef(*ncid);
+}
+
+int iofw_close_(
+	int *ncid)
+{
+    return iofw_close(*ncid);
+}
+
