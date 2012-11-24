@@ -72,11 +72,13 @@ int iofw_msg_init(int buffer_size)
 int iofw_msg_final()
 {
     iofw_msg_t *msg, *next;
+    MPI_Status status;
 
-    if(msg_head)
+    if(msg_head != NULL)
     {
         qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
         {
+	    MPI_Wait(&msg->req, &status);
             free(msg);
         }
         free(msg_head);
@@ -99,8 +101,8 @@ static void iofw_msg_client_buf_free()
     int done;
     MPI_Status status;
 
-    debug(DEBUG_MSG, "should not be here");
-    assert(0);
+    //debug(DEBUG_MSG, "should not be here");
+    //assert(0);
 
     msg = qlist_entry(qlist_pop(&msg_head->link), iofw_msg_t, link);
     MPI_Wait(&msg->req, &status);
@@ -134,17 +136,17 @@ int iofw_msg_isend(
 
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, tag, msg->comm, &(msg->req));
-    MPI_Wait(&(msg->req), &status);
-    assert(check_used_addr(msg->addr, buffer));
-    buffer->used_addr = msg->addr;
-    free_buf(buffer, msg->size);
+    //MPI_Wait(&(msg->req), &status);
+    //assert(check_used_addr(msg->addr, buffer));
+    //buffer->used_addr = msg->addr;
+    //free_buf(buffer, msg->size);
 
-    /**
-     *TODO , it's not good to put free here
-     **/
-    free(msg);
+    ///**
+    // *TODO , it's not good to put free here
+    // **/
+    //free(msg);
 
-    //qlist_add_tail(&(msg->link), &(msg_head->link));
+    qlist_add_tail(&(msg->link), &(msg_head->link));
 
     //debug(DEBUG_TIME, "%f ms", times_end());
     debug(DEBUG_MSG, "success return.");

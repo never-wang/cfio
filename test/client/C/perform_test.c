@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     times_start();
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_SERVER | DEBUG_MSG); 
+    //set_debug_mask(DEBUG_SERVER); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);

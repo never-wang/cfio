@@ -21,7 +21,7 @@
 #define LOOP 5
 #define VALN 8
 
-#define SLEEP_TIME 2
-#define IOFW_RATIO 4
+#define SLEEP_TIME 1
+#define IOFW_RATIO 8
 
 #endif
