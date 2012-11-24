@@ -1,4 +1,4 @@
-LDADD = ../../../src/client/C/libiofw.la
+LDADD = ../../../src/client/C/libiofw.a
 AM_CFLAGS = -I../../../src/client/C -I../../../src/common
 
 bin_PROGRAMS = func_test perform_test_pnetcdf perform_test_netcdf perform_test

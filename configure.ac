@@ -1,11 +1,11 @@
-AC_INIT([iofw], [1.04], [never.wencan@gmail.com])
+AC_INIT([iofw], [1.05], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
 CC=mpiicc
 AC_PROG_FC
 FC=mpiifort
 
-AM_PATH_CHECK
+#AM_PATH_CHECK
 
 #CPPFLAGS="$CPPFLAGS -mcmodel=large -shared-intel -g"
 CPPFLAGS="$CPPFLAGS"
@@ -133,8 +133,8 @@ AC_CHECK_LIB([pthread], [pthread_create],,AC_MSG_ERROR([invalid pthread library]
 AC_PROG_LIBTOOL
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile src/common/Makefile src/client/Makefile src/client/C/Makefile \
-		 src/client/Fortran/Makefile src/server/Makefile test/Makefile test/common/Makefile \
-		 test/client/Makefile test/client/C/Makefile])
+		 src/client/Fortran/Makefile src/server/Makefile test/Makefile test/client/Makefile \
+		 test/client/C/Makefile])
 AC_OUTPUT
 
 
