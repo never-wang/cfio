@@ -217,6 +217,7 @@ static inline int _handle_def(iofw_id_val_t *val)
     iofw_id_var_t *var;
     iofw_id_att_t *att;
     size_t data_size, ele_size;
+    int *start;
 
     if(NULL != val->dim)
     {
@@ -265,8 +266,19 @@ static inline int _handle_def(iofw_id_val_t *val)
 	    error("def var(%s) error(%s)",var->name,nc_strerror(ret));
 	    return IOFW_ERROR_NC;
 	}
+
+	start = malloc(sizeof(int) * var->ndims);
+	if(start == NULL)
+	{
+	    error("malloc fail.");
+	    return IOFW_ERROR_MALLOC;
+	}
+	for(i = 0; i < var->ndims; i ++)
+	{
+	    start[i] = var->start[i];
+	}
 	ret = nc_put_att(var->nc_id, var->var_id, ATT_NAME_START,
-		NC_INT, var->ndims, var->start); 
+		NC_INT, var->ndims, start); 
 	if(ret != NC_NOERR)
 	{
 	    error("put var(%s) start attr error(%s)",var->name,nc_strerror(ret));
