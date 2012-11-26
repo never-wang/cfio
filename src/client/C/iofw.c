@@ -254,6 +254,23 @@ int iofw_def_var(
     return IOFW_ERROR_NONE;
 }
 
+int iofw_put_att(
+	int ncid, int varid, const char *name, 
+	nc_type xtype, size_t len, const void *op)
+{
+    iofw_msg_t *msg;
+    
+    if(iofw_map_get_client_index_of_server(rank) == 0)
+    {
+      iofw_msg_pack_put_att(&msg, rank, ncid, varid, name,
+      	xtype, len, op);
+      iofw_msg_isend(msg);
+    }
+
+    debug(DEBUG_IOFW, "success return.");
+    return IOFW_ERROR_NONE;
+}
+
 int iofw_enddef(
 	int ncid)
 {

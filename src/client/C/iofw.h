@@ -38,10 +38,10 @@
     }			
 	
 /**
- * @brief: init, the x and y is	------>x
+ * @brief: init, the x and y is	------>x(dim 0)
  *			       	|[0 1 2]
  *			       	|[3 4 5]
- *			       	y[6 7 8]
+ *			 (dim 1)|y[6 7 8]
  *
  * @param x_proc_num: client proc number of x axis
  * @param y_proc_num: client proc number of y axis
@@ -112,6 +112,22 @@ int iofw_def_var(
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, 
 	int *varidp);
+/**
+ * @brief: iofw_put_att
+ *
+ * @param ncid: NetCDF ID
+ * @param varid: Variable ID of the variable to which the attribute will be 
+ *	assigned or NC_GLOBAL for a global attribute
+ * @param name: Attribute name
+ * @param xtype: one fo the set of prdefined netCDF external data types
+ * @param len: number of values provided for the attribute
+ * @param op: Pointer to values
+ *
+ * @return: error code
+ */
+int iofw_put_att(
+	int ncid, int varid, const char *name, 
+	nc_type xtype, size_t len, const void *op);
 /**
  * @brief:iofw_ enddef
  *

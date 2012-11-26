@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "quickhash.h"
 #include "iofw_types.h"
+#include "iofw_error.h"
 #include "map.h"
 #include "define.h"
 
@@ -180,7 +181,7 @@ static inline int _recv_client_io(
 	    iofw_map_get_client_index_of_server(client_id));
     *io_info = val;
 
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 /**
@@ -205,7 +206,7 @@ static inline int _remove_client_io(
 
     free(io_info);
 
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 static inline int _handle_def(iofw_id_val_t *val)
@@ -214,6 +215,7 @@ static inline int _handle_def(iofw_id_val_t *val)
     iofw_id_nc_t *nc;
     iofw_id_dim_t *dim;
     iofw_id_var_t *var;
+    iofw_id_att_t *att;
     size_t data_size, ele_size;
 
     if(NULL != val->dim)
@@ -223,14 +225,28 @@ static inline int _handle_def(iofw_id_val_t *val)
 	assert(nc->nc_id != IOFW_ID_NC_INVALID);
 	dim->nc_id = nc->nc_id;
 	debug(DEBUG_IO, "dim_len = %d", dim->dim_len);
-        ret = nc_def_dim(nc->nc_id,dim->name,dim->dim_len,&dim->dim_id);
-        if( ret != NC_NOERR )
-        {
+	if(dim->dim_len != IOFW_ID_DIM_LOCAL_NULL)
+	{
+	    ret = nc_def_dim(nc->nc_id,dim->name,dim->dim_len,&dim->dim_id);
+	}else
+	{
+	    ret = nc_def_dim(nc->nc_id,dim->name,dim->global_dim_len,&dim->dim_id);
+	}
+	if( ret != NC_NOERR )
+	{
 	    debug(DEBUG_IO, "%d", dim->nc_id);
-            error("def dim(%s) error(%s)",dim->name,nc_strerror(ret));
-            return IOFW_IO_ERROR_NC;
-        }
-	return IOFW_IO_ERROR_NONE;
+	    error("def dim(%s) error(%s)",dim->name,nc_strerror(ret));
+	    return IOFW_ERROR_NC;
+	}
+	ret = nc_put_att(nc->nc_id, NC_GLOBAL, dim->name,
+		NC_INT, 1, &dim->global_dim_len); 
+	if(ret != NC_NOERR)
+	{
+	    error("put dim(%s) global dim_len error(%s)",
+		    dim->name,nc_strerror(ret));
+	    return IOFW_ERROR_NC;
+	}
+	return IOFW_ERROR_NONE;
     }
 
     if(NULL != val->var)
@@ -247,8 +263,29 @@ static inline int _handle_def(iofw_id_val_t *val)
 	if(ret != NC_NOERR)
 	{
 	    error("def var(%s) error(%s)",var->name,nc_strerror(ret));
-	    return IOFW_IO_ERROR_NC;
+	    return IOFW_ERROR_NC;
 	}
+	ret = nc_put_att(var->nc_id, var->var_id, ATT_NAME_START,
+		NC_INT, var->ndims, var->start); 
+	if(ret != NC_NOERR)
+	{
+	    error("put var(%s) start attr error(%s)",var->name,nc_strerror(ret));
+	    return IOFW_ERROR_NC;
+	}
+
+	qlist_for_each_entry(att, var->att_head, link)
+	{
+	    ret = nc_put_att(var->nc_id, var->var_id, att->name,
+		    att->xtype, att->len, att->data); 
+	    if(ret != NC_NOERR)
+	    {
+		error("put var(%s) attr(%s) error(%s)",
+			var->name, nc_strerror(ret));
+		return IOFW_ERROR_NC;
+	    }
+
+	}
+
 	data_size = 1;
 	for(i = 0; i < var->ndims; i ++)
 	{
@@ -261,11 +298,11 @@ static inline int _handle_def(iofw_id_val_t *val)
 
 	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
 		ele_size ,  data_size);
-	return IOFW_IO_ERROR_NONE;
+	return IOFW_ERROR_NONE;
     }
 
     error("no def can do , this is impossible.");
-    return IOFW_IO_ERROR_NC;
+    return IOFW_ERROR_NC;
 }
 /**
  * @brief: update a var's start and count, still store in cur_start and cur_count
@@ -303,7 +340,7 @@ int iofw_io_init()
     io_table = qhash_init(_compare, _hash, IO_HASH_TABLE_SIZE);
     MPI_Comm_rank(MPI_COMM_WORLD, &server_id);
 
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_io_final()
@@ -314,7 +351,7 @@ int iofw_io_final()
 	io_table = NULL;
     }
 
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_io_reader_done(int client_id, int *server_done)
@@ -330,7 +367,7 @@ int iofw_io_reader_done(int client_id, int *server_done)
 	*server_done = 1;
     }
 
-    return IOFW_IO_ERROR_NONE;	
+    return IOFW_ERROR_NONE;	
 }
 
 int iofw_io_writer_done(int client_id, int *server_done)
@@ -346,7 +383,7 @@ int iofw_io_writer_done(int client_id, int *server_done)
 	*server_done = 1;
     }
 
-    return IOFW_IO_ERROR_NONE;	
+    return IOFW_ERROR_NONE;	
 }
 
 int iofw_io_create(int client_id)
@@ -355,56 +392,68 @@ int iofw_io_create(int client_id)
     char *_path = NULL;
     int nc_id, client_nc_id;
     iofw_id_nc_t *nc;
-    iofw_io_val_t *io_info;
+    //iofw_io_val_t *io_info;
     int return_code;
     int func_code = FUNC_NC_CREATE;
     char *path;
+    int sub_file_amount;
 
     iofw_msg_unpack_create(&_path,&cmode, &client_nc_id);
 
 #ifdef SVR_UNPACK_ONLY
     free(_path);
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
 
     /* TODO  */
     path = malloc(strlen(_path) + 32);
-    sprintf(path, "%s-%d", _path, server_id);
+    sprintf(path, "%s-%d", _path, iofw_map_get_server_index(server_id));
 
-    _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
-    
+    //_recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
+
     if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
 	iofw_id_map_nc(client_nc_id, IOFW_ID_NC_INVALID);
-    }
-
-    if(_bitmap_full(io_info->client_bitmap))
-    {
+	//if(_bitmap_full(io_info->client_bitmap))
+	//{
 	ret = nc_create(path,cmode,&nc_id);	
 	if(ret != NC_NOERR)
 	{
 	    error("Error happened when open %s error(%s)", 
 		    path, nc_strerror(ret));
-	    return_code = IOFW_IO_ERROR_NC;
+	    return_code = IOFW_ERROR_NC;
+
+	    goto RETURN;
+	}
+	//put attr of sub_amount
+	sub_file_amount = iofw_map_get_server_amount();
+	ret = nc_put_att(nc_id, NC_GLOBAL, ATT_NAME_SUB_AMOUNT, NC_INT, 1,
+		&sub_file_amount);
+	if(ret != NC_NOERR)
+	{
+	    error("Error happened when put sub_amount attr error(%s)", 
+		    nc_strerror(ret));
+	    return_code = IOFW_ERROR_NC;
 
 	    goto RETURN;
 	}
 
 	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
-	    iofw_id_map_nc(client_nc_id, nc_id);
+	    assert(1);
 	}else
 	{
 	    assert(IOFW_ID_NC_INVALID == nc->nc_id);
 
 	    nc->nc_id = nc_id;
 	}
-	
-	_remove_client_io(io_info);
-	debug(DEBUG_IO, "nc create(%s) success", path);
     }
 
-    return_code = IOFW_IO_ERROR_NONE;
+    //_remove_client_io(io_info);
+    debug(DEBUG_IO, "nc create(%s) success", path);
+    //}
+
+    return_code = IOFW_ERROR_NONE;
 
 RETURN:
     if(NULL != path)
@@ -441,7 +490,7 @@ int iofw_io_def_dim(int client_id)
 
 #ifdef SVR_UNPACK_ONLY
     free(name);
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
 
     //_recv_client_io(
@@ -449,7 +498,7 @@ int iofw_io_def_dim(int client_id)
 	
     if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
-	return_code = IOFW_IO_ERROR_INVALID_NC;
+	return_code = IOFW_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
@@ -457,8 +506,8 @@ int iofw_io_def_dim(int client_id)
     if(IOFW_ID_HASH_GET_NULL == 
             iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
     {
-        iofw_id_map_dim(name, client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
-        	IOFW_ID_DIM_INVALID);
+        iofw_id_map_dim(client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
+        	IOFW_ID_DIM_INVALID, name, len);
 	debug_mark(DEBUG_IO);
     }else
     {
@@ -469,13 +518,13 @@ int iofw_io_def_dim(int client_id)
     //{
     //    if(IOFW_ID_NC_INVALID == nc->nc_id)
     //    {
-    //        return_code = IOFW_IO_ERROR_INVALID_NC;
+    //        return_code = IOFW_ERROR_INVALID_NC;
     //        debug(DEBUG_IO, "Invalid NC ID.");
     //        goto RETURN;
     //    }
     //    if(nc->nc_status != DEFINE_MODE)
     //    {
-    //        return_code = IOFW_IO_ERROR_NC_NOT_DEFINE;
+    //        return_code = IOFW_ERROR_NC_NOT_DEFINE;
     //        debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
     //        goto RETURN;
     //    }
@@ -484,7 +533,7 @@ int iofw_io_def_dim(int client_id)
     //    if( ret != NC_NOERR )
     //    {
     //        error("def dim(%s) error(%s)",name,nc_strerror(ret));
-    //        return_code = IOFW_IO_ERROR_NC;
+    //        return_code = IOFW_ERROR_NC;
     //        goto RETURN;
     //    }
     //    
@@ -509,7 +558,7 @@ int iofw_io_def_dim(int client_id)
     //    debug(DEBUG_IO, "define dim(%s) success", name);
     //}
 
-    return_code = IOFW_IO_ERROR_NONE;
+    return_code = IOFW_ERROR_NONE;
 
 RETURN :
     return return_code;
@@ -542,13 +591,13 @@ int iofw_io_def_var(int client_id)
     free(start);
     free(count);
     free(client_dim_ids);
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
 
     if( ret < 0 )
     {
 	error("unpack_msg_def_var failed");
-	return IOFW_IO_ERROR_MSG_UNPACK;
+	return IOFW_ERROR_MSG_UNPACK;
     }
     dims = malloc(ndims * sizeof(iofw_id_dim_t *));
     dims_len = malloc(ndims * sizeof(size_t));
@@ -558,7 +607,7 @@ int iofw_io_def_var(int client_id)
 
     if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
     {
-	return_code = IOFW_IO_ERROR_INVALID_NC;
+	return_code = IOFW_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
@@ -569,7 +618,7 @@ int iofw_io_def_var(int client_id)
 		    client_nc_id, client_dim_ids[i], &dims[i]))
 	{
 	    debug(DEBUG_IO, "Invalid Dim.");
-	    return_code = IOFW_IO_ERROR_INVALID_DIM;
+	    return_code = IOFW_ERROR_INVALID_DIM;
 	    goto RETURN;
 	}
     }
@@ -613,7 +662,9 @@ int iofw_io_def_var(int client_id)
 	_updata_start_and_count(ndims, var->start, var->count, start, count);
 	for(i = 0; i < ndims; i ++)
 	{
-	    if(var->count[i] > dims[i]->dim_len)
+	    debug(DEBUG_IO, "count = %lu; dim_len = %d", 
+		    var->count[i], dims[i]->dim_len);
+	    if((int)(var->count[i]) > (int)(dims[i]->dim_len))
 	    {
 		dims[i]->dim_len = var->count[i];
 	    }
@@ -632,7 +683,7 @@ int iofw_io_def_var(int client_id)
 	free(count);
 	free(client_dim_ids);
     }
-    return_code = IOFW_IO_ERROR_NONE;
+    return_code = IOFW_ERROR_NONE;
 
 RETURN :
     if(dims != NULL)
@@ -645,6 +696,66 @@ RETURN :
 	free(dims_len);
 	dims_len = NULL;
     }
+    return return_code;
+}
+
+int iofw_io_put_att(int client_id)
+{
+    int client_nc_id, client_var_id; 
+    int return_code, ret;
+    iofw_id_nc_t *nc;
+    iofw_id_var_t *var;
+    char *name;
+    nc_type xtype;
+    int len;
+    char *data;
+
+    ret = iofw_msg_unpack_put_att(
+	    &client_nc_id, &client_var_id, &name, &xtype, &len, (void **)&data);
+    if( ret < 0 )
+    {
+	error("");
+	return IOFW_ERROR_MSG_UNPACK;
+    }
+
+#if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
+    free(name);
+    free(data);
+    return IOFW_ERROR_NONE;
+#endif
+
+    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    {
+	return_code = IOFW_ERROR_INVALID_NC;
+	debug(DEBUG_IO, "Invalid NC ID.");
+	goto RETURN;
+    }
+
+    if(client_var_id == NC_GLOBAL)
+    {
+	ret = nc_put_att(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
+	if(ret != NC_NOERR)
+	{
+	    error("Error happened when put sub_amount attr error(%s)", 
+		    nc_strerror(ret));
+	    return_code = IOFW_ERROR_NC;
+
+	    goto RETURN;
+	}
+    }
+    else
+    {
+	if(IOFW_ID_HASH_GET_NULL == iofw_id_put_att(
+		    client_nc_id, client_var_id, name, xtype, len, data))
+	{
+	    error("");
+	    return_code = IOFW_ERROR_INVALID_NC;
+	    goto RETURN;
+	}
+    }
+    return_code = IOFW_ERROR_NONE;
+
+RETURN:
     return return_code;
 }
 
@@ -661,11 +772,11 @@ int iofw_io_enddef(int client_id)
     if( ret < 0 )
     {
 	error("unapck msg error");
-	return IOFW_IO_ERROR_MSG_UNPACK;
+	return IOFW_ERROR_MSG_UNPACK;
     }
 
 #ifdef SVR_UNPACK_ONLY
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
 
     _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
@@ -676,7 +787,7 @@ int iofw_io_enddef(int client_id)
 	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
-	    return IOFW_IO_ERROR_INVALID_NC;
+	    return IOFW_ERROR_INVALID_NC;
 	}
 
 	if(DEFINE_MODE == nc->nc_status)
@@ -693,14 +804,14 @@ int iofw_io_enddef(int client_id)
 	    if(ret < 0)
 	    {
 		error("enddef error(%s)",nc_strerror(ret));
-		return IOFW_IO_ERROR_NC;
+		return IOFW_ERROR_NC;
 	    }
 
 	    nc->nc_status = DATA_MODE;
 	}
 	_remove_client_io(io_info);
     }
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 }
 
 int iofw_io_put_vara(int client_id)
@@ -723,12 +834,17 @@ int iofw_io_put_vara(int client_id)
     ret = iofw_msg_unpack_put_vara(
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
+    if( ret < 0 )
+    {
+	error("");
+	return IOFW_ERROR_MSG_UNPACK;
+    }
 
 #if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
     free(start);
     free(count);
     free(data);
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
     //float *_data = data;
     //for(i = 0; i < 4; i ++)
@@ -736,12 +852,6 @@ int iofw_io_put_vara(int client_id)
     //    printf("%f, ", _data[i]);
     //}
     //printf("\n");
-
-    if( ret < 0 )
-    {
-	error("unpack_msg_put_vara_float failure");
-	return IOFW_IO_ERROR_MSG_UNPACK;
-    }
 
     _recv_client_io(
 	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
@@ -752,7 +862,7 @@ int iofw_io_put_vara(int client_id)
 		client_nc_id, client_var_id, client_index, 
 		start, count, (char*)data))
     {
-	return_code = IOFW_IO_ERROR_INVALID_VAR;
+	return_code = IOFW_ERROR_INVALID_VAR;
 	debug(DEBUG_IO, "Invalid var.");
 	goto RETURN;
     }
@@ -764,7 +874,7 @@ int iofw_io_put_vara(int client_id)
         if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
         	IOFW_ID_NC_INVALID == nc->nc_id)
         {
-            return_code = IOFW_IO_ERROR_INVALID_NC;
+            return_code = IOFW_ERROR_INVALID_NC;
             debug(DEBUG_IO, "Invalid nc.");
             goto RETURN;
         }
@@ -772,7 +882,7 @@ int iofw_io_put_vara(int client_id)
         	iofw_id_get_var(client_nc_id, client_var_id, &var) ||
         	IOFW_ID_VAR_INVALID == var->var_id)
         {
-            return_code = IOFW_IO_ERROR_INVALID_VAR;
+            return_code = IOFW_ERROR_INVALID_VAR;
             debug(DEBUG_IO, "Invalid var.");
             goto RETURN;
         }
@@ -780,13 +890,13 @@ int iofw_io_put_vara(int client_id)
         if(ndims != var->ndims)
         {
             debug(DEBUG_IO, "wrong ndims.");
-            return_code = IOFW_IO_ERROR_WRONG_NDIMS;
+            return_code = IOFW_ERROR_WRONG_NDIMS;
             goto RETURN;
         }
 
         if(NULL == var->data)
         {
-            return_code = IOFW_IO_ERROR_INVALID_VAR;
+            return_code = IOFW_ERROR_INVALID_VAR;
             debug(DEBUG_IO, "Var data is NULL.");
             goto RETURN;
         }
@@ -802,7 +912,7 @@ int iofw_io_put_vara(int client_id)
 	put_start = malloc(var->ndims * sizeof(size_t));
 	if(NULL == put_start)
 	{
-	    return_code = IOFW_IO_ERROR_MALLOC;
+	    return_code = IOFW_ERROR_MALLOC;
 	    goto RETURN;
 	}
         for(i = 0; i < var->ndims; i ++)
@@ -838,12 +948,12 @@ int iofw_io_put_vara(int client_id)
         {
             error("write nc(%d) var (%d) failure(%s)",
         	    nc->nc_id,var->var_id,nc_strerror(ret));
-            return_code = IOFW_IO_ERROR_NC;
+            return_code = IOFW_ERROR_NC;
         }
         _remove_client_io(io_info);
     }
 
-    return_code = IOFW_IO_ERROR_NONE;	
+    return_code = IOFW_ERROR_NONE;	
 
 RETURN :
     return return_code;
@@ -856,7 +966,7 @@ int iofw_io_close(int client_id)
     iofw_id_nc_t *nc;
     iofw_io_val_t *io_info;
     int func_code = FUNC_NC_CLOSE;
-    iofw_id_val_t *iter, *nc_val;
+    iofw_id_val_t *iter, *next, *nc_val;
 
     ret = iofw_msg_unpack_close(&client_nc_id);
 
@@ -867,7 +977,7 @@ int iofw_io_close(int client_id)
     }
 
 #ifdef SVR_UNPACK_ONLY
-    return IOFW_IO_ERROR_NONE;
+    return IOFW_ERROR_NONE;
 #endif
 
     _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
@@ -880,28 +990,29 @@ int iofw_io_close(int client_id)
 	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
-	    return IOFW_IO_ERROR_INVALID_NC;
+	    return IOFW_ERROR_INVALID_NC;
 	}
 	ret = nc_close(nc->nc_id);
 
 	if( ret != NC_NOERR )
 	{
 	    error("close nc(%d) file failure,%s\n",nc->nc_id,nc_strerror(ret));
-	    return IOFW_IO_ERROR_NC;
+	    return IOFW_ERROR_NC;
 	}
 	_remove_client_io(io_info);
 	
 	iofw_id_get_val(client_nc_id, 0, 0, &nc_val);
-	qlist_for_each_entry(iter, &(nc_val->link), link)
+	qlist_for_each_entry_safe(iter, next, &(nc_val->link), link)
 	{
 	    qlist_del(&(iter->link));
 	    qhash_del(&(iter->hash_link));
 	    iofw_id_val_free(iter);
+	debug_mark(DEBUG_IO);
 	}
 	qhash_del(&(nc_val->hash_link));
 	free(nc_val);
     }
-    debug_mark(DEBUG_IO);
-    return IOFW_IO_ERROR_NONE;
+    debug(DEBUG_IO, "success return.");
+    return IOFW_ERROR_NONE;
 }
 

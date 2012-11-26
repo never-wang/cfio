@@ -36,9 +36,9 @@ int main(int argc, char** argv)
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
 
-    if(3 != argc)
+    if(4 != argc)
     {
-	printf("Usage : perform_test_pnetcdf LAT_PROC output_dir\n");
+	printf("Usage : perform_test_pnetcdf LAT_PROC LON_PROC output_dir\n");
 	return -1;
     }
 
@@ -49,13 +49,14 @@ int main(int argc, char** argv)
     times_init();
     times_start();
     
-    LAT_PROC = LON_PROC = atoi(argv[1]);
+    LAT_PROC = atoi(argv[1]);
+    LON_PROC = atoi(argv[2]);
     assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
-    start[1] = (rank / LON_PROC) * (LON / LON_PROC);
+    start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
     count[0] = LAT / LAT_PROC;
     count[1] = LON / LON_PROC;
     double *fp = malloc(count[0] * count[1] *sizeof(double));
@@ -70,7 +71,7 @@ int main(int argc, char** argv)
 	sleep(SLEEP_TIME);
 	times_start();
 	char fileName[100];
-	sprintf(fileName,"%s/pnetcdf-%d.nc", argv[2], i);
+	sprintf(fileName,"%s/pnetcdf-%d.nc", argv[3], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
 	ncmpi_create(MPI_COMM_WORLD, fileName, 0, MPI_INFO_NULL, &ncidp);

@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "msg.h"
+#include "netcdf.h"
 #include "debug.h"
 #include "times.h"
 #include "map.h"
@@ -73,9 +74,12 @@ int iofw_msg_final()
 {
     iofw_msg_t *msg, *next;
     MPI_Status status;
+    int i = 0;
 
     if(msg_head != NULL)
     {
+	i ++;
+	debug(DEBUG_MSG, "wait msg : %d", i);
         qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
         {
 	    MPI_Wait(&msg->req, &status);
@@ -343,6 +347,45 @@ int iofw_msg_pack_def_var(
     return IOFW_ERROR_NONE;
 }
 
+int iofw_msg_pack_put_att(
+	iofw_msg_t **_msg, int client_proc_id,
+	int ncid, int varid, const char *name, 
+	nc_type xtype, size_t len, const void *op)
+{
+    uint32_t code = FUNC_PUT_ATT;
+    iofw_msg_t *msg;
+
+    msg = create_msg();
+    msg->src = client_proc_id;
+
+    msg->size += iofw_buf_data_size(sizeof(uint32_t));
+    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += iofw_buf_str_size(name);
+    msg->size += iofw_buf_data_size(sizeof(nc_type));
+    msg->size += iofw_buf_data_array_size(len, sizeof(char));
+
+    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+
+    msg->addr = buffer->free_addr;
+
+    iofw_buf_pack_data(&code , sizeof(uint32_t), buffer);
+    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
+    iofw_buf_pack_data(&varid, sizeof(int), buffer);
+    iofw_buf_pack_str(name, buffer);
+    iofw_buf_pack_data(&xtype, sizeof(nc_type), buffer);
+    iofw_buf_pack_data_array(op, len, sizeof(char), buffer);
+
+    iofw_map_forwarding(msg);
+    *_msg = msg;
+    
+    debug(DEBUG_MSG, "ncid = %d, varid = %d, name = %s, len = %lu", 
+	    ncid, varid, name, len);
+
+    return IOFW_ERROR_NONE;
+
+}
+
 int iofw_msg_pack_enddef(
 	iofw_msg_t **_msg, int client_proc_id,
 	int ncid)
@@ -581,6 +624,21 @@ int iofw_msg_unpack_def_var(
     iofw_buf_unpack_data(varid, sizeof(int), buffer);
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", *ncid, *name, *ndims);
+
+    return IOFW_ERROR_NONE;
+}
+int iofw_msg_unpack_put_att(
+	int *ncid, int *varid, char **name, 
+	nc_type *xtype, int *len, void **op)
+{
+    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
+    iofw_buf_unpack_data(varid, sizeof(int), buffer);
+    iofw_buf_unpack_str(name, buffer);
+    iofw_buf_unpack_data(xtype, sizeof(nc_type), buffer);
+    iofw_buf_unpack_data_array(op, len, sizeof(char), buffer);
+
+    debug(DEBUG_MSG, "ncid = %d, varid = %d, name = %s, len = %d",
+	    *ncid, *varid, *name, *len);
 
     return IOFW_ERROR_NONE;
 }

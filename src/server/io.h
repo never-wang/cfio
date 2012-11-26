@@ -23,8 +23,6 @@
 
 #define IO_HASH_TABLE_SIZE 32
 
-/* return codes */
-#define	ALL_CLINET_REPORT_DONE 1
 /* the msg is delt, the buffer could be reused inmmediately */
 #define DEALT_MSG 2
 /* the msg is put into the queue, the buffer should be keep util
@@ -32,18 +30,8 @@
 #define ENQUEUE_MSG 3
 #define IMM_MSG 4
 
-#define IOFW_IO_ERROR_NONE	     0
-#define IOFW_IO_ERROR_NC	    -1	/* nc operation error */
-#define IOFW_IO_ERROR_INVALID_NC    -2	/* invalid nc id */
-#define IOFW_IO_ERROR_INVALID_DIM   -3	/* invalid dimension id */
-#define IOFW_IO_ERROR_INVALID_VAR   -4	/* invalid variable id */
-#define IOFW_IO_ERROR_MSG_UNPACK    -5
-#define IOFW_IO_ERROR_PUT_VAR	    -6
-#define IOFW_IO_ERROR_WRONG_NDIMS   -7  /* Wrong ndims in put var */
-#define IOFW_IO_ERROR_NC_NOT_DEFINE -8  /* nc file is not in DEFINE_MODE, some IO
-					   function only can be called in 
-					   DEFINE_MODE*/
-#define IOFW_IO_ERROR_MALLOC	    -9	/* Malloc fail */
+#define ATT_NAME_SUB_AMOUNT	    "sub_amount"
+#define ATT_NAME_START		    "start"
 
 typedef struct
 {

@@ -248,7 +248,12 @@ int iofw_map_get_client_num_of_server(int server_id)
     debug(DEBUG_MAP, "client number of server(%d) : %d", server_id, client_num);
     return client_num;
 }
+int iofw_map_get_server_index(int server_id)
+{
+    assert(iofw_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
 
+    return server_id - client_amount;
+}
 int iofw_map_get_client_index_of_server(int client_id)
 {
     assert(iofw_map_proc_type(client_id) == IOFW_MAP_TYPE_CLIENT);

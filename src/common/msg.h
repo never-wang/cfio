@@ -32,7 +32,7 @@
 #define FUNC_NC_CLOSE		((uint32_t)3)
 #define FUNC_NC_DEF_DIM		((uint32_t)11)
 #define FUNC_NC_DEF_VAR		((uint32_t)12)
-#define FUNC_DEF_VAR_RANGE	((uint32_t)13)
+#define FUNC_PUT_ATT		((uint32_t)13)
 #define FUNC_NC_PUT_VARA	((uint32_t)20)
 #define FUNC_END_IO		((uint32_t)40)
 /* below two are only used in io.c */
@@ -148,6 +148,24 @@ int iofw_msg_pack_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, int varid);
+/**
+ * @brief: pack iofw_put_att into msg
+ *
+ * @param _msg: pointer to the msg
+ * @param client_proc_id: id of client proc who call the function
+ * @param ncid: netCDF ID, arg of iofw_put_att
+ * @param varid: variable ID, arg of iofw_put_att
+ * @param name: variable name, arg of iofw_put_att
+ * @param xtype: predefined netCDF external data type, arg of iofw_put_att
+ * @param len: number of values provided for the attribute
+ * @param op: Pointer to values
+ *
+ * @return: error code
+ */
+int iofw_msg_pack_put_att(
+	iofw_msg_t **_msg, int client_proc_id,
+	int ncid, int varid, const char *name, 
+	nc_type xtype, size_t len, const void *op);
 /**
  * @brief: pack iofw_enddef into msg
  
@@ -268,6 +286,23 @@ int iofw_msg_unpack_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids, 
 	size_t **start, size_t **count, int *varid);
+/**
+ * @brief: unpack arguments for iofw_put_att
+ *
+ * @param ncid: pointer to where netCDF ID is to be stored
+ * @param varid: pointer to where variable ID is to be stored 
+ * @param name: pointer to where variable name is to be stored, need to be freed by
+ *	the caller
+ * @param xtype: pointer to where netCDF external data types is to be stored
+ * @param len: pointer to where number of values provided for the attribute is to be
+ *	stored
+ * @param op: Pointer to values
+ *
+ * @return: 
+ */
+int iofw_msg_unpack_put_att(
+	int *ncid, int *varid, char **name, 
+	nc_type *xtype, int *len, void **op);
 /**
  * @brief: unpack arguments for the iofw_enddef function 
  *

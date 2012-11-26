@@ -68,6 +68,13 @@ static int decode(iofw_msg_t *msg)
 	    debug(DEBUG_SERVER, "server %d done nc_def_var for client %d\n",
 		    rank,client_id);
 	    return IOFW_ERROR_NONE;
+	case FUNC_PUT_ATT:
+	    debug(DEBUG_SERVER, "server %d recv nc_put_att from client %d",
+		    rank, client_id);
+	    iofw_io_put_att(client_id);
+	    debug(DEBUG_SERVER, "server %d done nc_put_att from client %d",
+		    rank, client_id);
+	    return IOFW_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
 	    debug(DEBUG_SERVER,"server %d recv nc_enddef from client %d",
 		    rank, client_id);

@@ -79,6 +79,14 @@ int iofw_map_get_client_amount();
  */
 int iofw_map_get_client_num_of_server(int server_id);
 /**
+ * @brief: get server index
+ *
+ * @param server_id: server proc id
+ *
+ * @return: server index
+ */
+int iofw_map_get_server_index(int server_id);
+/**
  * @brief: get client index in a server
  *
  * @param client_id: the client's id

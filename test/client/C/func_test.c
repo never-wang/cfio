@@ -22,10 +22,10 @@
 #define LAT 6
 #define LON 6
 
-#define LAT_PROC 3
-#define LON_PROC 3
+#define LAT_PROC 1
+#define LON_PROC 1
 
-#define ratio 8
+#define ratio 1
 
 int main(int argc, char** argv)
 {
@@ -35,6 +35,7 @@ int main(int argc, char** argv)
     int dim1,var1,i;
 
     size_t len = 10;
+    char *test="test";
     MPI_Comm comm = MPI_COMM_WORLD;
 
     MPI_Init(&argc, &argv);
@@ -42,8 +43,8 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_MAP | DEBUG_ID); 
-    //set_debug_mask(DEBUG_MAP); 
+    //set_debug_mask(DEBUG_IOFW | DEBUG_SERVER | DEBUG_MSG); 
+    set_debug_mask(DEBUG_ID | DEBUG_IO); 
     //set_debug_mask(DEBUG_TIME); 
     //set_debug_mask(DEBUG_SERVER); 
     size_t start[2],count[2];
@@ -72,9 +73,12 @@ int main(int argc, char** argv)
     iofw_def_dim(ncidp, "lat", LAT,&dimids[0]);
     iofw_def_dim(ncidp, "lon", LON,&dimids[1]);
 
+    iofw_put_att(ncidp, NC_GLOBAL, "test", NC_CHAR, strlen(test), test);
+
     iofw_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
+    iofw_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
     iofw_enddef(ncidp);
-    iofw_put_vara_float(ncidp,var1, 2,start, count,fp); 
+    //iofw_put_vara_float(ncidp,var1, 2,start, count,fp); 
 
     iofw_close(ncidp);
     free(fp);

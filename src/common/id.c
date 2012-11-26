@@ -368,9 +368,9 @@ int iofw_id_map_nc(
  * name : addr_copy
  **/
 int iofw_id_map_dim(
-	char *name, 
 	int client_nc_id, int client_dim_id, 
-	int server_nc_id, int server_dim_id)
+	int server_nc_id, int server_dim_id,
+	char *name, int dim_len)
 {
     iofw_id_key_t key;
     iofw_id_val_t *val;
@@ -391,9 +391,11 @@ int iofw_id_map_dim(
     val->client_dim_id = client_dim_id;
     val->dim = malloc(sizeof(iofw_id_dim_t));
     memset(val->dim, 0, sizeof(iofw_id_dim_t));
-    val->dim->name = name;
     val->dim->nc_id = server_nc_id;
     val->dim->dim_id = server_dim_id;
+    val->dim->name = name;
+    val->dim->dim_len = IOFW_ID_DIM_LOCAL_NULL;
+    val->dim->global_dim_len = dim_len;
 
     qhash_add(map_table, &key, &(val->hash_link));
     qlist_add_tail(&(val->link), &(nc_val->link));
@@ -452,6 +454,9 @@ int iofw_id_map_var(
     val->var->data_type = data_type;
     
     val->var->data = NULL;
+
+    val->var->att_head = malloc(sizeof(qlist_head_t));
+    INIT_QLIST_HEAD(val->var->att_head);
 
     qhash_add(map_table, &key, &(val->hash_link));
     qlist_add_tail(&(val->link), &(nc_val->link));
@@ -607,7 +612,7 @@ int iofw_id_put_var(
 		    start[i] < var->start[i])
 	    {
 		debug(DEBUG_ID, "Index exceeds : (start[%d] = %lu), "
-			"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] = "
+			"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] "
 			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
 			client_nc_id, client_var_id, 
 			i, var->start[i], i, var->count[i]);
@@ -643,6 +648,44 @@ int iofw_id_put_var(
 	return IOFW_ERROR_NONE;
     }
 }
+
+int iofw_id_put_att(
+	int client_nc_id, int client_var_id,
+	char *name, nc_type xtype, int len, char *data)
+{
+    iofw_id_key_t key;
+    iofw_id_val_t *val;
+    struct qhash_head *link;
+    iofw_id_var_t *var;
+    iofw_id_att_t *att;
+    int i;
+
+    memset(&key, 0, sizeof(iofw_id_key_t));
+    key.client_nc_id = client_nc_id;
+    key.client_var_id = client_var_id;
+
+    if(NULL == (link = qhash_search(map_table, &key)))
+    {
+	debug(DEBUG_ID, "Can't find var (%d, 0, %d)", 
+		client_nc_id, client_var_id);
+	return IOFW_ID_HASH_GET_NULL;
+    }else
+    {
+	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	var = val->var;
+	
+	att = malloc(sizeof(iofw_id_att_t));
+	att->name = name;
+	att->xtype = xtype;
+	att->len = len;
+	att->data = data;
+	qlist_add_tail(&(att->link), var->att_head);
+
+	debug(DEBUG_ID, "put att(%s)", att->name);
+	
+	return IOFW_ERROR_NONE;
+    }
+} 
 
 int iofw_id_merge_var_data(iofw_id_var_t *var)
 {
@@ -702,6 +745,9 @@ void iofw_id_val_free(iofw_id_val_t *val)
 {
     int i;
     iofw_id_data_t *recv_data;
+    iofw_id_att_t *att, *next;
+
+    debug(DEBUG_ID, "start free.");
 
     if(NULL != val)
     {
@@ -771,11 +817,32 @@ void iofw_id_val_free(iofw_id_val_t *val)
 		free(val->var->data);
 		val->var->data = NULL;
 	    }
+	    if(NULL != val->var->att_head)
+	    {
+		qlist_for_each_entry_safe(att, next, val->var->att_head, link)
+		{
+		    assert(att != NULL);
+		   if(att->name != NULL)
+		   {
+		       free(att->name);
+		       att->name = NULL;
+		   }
+		   if(att->data != NULL)
+		   {
+		       free(att->data);
+		       att->data = NULL;
+		   }
+		   free(att);
+		}
+		free(val->var->att_head);
+		val->var->att_head = NULL;
+	    }
 	    free(val->var);
 	    val->var = NULL;
 	}
 	free(val);
 	val = NULL;
     }
+    debug(DEBUG_ID, "success return.");
 }
 	

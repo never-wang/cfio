@@ -36,13 +36,14 @@ int main(int argc, char** argv)
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
 
-    if(3 != argc)
+    if(4 != argc)
     {
-	printf("Usage : perform_test LAT_PROC output_dir\n");
+	printf("Usage : perform_test LAT_PROC LON_PROC output_dir\n");
 	return -1;
     }
     
-    LAT_PROC = LON_PROC = atoi(argv[1]);
+    LAT_PROC = atoi(argv[1]);
+    LON_PROC = atoi(argv[2]);
     
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(comm, &rank);
@@ -53,14 +54,17 @@ int main(int argc, char** argv)
     times_start();
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_SERVER); 
+    //set_debug_mask(DEBUG_SERVER | DEBUG_ID | DEBUG_IO); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
-    start[1] = (rank / LON_PROC) * (LON / LON_PROC);
+    start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
     count[0] = LAT / LAT_PROC;
     count[1] = LON / LON_PROC;
     double *fp = malloc(count[0] * count[1] *sizeof(double));
+
+    printf("Proc %d : start(%lu, %lu) ; count(%lu, %lu)\n", 
+	    rank, start[0], start[1], count[0], count[1]);
 
     for( i = 0; i< count[0] * count[1]; i++)
     {
@@ -73,7 +77,7 @@ int main(int argc, char** argv)
     {
 	sleep(SLEEP_TIME);
 	times_start();
-	sprintf(fileName,"%s/iofw-%d.nc", argv[2], i);
+	sprintf(fileName,"%s/iofw-%d.nc", argv[3], i);
 	int dimids[2];
 	iofw_create(fileName, 0, &ncidp);
 	int lat = LAT;

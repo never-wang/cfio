@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #include "quicklist.h"
+#include "netcdf.h"
 
 #define MAP_HASH_TABLE_SIZE 1024
 #define ASSIGN_HASH_TABLE_SIZE 1024
@@ -38,6 +39,9 @@
 #define IOFW_ID_NC_INVALID -1   
 #define IOFW_ID_DIM_INVALID -1
 #define IOFW_ID_VAR_INVALID -1
+#define IOFW_ID_DIM_LOCAL_NULL -1 /* when the def_var not be called, the local 
+				     dim_len will to set to this value, mean that
+				     we don't need to call nc_def_dim */
 
 #define iofw_id_val_entry(ptr, member) \
     (iofw_id_val_t *)((char *)ptr - (size_t)&(((iofw_id_val_t *)0)->member)) 
@@ -72,6 +76,7 @@ typedef struct
     int dim_id;		    /* id of the dimension */
     
     int dim_len;	    /* length of the dim */
+    int global_dim_len;
 }iofw_id_dim_t;
 /** @brief: store a variable information in server */
 typedef struct
@@ -91,8 +96,19 @@ typedef struct
     int data_type;          /* type of data, define in iofw_types.h */
     //size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
+    qlist_head_t 
+	*att_head;	    /* variable attribute list */
 
 }iofw_id_var_t;
+/** @brief: store a variable's att */
+typedef struct
+{
+    char *name;		    /* name of the attribute */
+    nc_type xtype;	    /* type of the attribute */
+    int len;		    /* len of the attribute data */
+    char *data;		    /* data of the attribute */
+    qlist_head_t link;
+}iofw_id_att_t;
 
 /** @brief: id hash entry key */
 typedef struct
@@ -182,14 +198,15 @@ int iofw_id_map_nc(int client_nc_id, int server_nc_id);
  * @param client_dim_id: the dim id in client
  * @param server_nc_id: the nc file id in server
  * @param server_dim_id: the dim id in server
+ * @param name: name of dim
  * @param dim_len: length of dim
  *
  * @return: error code
  */
 int iofw_id_map_dim(
-	char *name,
 	int client_nc_id, int client_dim_id, 
-	int server_nc_id, int server_dim_id);
+	int server_nc_id, int server_dim_id,
+	char *name, int dim_len);
 /**
  * @brief: add a new map((client_nc_id, client_var_id)->(server_nc_id,
  *	server_dim_id)) in server
