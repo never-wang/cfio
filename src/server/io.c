@@ -27,8 +27,8 @@
 #include "buffer.h"
 #include "debug.h"
 #include "quickhash.h"
-#include "iofw_types.h"
-#include "iofw_error.h"
+#include "cfio_types.h"
+#include "cfio_error.h"
 #include "map.h"
 #include "define.h"
 
@@ -40,9 +40,9 @@ static int _compare(void *key, struct qhash_head *link)
     assert(NULL != key);
     assert(NULL != link);
 
-    iofw_io_val_t *val = qlist_entry(link, iofw_io_val_t, hash_link);
+    cfio_io_val_t *val = qlist_entry(link, cfio_io_val_t, hash_link);
 
-    if(0 == memcmp(key, val, sizeof(iofw_io_key_t)))
+    if(0 == memcmp(key, val, sizeof(cfio_io_key_t)))
     {
 	return 1;
     }
@@ -52,7 +52,7 @@ static int _compare(void *key, struct qhash_head *link)
 
 static int _hash(void *key, int table_size)
 {
-    iofw_io_key_t *_key = key;
+    cfio_io_key_t *_key = key;
     int a, b, c;
 
     a = _key->func_code; b = _key->client_nc_id; c = _key->client_dim_id;
@@ -65,7 +65,7 @@ static int _hash(void *key, int table_size)
     return h;
 }
 
-static void _free(iofw_io_val_t *val)
+static void _free(cfio_io_val_t *val)
 {
     if(NULL != val)
     {
@@ -86,10 +86,10 @@ static inline void _add_bitmap(uint8_t *bitmap, int client_id)
     int i, j;
     int client_index;
 
-    assert(client_id < iofw_map_get_client_amount());
+    assert(client_id < cfio_map_get_client_amount());
     assert(bitmap != NULL);
 
-    client_index = iofw_map_get_client_index_of_server(client_id);
+    client_index = cfio_map_get_client_index_of_server(client_id);
 
     i = client_index >> 3;
     j = client_index - (i << 3);
@@ -112,7 +112,7 @@ static inline int _bitmap_full(uint8_t *bitmap)
     int head, tail;
     int client_num;
     
-    client_num = iofw_map_get_client_num_of_server(server_id);
+    client_num = cfio_map_get_client_num_of_server(server_id);
     head = client_num >> 3;
     tail = client_num - (head << 3);
 
@@ -150,10 +150,10 @@ static inline int _bitmap_full(uint8_t *bitmap)
 static inline int _recv_client_io(
 	int client_id, int func_code,
 	int client_nc_id, int client_dim_id, int client_var_id,
-	iofw_io_val_t **io_info)
+	cfio_io_val_t **io_info)
 {
-    iofw_io_key_t key;
-    iofw_io_val_t *val;
+    cfio_io_key_t key;
+    cfio_io_val_t *val;
     qlist_head_t *link;
     int client_num;
 
@@ -162,23 +162,23 @@ static inline int _recv_client_io(
     key.client_dim_id = client_dim_id;
     key.client_var_id = client_var_id;
 
-    client_num = iofw_map_get_client_num_of_server(server_id);
+    client_num = cfio_map_get_client_num_of_server(server_id);
 
     if(NULL == (link = qhash_search(io_table, &key)))
     {
-	val = malloc(sizeof(iofw_io_val_t));
+	val = malloc(sizeof(cfio_io_val_t));
 
-	memcpy(val, &key, sizeof(iofw_io_key_t));
+	memcpy(val, &key, sizeof(cfio_io_key_t));
 	val->client_bitmap = malloc((client_num >> 3) + 1);
 	memset(val->client_bitmap, 0, (client_num >> 3) + 1);
 	qhash_add(io_table, &key, &(val->hash_link));
 
     }else
     {
-	val = qlist_entry(link, iofw_io_val_t, hash_link);
+	val = qlist_entry(link, cfio_io_val_t, hash_link);
     }
     _add_bitmap(val->client_bitmap, 
-	    iofw_map_get_client_index_of_server(client_id));
+	    cfio_map_get_client_index_of_server(client_id));
     *io_info = val;
 
     return IOFW_ERROR_NONE;
@@ -192,7 +192,7 @@ static inline int _recv_client_io(
  * @return: error code
  */
 static inline int _remove_client_io(
-	iofw_io_val_t *io_info)
+	cfio_io_val_t *io_info)
 {
     assert(io_info != NULL);
 
@@ -209,20 +209,20 @@ static inline int _remove_client_io(
     return IOFW_ERROR_NONE;
 }
 
-static inline int _handle_def(iofw_id_val_t *val)
+static inline int _handle_def(cfio_id_val_t *val)
 {
     int ret, i;
-    iofw_id_nc_t *nc;
-    iofw_id_dim_t *dim;
-    iofw_id_var_t *var;
-    iofw_id_att_t *att;
+    cfio_id_nc_t *nc;
+    cfio_id_dim_t *dim;
+    cfio_id_var_t *var;
+    cfio_id_att_t *att;
     size_t data_size, ele_size;
     int *start;
 
     if(NULL != val->dim)
     {
 	dim = val->dim;
-	iofw_id_get_nc(val->client_nc_id, &nc);
+	cfio_id_get_nc(val->client_nc_id, &nc);
 	assert(nc->nc_id != IOFW_ID_NC_INVALID);
 	dim->nc_id = nc->nc_id;
 	debug(DEBUG_IO, "dim_len = %d", dim->dim_len);
@@ -255,7 +255,7 @@ static inline int _handle_def(iofw_id_val_t *val)
 	var = val->var;
 	for(i = 0; i < var->ndims; i ++)
 	{
-	    iofw_id_get_dim(val->client_nc_id, var->dim_ids[i], &dim);
+	    cfio_id_get_dim(val->client_nc_id, var->dim_ids[i], &dim);
 	    var->dim_ids[i] = dim->dim_id;
 	}
 	var->nc_id = dim->nc_id;
@@ -292,7 +292,7 @@ static inline int _handle_def(iofw_id_val_t *val)
 	    if(ret != NC_NOERR)
 	    {
 		error("put var(%s) attr(%s) error(%s)",
-			var->name, nc_strerror(ret));
+			var->name, att->name, nc_strerror(ret));
 		return IOFW_ERROR_NC;
 	    }
 
@@ -305,7 +305,7 @@ static inline int _handle_def(iofw_id_val_t *val)
 	    //debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
 	    //        i, var->start[i], var->count[i]);
 	}
-	iofw_types_size(ele_size, var->data_type);
+	cfio_types_size(ele_size, var->data_type);
 	var->data = malloc(ele_size * data_size);
 
 	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
@@ -347,7 +347,7 @@ void _updata_start_and_count(int ndims,
     }
 }
 
-int iofw_io_init()
+int cfio_io_init()
 {
     io_table = qhash_init(_compare, _hash, IO_HASH_TABLE_SIZE);
     MPI_Comm_rank(MPI_COMM_WORLD, &server_id);
@@ -355,21 +355,21 @@ int iofw_io_init()
     return IOFW_ERROR_NONE;
 }
 
-int iofw_io_final()
+int cfio_io_final()
 {
     if(NULL != io_table)
     {
-	qhash_destroy_and_finalize(io_table, iofw_io_val_t, hash_link, _free);
+	qhash_destroy_and_finalize(io_table, cfio_io_val_t, hash_link, _free);
 	io_table = NULL;
     }
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_io_reader_done(int client_id, int *server_done)
+int cfio_io_reader_done(int client_id, int *server_done)
 {
     int func_code = FUNC_READER_END_IO;
-    iofw_io_val_t *io_info;
+    cfio_io_val_t *io_info;
 
     _recv_client_io(client_id, func_code, 0, 0, 0, &io_info);
 
@@ -382,10 +382,10 @@ int iofw_io_reader_done(int client_id, int *server_done)
     return IOFW_ERROR_NONE;	
 }
 
-int iofw_io_writer_done(int client_id, int *server_done)
+int cfio_io_writer_done(int client_id, int *server_done)
 {
     int func_code = FUNC_WRITER_END_IO;
-    iofw_io_val_t *io_info;
+    cfio_io_val_t *io_info;
 
     _recv_client_io(client_id, func_code, 0, 0, 0, &io_info);
 
@@ -398,19 +398,19 @@ int iofw_io_writer_done(int client_id, int *server_done)
     return IOFW_ERROR_NONE;	
 }
 
-int iofw_io_create(int client_id)
+int cfio_io_create(int client_id)
 {
     int ret, cmode;
     char *_path = NULL;
     int nc_id, client_nc_id;
-    iofw_id_nc_t *nc;
-    //iofw_io_val_t *io_info;
+    cfio_id_nc_t *nc;
+    //cfio_io_val_t *io_info;
     int return_code;
     int func_code = FUNC_NC_CREATE;
     char *path;
     int sub_file_amount;
 
-    iofw_msg_unpack_create(&_path,&cmode, &client_nc_id);
+    cfio_msg_unpack_create(&_path,&cmode, &client_nc_id);
 
 #ifdef SVR_UNPACK_ONLY
     free(_path);
@@ -419,13 +419,13 @@ int iofw_io_create(int client_id)
 
     /* TODO  */
     path = malloc(strlen(_path) + 32);
-    sprintf(path, "%s-%d", _path, iofw_map_get_server_index(server_id));
+    sprintf(path, "%s-%d", _path, cfio_map_get_server_index(server_id));
 
     //_recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
 
-    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
-	iofw_id_map_nc(client_nc_id, IOFW_ID_NC_INVALID);
+	cfio_id_map_nc(client_nc_id, IOFW_ID_NC_INVALID);
 	//if(_bitmap_full(io_info->client_bitmap))
 	//{
 	ret = nc_create(path,cmode,&nc_id);	
@@ -438,7 +438,7 @@ int iofw_io_create(int client_id)
 	    goto RETURN;
 	}
 	//put attr of sub_amount
-	sub_file_amount = iofw_map_get_server_amount();
+	sub_file_amount = cfio_map_get_server_amount();
 	ret = nc_put_att(nc_id, NC_GLOBAL, ATT_NAME_SUB_AMOUNT, NC_INT, 1,
 		&sub_file_amount);
 	if(ret != NC_NOERR)
@@ -450,7 +450,7 @@ int iofw_io_create(int client_id)
 	    goto RETURN;
 	}
 
-	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    assert(1);
 	}else
@@ -481,21 +481,21 @@ RETURN:
     return return_code;
 }
 
-int iofw_io_def_dim(int client_id)
+int cfio_io_def_dim(int client_id)
 {
     int ret = 0;
     int dim_id;
     int client_nc_id, client_dim_id;
-    iofw_id_nc_t *nc;
-    iofw_id_dim_t *dim;
-    iofw_io_val_t *io_info;
+    cfio_id_nc_t *nc;
+    cfio_id_dim_t *dim;
+    cfio_io_val_t *io_info;
     size_t len;
     char *name = NULL;
 
     int func_code = FUNC_NC_DEF_DIM;
     int return_code;
 
-    iofw_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
+    cfio_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
     
     debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
 	    client_nc_id, name, len);
@@ -508,7 +508,7 @@ int iofw_io_def_dim(int client_id)
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, client_dim_id, 0, &io_info);
 	
-    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
 	return_code = IOFW_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
@@ -516,9 +516,9 @@ int iofw_io_def_dim(int client_id)
     }
 
     if(IOFW_ID_HASH_GET_NULL == 
-            iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
+            cfio_id_get_dim(client_nc_id, client_dim_id, &dim))
     {
-        iofw_id_map_dim(client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
+        cfio_id_map_dim(client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
         	IOFW_ID_DIM_INVALID, name, len);
 	debug_mark(DEBUG_IO);
     }else
@@ -550,9 +550,9 @@ int iofw_io_def_dim(int client_id)
     //    }
     //    
     //    if(IOFW_ID_HASH_GET_NULL == 
-    //    	iofw_id_get_dim(client_nc_id, client_dim_id, &dim))
+    //    	cfio_id_get_dim(client_nc_id, client_dim_id, &dim))
     //    {
-    //        iofw_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
+    //        cfio_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
     //    	    dim_id, len);
     //    }else
     //    {
@@ -576,15 +576,15 @@ RETURN :
     return return_code;
 }
 
-int iofw_io_def_var(int client_id)
+int cfio_io_def_var(int client_id)
 {
     int ret = 0, i;
     int nc_id, var_id, ndims;
     int client_nc_id, client_var_id;
-    iofw_id_nc_t *nc;
-    iofw_id_dim_t **dims = NULL; 
-    iofw_id_var_t *var = NULL;
-    iofw_io_val_t *io_info = NULL;
+    cfio_id_nc_t *nc;
+    cfio_id_dim_t **dims = NULL; 
+    cfio_id_var_t *var = NULL;
+    cfio_io_val_t *io_info = NULL;
     int *client_dim_ids = NULL;
     size_t *dims_len = NULL;
     char *name = NULL;
@@ -595,7 +595,7 @@ int iofw_io_def_var(int client_id)
     int func_code = FUNC_NC_DEF_VAR;
     int return_code;
 
-    ret = iofw_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
+    ret = cfio_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
 	    &client_dim_ids, &start, &count, &client_var_id);
     
 #ifdef SVR_UNPACK_ONLY
@@ -611,13 +611,13 @@ int iofw_io_def_var(int client_id)
 	error("unpack_msg_def_var failed");
 	return IOFW_ERROR_MSG_UNPACK;
     }
-    dims = malloc(ndims * sizeof(iofw_id_dim_t *));
+    dims = malloc(ndims * sizeof(cfio_id_dim_t *));
     dims_len = malloc(ndims * sizeof(size_t));
 
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
-    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
 	return_code = IOFW_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
@@ -626,7 +626,7 @@ int iofw_io_def_var(int client_id)
 	
     for(i = 0; i < ndims; i ++)
     {
-	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_dim(
+	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_dim(
 		    client_nc_id, client_dim_ids[i], &dims[i]))
 	{
 	    debug(DEBUG_IO, "Invalid Dim.");
@@ -636,14 +636,14 @@ int iofw_io_def_var(int client_id)
     }
 
     if(IOFW_ID_HASH_GET_NULL == 
-	    iofw_id_get_var(client_nc_id, client_var_id, &var))
+	    cfio_id_get_var(client_nc_id, client_var_id, &var))
     {
 	/**
 	 * the fisrst def var msg arrive, not need to free the name, start, count
 	 * and client_dim_ids
 	 **/
-	client_num = iofw_map_get_client_num_of_server(server_id);
-	iofw_id_map_var(name, client_nc_id, client_var_id, 
+	client_num = cfio_map_get_client_num_of_server(server_id);
+	cfio_id_map_var(name, client_nc_id, client_var_id, 
 		IOFW_ID_NC_INVALID, IOFW_ID_VAR_INVALID, 
 		ndims, client_dim_ids, start, count, xtype, client_num);
 	/**
@@ -711,18 +711,18 @@ RETURN :
     return return_code;
 }
 
-int iofw_io_put_att(int client_id)
+int cfio_io_put_att(int client_id)
 {
     int client_nc_id, client_var_id; 
     int return_code, ret;
-    iofw_id_nc_t *nc;
-    iofw_id_var_t *var;
+    cfio_id_nc_t *nc;
+    cfio_id_var_t *var;
     char *name;
     nc_type xtype;
     int len;
     char *data;
 
-    ret = iofw_msg_unpack_put_att(
+    ret = cfio_msg_unpack_put_att(
 	    &client_nc_id, &client_var_id, &name, &xtype, &len, (void **)&data);
     if( ret < 0 )
     {
@@ -736,7 +736,7 @@ int iofw_io_put_att(int client_id)
     return IOFW_ERROR_NONE;
 #endif
 
-    if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
 	return_code = IOFW_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
@@ -757,7 +757,7 @@ int iofw_io_put_att(int client_id)
     }
     else
     {
-	if(IOFW_ID_HASH_GET_NULL == iofw_id_put_att(
+	if(IOFW_ID_HASH_GET_NULL == cfio_id_put_att(
 		    client_nc_id, client_var_id, name, xtype, len, data))
 	{
 	    error("");
@@ -771,16 +771,16 @@ RETURN:
     return return_code;
 }
 
-int iofw_io_enddef(int client_id)
+int cfio_io_enddef(int client_id)
 {
     int client_nc_id, ret;
-    iofw_id_nc_t *nc;
-    iofw_io_val_t *io_info;
-    iofw_id_val_t *iter, *nc_val;
+    cfio_id_nc_t *nc;
+    cfio_io_val_t *io_info;
+    cfio_id_val_t *iter, *nc_val;
 
     int func_code = FUNC_NC_ENDDEF;
 
-    ret = iofw_msg_unpack_enddef(&client_nc_id);
+    ret = cfio_msg_unpack_enddef(&client_nc_id);
     if( ret < 0 )
     {
 	error("unapck msg error");
@@ -796,7 +796,7 @@ int iofw_io_enddef(int client_id)
     if(_bitmap_full(io_info->client_bitmap))
     {
 
-	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
 	    return IOFW_ERROR_INVALID_NC;
@@ -804,7 +804,7 @@ int iofw_io_enddef(int client_id)
 
 	if(DEFINE_MODE == nc->nc_status)
 	{
-	    iofw_id_get_val(client_nc_id, 0, 0, &nc_val);
+	    cfio_id_get_val(client_nc_id, 0, 0, &nc_val);
 	    qlist_for_each_entry(iter, &(nc_val->link), link)
 	    {
 		if((ret = _handle_def(iter)) < 0)
@@ -826,12 +826,12 @@ int iofw_io_enddef(int client_id)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_io_put_vara(int client_id)
+int cfio_io_put_vara(int client_id)
 {
     int i,ret = 0, ndims;
-    iofw_id_nc_t *nc;
-    iofw_id_var_t *var;
-    iofw_io_val_t *io_info;
+    cfio_id_nc_t *nc;
+    cfio_id_var_t *var;
+    cfio_io_val_t *io_info;
     int client_nc_id, client_var_id;
     size_t *start, *count;
     size_t data_size;
@@ -842,8 +842,8 @@ int iofw_io_put_vara(int client_id)
     int func_code = FUNC_NC_PUT_VARA;
     int return_code;
 
-    //    ret = iofw_unpack_msg_extra_data_size(h_buf, &data_size);
-    ret = iofw_msg_unpack_put_vara(
+    //    ret = cfio_unpack_msg_extra_data_size(h_buf, &data_size);
+    ret = cfio_msg_unpack_put_vara(
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
     if( ret < 0 )
@@ -868,9 +868,9 @@ int iofw_io_put_vara(int client_id)
     _recv_client_io(
 	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
-    client_index = iofw_map_get_client_index_of_server(client_id);
+    client_index = cfio_map_get_client_index_of_server(client_id);
     //TODO  check whether data_type is right
-    if(IOFW_ID_HASH_GET_NULL == iofw_id_put_var(
+    if(IOFW_ID_HASH_GET_NULL == cfio_id_put_var(
 		client_nc_id, client_var_id, client_index, 
 		start, count, (char*)data))
     {
@@ -883,7 +883,7 @@ int iofw_io_put_vara(int client_id)
     {
         debug(DEBUG_IO, "bit map full");
 
-        if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc) ||
+        if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc) ||
         	IOFW_ID_NC_INVALID == nc->nc_id)
         {
             return_code = IOFW_ERROR_INVALID_NC;
@@ -891,7 +891,7 @@ int iofw_io_put_vara(int client_id)
             goto RETURN;
         }
         if(IOFW_ID_HASH_GET_NULL == 
-        	iofw_id_get_var(client_nc_id, client_var_id, &var) ||
+        	cfio_id_get_var(client_nc_id, client_var_id, &var) ||
         	IOFW_ID_VAR_INVALID == var->var_id)
         {
             return_code = IOFW_ERROR_INVALID_VAR;
@@ -913,7 +913,7 @@ int iofw_io_put_vara(int client_id)
             goto RETURN;
         }
         
-        iofw_id_merge_var_data(var);
+        cfio_id_merge_var_data(var);
 
         for(i = 0; i < var->ndims; i ++)
         {
@@ -972,15 +972,15 @@ RETURN :
 
 }
 
-int iofw_io_close(int client_id)
+int cfio_io_close(int client_id)
 {
     int client_nc_id, nc_id, ret;
-    iofw_id_nc_t *nc;
-    iofw_io_val_t *io_info;
+    cfio_id_nc_t *nc;
+    cfio_io_val_t *io_info;
     int func_code = FUNC_NC_CLOSE;
-    iofw_id_val_t *iter, *next, *nc_val;
+    cfio_id_val_t *iter, *next, *nc_val;
 
-    ret = iofw_msg_unpack_close(&client_nc_id);
+    ret = cfio_msg_unpack_close(&client_nc_id);
 
     if( ret < 0 )
     {
@@ -999,7 +999,7 @@ int iofw_io_close(int client_id)
     {
 	/*TODO handle memory free*/
 
-	if(IOFW_ID_HASH_GET_NULL == iofw_id_get_nc(client_nc_id, &nc))
+	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
 	    return IOFW_ERROR_INVALID_NC;
@@ -1013,12 +1013,12 @@ int iofw_io_close(int client_id)
 	}
 	_remove_client_io(io_info);
 	
-	iofw_id_get_val(client_nc_id, 0, 0, &nc_val);
+	cfio_id_get_val(client_nc_id, 0, 0, &nc_val);
 	qlist_for_each_entry_safe(iter, next, &(nc_val->link), link)
 	{
 	    qlist_del(&(iter->link));
 	    qhash_del(&(iter->hash_link));
-	    iofw_id_val_free(iter);
+	    cfio_id_val_free(iter);
 	debug_mark(DEBUG_IO);
 	}
 	qhash_del(&(nc_val->hash_link));

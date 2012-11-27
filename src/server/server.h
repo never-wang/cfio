@@ -22,18 +22,18 @@
  *
  * @return: error code
  */
-int iofw_server_init();
+int cfio_server_init();
 /**
  * @brief: final 
  *
  * @return: error code
  */
-int iofw_server_final();
+int cfio_server_final();
 /**
- * @brief: start iofw server
+ * @brief: start cfio server
  *
  * @return: error code
  */
-int iofw_server_start();
+int cfio_server_start();
 
 #endif

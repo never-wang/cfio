@@ -16,7 +16,7 @@
 
 #include "debug.h"
 #include "buffer.h"
-#include "iofw_error.h"
+#include "cfio_error.h"
 
 /**
  * @brief: 
@@ -25,7 +25,7 @@
  * @param data: 
  * @param size: 
  */
-static inline void put_buf_data(iofw_buf_t *buf_p, const void *data, size_t size)
+static inline void put_buf_data(cfio_buf_t *buf_p, const void *data, size_t size)
 {
     char *_data = data;
 	
@@ -35,7 +35,7 @@ static inline void put_buf_data(iofw_buf_t *buf_p, const void *data, size_t size
     }
     memcpy(buf_p->free_addr, _data, size);
 }
-static inline void get_buf_data(iofw_buf_t *buf_p, void *data, size_t size)
+static inline void get_buf_data(cfio_buf_t *buf_p, void *data, size_t size)
 {
     char *_data = data;
 
@@ -48,11 +48,11 @@ static inline void get_buf_data(iofw_buf_t *buf_p, void *data, size_t size)
 }
 
 
-iofw_buf_t *iofw_buf_open(size_t size, int *error)
+cfio_buf_t *cfio_buf_open(size_t size, int *error)
 {
-    iofw_buf_t *buf_p;
+    cfio_buf_t *buf_p;
     
-    buf_p = malloc(size + sizeof(iofw_buf_t));
+    buf_p = malloc(size + sizeof(cfio_buf_t));
 
     if(NULL == buf_p)
     {
@@ -63,14 +63,14 @@ iofw_buf_t *iofw_buf_open(size_t size, int *error)
 
     buf_p->magic = IOFW_BUF_MAGIC;
     buf_p->size = size;
-    buf_p->start_addr = (char *)buf_p + sizeof(iofw_buf_t);
+    buf_p->start_addr = (char *)buf_p + sizeof(cfio_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
     buf_p->magic2 = IOFW_BUF_MAGIC;
 
     return buf_p;
 }
 
-int iofw_buf_close(iofw_buf_t *buf_p)
+int cfio_buf_close(cfio_buf_t *buf_p)
 {
     if(buf_p)
     {
@@ -81,7 +81,7 @@ int iofw_buf_close(iofw_buf_t *buf_p)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_buf_clear(iofw_buf_t *buf_p)
+int cfio_buf_clear(cfio_buf_t *buf_p)
 {
     assert(NULL != buf_p);
 
@@ -92,14 +92,14 @@ int iofw_buf_clear(iofw_buf_t *buf_p)
     return IOFW_ERROR_NONE;
 }
 
-size_t iofw_buf_pack_size(
+size_t cfio_buf_pack_size(
 	size_t size)
 {
     return size;
 }
 
-int iofw_buf_pack_data(
-	const void *data, size_t size, iofw_buf_t *buf_p)
+int cfio_buf_pack_data(
+	const void *data, size_t size, cfio_buf_t *buf_p)
 {
     assert(NULL != data);
     assert(NULL != buf_p);
@@ -113,8 +113,8 @@ int iofw_buf_pack_data(
 
     return IOFW_ERROR_NONE;
 }
-int iofw_buf_unpack_data(
-	void *data, size_t size, iofw_buf_t *buf_p)
+int cfio_buf_unpack_data(
+	void *data, size_t size, cfio_buf_t *buf_p)
 {
     assert(NULL != data);
     assert(NULL != buf_p);
@@ -129,16 +129,16 @@ int iofw_buf_unpack_data(
     return IOFW_ERROR_NONE;
 }
 
-size_t iofw_buf_pack_array_size(
+size_t cfio_buf_pack_array_size(
 	int len, size_t size)
 {
     return len * (size_t)size + (sizeof(int));
 }
 
 
-int iofw_buf_pack_data_array(
+int cfio_buf_pack_data_array(
 	const void *data, int len,
-	size_t size, iofw_buf_t *buf_p)
+	size_t size, cfio_buf_t *buf_p)
 {
     
     /**
@@ -161,9 +161,9 @@ int iofw_buf_pack_data_array(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_buf_unpack_data_array(
+int cfio_buf_unpack_data_array(
 	void **data, int *len, 
-	size_t size, iofw_buf_t *buf_p)
+	size_t size, cfio_buf_t *buf_p)
 {
     assert(NULL != data);
     assert(NULL != buf_p);
@@ -201,9 +201,9 @@ int iofw_buf_unpack_data_array(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_buf_unpack_data_array_ptr(
+int cfio_buf_unpack_data_array_ptr(
 	void **data, int *len, 
-	size_t size, iofw_buf_t *buf_p)
+	size_t size, cfio_buf_t *buf_p)
 {
     assert(NULL != data);
     assert(NULL != buf_p);

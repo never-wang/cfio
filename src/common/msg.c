@@ -23,43 +23,43 @@
 #include "map.h"
 #include "pthread.h"
 #include "id.h"
-#include "iofw_types.h"
-#include "iofw_error.h"
+#include "cfio_types.h"
+#include "cfio_error.h"
 #include "define.h"
 
-static iofw_msg_t *msg_head;
-iofw_buf_t *buffer;
+static cfio_msg_t *msg_head;
+cfio_buf_t *buffer;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t empty_cond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t full_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t full_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static inline iofw_msg_t *create_msg()
+static inline cfio_msg_t *create_msg()
 {
-    iofw_msg_t *msg;
-    msg = malloc(sizeof(iofw_msg_t));
+    cfio_msg_t *msg;
+    msg = malloc(sizeof(cfio_msg_t));
     if(NULL == msg)
     {
 	return NULL;
     }
-    memset(msg, 0, sizeof(iofw_msg_t));
+    memset(msg, 0, sizeof(cfio_msg_t));
     msg->addr = buffer->free_addr;
 
     return msg;
 }
 
-int iofw_msg_init(int buffer_size)
+int cfio_msg_init(int buffer_size)
 {
     int error;
 
-    msg_head = malloc(sizeof(iofw_msg_t));
+    msg_head = malloc(sizeof(cfio_msg_t));
     if(NULL == msg_head)
     {
 	return IOFW_ERROR_MALLOC;
     }
     INIT_QLIST_HEAD(&(msg_head->link));
 
-    buffer = iofw_buf_open(buffer_size, &error);
+    buffer = cfio_buf_open(buffer_size, &error);
 
     if(NULL == buffer)
     {
@@ -70,9 +70,9 @@ int iofw_msg_init(int buffer_size)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_final()
+int cfio_msg_final()
 {
-    iofw_msg_t *msg, *next;
+    cfio_msg_t *msg, *next;
     MPI_Status status;
     int i = 0;
 
@@ -89,7 +89,7 @@ int iofw_msg_final()
         msg_head = NULL;
     }
 
-    iofw_buf_close(buffer);
+    cfio_buf_close(buffer);
 
     return IOFW_ERROR_NONE;
 }
@@ -99,16 +99,16 @@ int iofw_msg_final()
  *
  * @return: 
  */
-static void iofw_msg_client_buf_free()
+static void cfio_msg_client_buf_free()
 {
-    iofw_msg_t *msg, *next;
+    cfio_msg_t *msg, *next;
     int done;
     MPI_Status status;
 
     //debug(DEBUG_MSG, "should not be here");
     //assert(0);
 
-    msg = qlist_entry(qlist_pop(&msg_head->link), iofw_msg_t, link);
+    msg = qlist_entry(qlist_pop(&msg_head->link), cfio_msg_t, link);
     MPI_Wait(&msg->req, &status);
 
     assert(check_used_addr(msg->addr, buffer));
@@ -119,15 +119,15 @@ static void iofw_msg_client_buf_free()
     return;
 }
 
-static void iofw_msg_server_buf_free()
+static void cfio_msg_server_buf_free()
 {
 
     pthread_cond_wait(&full_cond, &full_mutex);
     return;
 }
 
-int iofw_msg_isend(
-	iofw_msg_t *msg)
+int cfio_msg_isend(
+	cfio_msg_t *msg)
 {
     int tag = msg->src;
     MPI_Request request;
@@ -158,14 +158,14 @@ int iofw_msg_isend(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
+int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg)
 {
     MPI_Status status;
     int size;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     //times_start();
-    ensure_free_space(buffer, MSG_MAX_SIZE, iofw_msg_server_buf_free);
+    ensure_free_space(buffer, MSG_MAX_SIZE, cfio_msg_server_buf_free);
     //debug(DEBUG_TIME, "%f", times_end());
 
     MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_ANY_SOURCE, 
@@ -204,9 +204,9 @@ int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg)
     return IOFW_ERROR_NONE;
 }
 
-iofw_msg_t *iofw_msg_get_first()
+cfio_msg_t *cfio_msg_get_first()
 {
-    iofw_msg_t *msg = NULL;
+    cfio_msg_t *msg = NULL;
     qlist_head_t *link;
 
     pthread_cond_signal(&full_cond);
@@ -221,7 +221,7 @@ iofw_msg_t *iofw_msg_get_first()
 	    pthread_cond_wait(&empty_cond, &mutex);
 	}else
 	{
-	    msg = qlist_entry(link, iofw_msg_t, link);
+	    msg = qlist_entry(link, cfio_msg_t, link);
 	}
 	pthread_mutex_unlock(&mutex);
     }
@@ -233,32 +233,32 @@ iofw_msg_t *iofw_msg_get_first()
     return msg;
 }
 
-int iofw_msg_pack_create(
-	iofw_msg_t **_msg, int client_proc_id, 
+int cfio_msg_pack_create(
+	cfio_msg_t **_msg, int client_proc_id, 
 	const char *path, int cmode, int ncid)
 {
     uint32_t code = FUNC_NC_CREATE;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     msg = create_msg();
     msg->src = client_proc_id;
 
     msg->size = 0;
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_str_size(path);
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_str_size(path);
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(int));
 
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
 
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t) , buffer);
-    iofw_buf_pack_str(path, buffer);
-    iofw_buf_pack_data(&cmode, sizeof(int), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t) , buffer);
+    cfio_buf_pack_str(path, buffer);
+    cfio_buf_pack_data(&cmode, sizeof(int), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);
@@ -269,33 +269,33 @@ int iofw_msg_pack_create(
 /**
  *pack msg function
  **/
-int iofw_msg_pack_def_dim(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_def_dim(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, size_t len, int dimid)
 {
     uint32_t code = FUNC_NC_DEF_DIM;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_str_size(name);
-    msg->size += iofw_buf_data_size(sizeof(size_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_str_size(name);
+    msg->size += cfio_buf_data_size(sizeof(size_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
 
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
     
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
-    iofw_buf_pack_str(name, buffer);
-    iofw_buf_pack_data(&len, sizeof(size_t), buffer);
-    iofw_buf_pack_data(&dimid, sizeof(int), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_str(name, buffer);
+    cfio_buf_pack_data(&len, sizeof(size_t), buffer);
+    cfio_buf_pack_data(&dimid, sizeof(int), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, len = %lu", ncid, name, len);
@@ -303,43 +303,43 @@ int iofw_msg_pack_def_dim(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_pack_def_var(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_def_var(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, int varid)
 {
     uint32_t code = FUNC_NC_DEF_VAR;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_str_size(name);
-    msg->size += iofw_buf_data_size(sizeof(nc_type));
-    msg->size += iofw_buf_data_array_size(ndims, sizeof(int));
-    msg->size += iofw_buf_data_array_size(ndims, sizeof(size_t));
-    msg->size += iofw_buf_data_array_size(ndims, sizeof(size_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_str_size(name);
+    msg->size += cfio_buf_data_size(sizeof(nc_type));
+    msg->size += cfio_buf_data_array_size(ndims, sizeof(int));
+    msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
+    msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
 
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
     
     debug_mark(DEBUG_MSG);
     
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code , sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
-    iofw_buf_pack_str(name, buffer);
-    iofw_buf_pack_data(&xtype, sizeof(nc_type), buffer);
-    iofw_buf_pack_data_array(dimids, ndims, sizeof(int), buffer);
-    iofw_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
-    iofw_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
-    iofw_buf_pack_data(&varid, sizeof(int), buffer);
+    cfio_buf_pack_data(&code , sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_str(name, buffer);
+    cfio_buf_pack_data(&xtype, sizeof(nc_type), buffer);
+    cfio_buf_pack_data_array(dimids, ndims, sizeof(int), buffer);
+    cfio_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
+    cfio_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
+    cfio_buf_pack_data(&varid, sizeof(int), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", ncid, name, ndims);
@@ -347,36 +347,36 @@ int iofw_msg_pack_def_var(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_pack_put_att(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_put_att(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, int varid, const char *name, 
 	nc_type xtype, size_t len, const void *op)
 {
     uint32_t code = FUNC_PUT_ATT;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     msg = create_msg();
     msg->src = client_proc_id;
 
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_str_size(name);
-    msg->size += iofw_buf_data_size(sizeof(nc_type));
-    msg->size += iofw_buf_data_array_size(len, sizeof(char));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_str_size(name);
+    msg->size += cfio_buf_data_size(sizeof(nc_type));
+    msg->size += cfio_buf_data_array_size(len, sizeof(char));
 
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
 
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code , sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
-    iofw_buf_pack_data(&varid, sizeof(int), buffer);
-    iofw_buf_pack_str(name, buffer);
-    iofw_buf_pack_data(&xtype, sizeof(nc_type), buffer);
-    iofw_buf_pack_data_array(op, len, sizeof(char), buffer);
+    cfio_buf_pack_data(&code , sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_data(&varid, sizeof(int), buffer);
+    cfio_buf_pack_str(name, buffer);
+    cfio_buf_pack_data(&xtype, sizeof(nc_type), buffer);
+    cfio_buf_pack_data_array(op, len, sizeof(char), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     debug(DEBUG_MSG, "ncid = %d, varid = %d, name = %s, len = %lu", 
@@ -386,27 +386,27 @@ int iofw_msg_pack_put_att(
 
 }
 
-int iofw_msg_pack_enddef(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_enddef(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid)
 {
     uint32_t code = FUNC_NC_ENDDEF;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
     
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
     
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     debug(DEBUG_MSG, "ncid = %d", ncid);
@@ -414,8 +414,8 @@ int iofw_msg_pack_enddef(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_pack_put_vara(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_put_vara(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, int varid, int ndims,
 	const size_t *start, const size_t *count, 
 	const int fp_type, const void *fp)
@@ -423,7 +423,7 @@ int iofw_msg_pack_put_vara(
     int i;
     size_t data_len;
     uint32_t code = FUNC_NC_PUT_VARA;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     
     //times_start();
 
@@ -446,67 +446,67 @@ int iofw_msg_pack_put_vara(
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_data_size(sizeof(int));
-    msg->size += iofw_buf_data_array_size(ndims, sizeof(size_t));
-    msg->size += iofw_buf_data_array_size(ndims, sizeof(size_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
+    msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
     switch(fp_type)
     {
 	case IOFW_BYTE :
-	    msg->size += iofw_buf_data_array_size(data_len, 1);
+	    msg->size += cfio_buf_data_array_size(data_len, 1);
 	    break;
 	case IOFW_CHAR :
-	    msg->size += iofw_buf_data_array_size(data_len, sizeof(char));
+	    msg->size += cfio_buf_data_array_size(data_len, sizeof(char));
 	    break;
 	case IOFW_SHORT :
-	    msg->size += iofw_buf_data_array_size(data_len, sizeof(short));
+	    msg->size += cfio_buf_data_array_size(data_len, sizeof(short));
 	    break;
 	case IOFW_INT :
-	    msg->size += iofw_buf_data_array_size(data_len, sizeof(int));
+	    msg->size += cfio_buf_data_array_size(data_len, sizeof(int));
 	    break;
 	case IOFW_FLOAT :
-	    msg->size += iofw_buf_data_array_size(data_len, sizeof(float));
+	    msg->size += cfio_buf_data_array_size(data_len, sizeof(float));
 	    break;
 	case IOFW_DOUBLE :
-	    msg->size += iofw_buf_data_array_size(data_len, sizeof(double));
+	    msg->size += cfio_buf_data_array_size(data_len, sizeof(double));
 	    break;
     }
 	    
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
 
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
-    iofw_buf_pack_data(&varid, sizeof(int), buffer);
-    iofw_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
-    iofw_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
-    iofw_buf_pack_data(&fp_type, sizeof(int), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_data(&varid, sizeof(int), buffer);
+    cfio_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
+    cfio_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
+    cfio_buf_pack_data(&fp_type, sizeof(int), buffer);
     switch(fp_type)
     {
 	case IOFW_BYTE :
-	    iofw_buf_pack_data_array(fp, data_len, 1, buffer);
+	    cfio_buf_pack_data_array(fp, data_len, 1, buffer);
 	    break;
 	case IOFW_CHAR :
-	    iofw_buf_pack_data_array(fp, data_len, sizeof(char), buffer);
+	    cfio_buf_pack_data_array(fp, data_len, sizeof(char), buffer);
 	    break;
 	case IOFW_SHORT :
-	    iofw_buf_pack_data_array(fp, data_len, sizeof(short), buffer);
+	    cfio_buf_pack_data_array(fp, data_len, sizeof(short), buffer);
 	    break;
 	case IOFW_INT :
-	    iofw_buf_pack_data_array(fp, data_len, sizeof(int), buffer);
+	    cfio_buf_pack_data_array(fp, data_len, sizeof(int), buffer);
 	    break;
 	case IOFW_FLOAT :
-	    iofw_buf_pack_data_array(fp, data_len, sizeof(float), buffer);
+	    cfio_buf_pack_data_array(fp, data_len, sizeof(float), buffer);
 	    break;
 	case IOFW_DOUBLE :
-	    iofw_buf_pack_data_array(fp, data_len, sizeof(double), buffer);
+	    cfio_buf_pack_data_array(fp, data_len, sizeof(double), buffer);
 	    break;
     }
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     //debug(DEBUG_TIME, "%f ms", times_end());
@@ -516,50 +516,50 @@ int iofw_msg_pack_put_vara(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_pack_close(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_close(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid)
 {
     uint32_t code = FUNC_NC_CLOSE;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     
     //times_start();
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
-    msg->size += iofw_buf_data_size(sizeof(int));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(int));
     
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
 
     msg->addr = buffer->free_addr;
 
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
-    iofw_buf_pack_data(&ncid, sizeof(int), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&ncid, sizeof(int), buffer);
 
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     //debug(DEBUG_TIME, "%f", times_end());
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_pack_io_done(
-	iofw_msg_t **_msg, int client_proc_id)
+int cfio_msg_pack_io_done(
+	cfio_msg_t **_msg, int client_proc_id)
 {
     uint32_t code = FUNC_END_IO;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     
     msg = create_msg();
     msg->src = client_proc_id;
     
-    msg->size += iofw_buf_data_size(sizeof(uint32_t));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
     
-    ensure_free_space(buffer, msg->size, iofw_msg_client_buf_free);
+    ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
     
-    iofw_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
     
-    iofw_map_forwarding(msg);
+    cfio_map_forwarding(msg);
     *_msg = msg;
     
     return IOFW_ERROR_NONE;
@@ -567,7 +567,7 @@ int iofw_msg_pack_io_done(
 /**
  *unpack msg function
  **/
-int iofw_msg_unpack_func_code(iofw_msg_t *msg, uint32_t *func_code)
+int cfio_msg_unpack_func_code(cfio_msg_t *msg, uint32_t *func_code)
 {
     assert(check_used_addr(msg->addr, buffer));
     
@@ -577,65 +577,65 @@ int iofw_msg_unpack_func_code(iofw_msg_t *msg, uint32_t *func_code)
     //}
 
     buffer->used_addr = msg->addr;
-    iofw_buf_unpack_data(func_code, sizeof(uint32_t), buffer);
+    cfio_buf_unpack_data(func_code, sizeof(uint32_t), buffer);
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_create(
+int cfio_msg_unpack_create(
 	char **path, int *cmode, int *ncid)
 {
-    iofw_buf_unpack_str(path, buffer);
-    iofw_buf_unpack_data(cmode, sizeof(int), buffer);
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_str(path, buffer);
+    cfio_buf_unpack_data(cmode, sizeof(int), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
 
     debug(DEBUG_MSG, "path = %s; cmode = %d, ncid = %d", *path, *cmode, *ncid);
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_def_dim(
+int cfio_msg_unpack_def_dim(
 	int *ncid, char **name, size_t *len, int *dimid)
 {
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
-    iofw_buf_unpack_str(name, buffer);
-    iofw_buf_unpack_data(len, sizeof(size_t), buffer);
-    iofw_buf_unpack_data(dimid, sizeof(int), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_str(name, buffer);
+    cfio_buf_unpack_data(len, sizeof(size_t), buffer);
+    cfio_buf_unpack_data(dimid, sizeof(int), buffer);
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, len = %lu", *ncid, *name, *len);
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_def_var(
+int cfio_msg_unpack_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids, 
 	size_t **start, size_t **count, int *varid)
 {
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
-    iofw_buf_unpack_str(name, buffer);
-    iofw_buf_unpack_data(xtype, sizeof(nc_type), buffer);
-    iofw_buf_unpack_data_array((void **)dimids, ndims, 
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_str(name, buffer);
+    cfio_buf_unpack_data(xtype, sizeof(nc_type), buffer);
+    cfio_buf_unpack_data_array((void **)dimids, ndims, 
 	    sizeof(int), buffer);
-    iofw_buf_unpack_data_array((void **)start, ndims, 
+    cfio_buf_unpack_data_array((void **)start, ndims, 
 	    sizeof(size_t), buffer);
-    iofw_buf_unpack_data_array((void **)count, ndims, 
+    cfio_buf_unpack_data_array((void **)count, ndims, 
 	    sizeof(size_t), buffer);
-    iofw_buf_unpack_data(varid, sizeof(int), buffer);
+    cfio_buf_unpack_data(varid, sizeof(int), buffer);
     
     debug(DEBUG_MSG, "ncid = %d, name = %s, ndims = %u", *ncid, *name, *ndims);
 
     return IOFW_ERROR_NONE;
 }
-int iofw_msg_unpack_put_att(
+int cfio_msg_unpack_put_att(
 	int *ncid, int *varid, char **name, 
 	nc_type *xtype, int *len, void **op)
 {
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
-    iofw_buf_unpack_data(varid, sizeof(int), buffer);
-    iofw_buf_unpack_str(name, buffer);
-    iofw_buf_unpack_data(xtype, sizeof(nc_type), buffer);
-    iofw_buf_unpack_data_array(op, len, sizeof(char), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_data(varid, sizeof(int), buffer);
+    cfio_buf_unpack_str(name, buffer);
+    cfio_buf_unpack_data(xtype, sizeof(nc_type), buffer);
+    cfio_buf_unpack_data_array(op, len, sizeof(char), buffer);
 
     debug(DEBUG_MSG, "ncid = %d, varid = %d, name = %s, len = %d",
 	    *ncid, *varid, *name, *len);
@@ -643,51 +643,51 @@ int iofw_msg_unpack_put_att(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_enddef(
+int cfio_msg_unpack_enddef(
 	int *ncid)
 {
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
     debug(DEBUG_MSG, "ncid = %d", *ncid);
 
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_put_vara(
+int cfio_msg_unpack_put_vara(
 	int *ncid, int *varid, int *ndims, 
 	size_t **start, size_t **count,
 	int *data_len, int *fp_type, char **fp)
 {
     int i;
 
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
-    iofw_buf_unpack_data(varid, sizeof(int), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_data(varid, sizeof(int), buffer);
     
-    iofw_buf_unpack_data_array((void**)start, ndims, sizeof(size_t), buffer);
-    iofw_buf_unpack_data_array((void**)count, ndims, sizeof(size_t), buffer);
+    cfio_buf_unpack_data_array((void**)start, ndims, sizeof(size_t), buffer);
+    cfio_buf_unpack_data_array((void**)count, ndims, sizeof(size_t), buffer);
 
-//    iofw_buf_unpack_data_array_ptr((void**)fp, data_len, 
+//    cfio_buf_unpack_data_array_ptr((void**)fp, data_len, 
 //	    sizeof(float), buffer);
 //
-    iofw_buf_unpack_data(fp_type, sizeof(int), buffer);
+    cfio_buf_unpack_data(fp_type, sizeof(int), buffer);
     switch(*fp_type)
     {
 	case IOFW_BYTE :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, 1, buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, 1, buffer);
 	    break;
 	case IOFW_CHAR :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, 1, buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, 1, buffer);
 	    break;
 	case IOFW_SHORT :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, sizeof(short), buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, sizeof(short), buffer);
 	    break;
 	case IOFW_INT :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, sizeof(int), buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, sizeof(int), buffer);
 	    break;
 	case IOFW_FLOAT :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, sizeof(float), buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, sizeof(float), buffer);
 	    break;
 	case IOFW_DOUBLE :
-	    iofw_buf_unpack_data_array((void**)fp, data_len, sizeof(double), buffer);
+	    cfio_buf_unpack_data_array((void**)fp, data_len, sizeof(double), buffer);
 	    break;
     }
 
@@ -698,9 +698,9 @@ int iofw_msg_unpack_put_vara(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_msg_unpack_close(int *ncid)
+int cfio_msg_unpack_close(int *ncid)
 {
-    iofw_buf_unpack_data(ncid, sizeof(int), buffer);
+    cfio_buf_unpack_data(ncid, sizeof(int), buffer);
     debug(DEBUG_MSG, "ncid = %d", *ncid);
 
     return IOFW_ERROR_NONE;

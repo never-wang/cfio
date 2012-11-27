@@ -39,7 +39,7 @@ typedef struct
     int client_nc_id;
     int client_dim_id;
     int client_var_id;
-}iofw_io_key_t;
+}cfio_io_key_t;
 
 typedef struct
 {
@@ -52,27 +52,27 @@ typedef struct
 
     qlist_head_t hash_link;
     //qlist_head_t queue_link;
-}iofw_io_val_t;
+}cfio_io_val_t;
 
 /**
  * @brief: initialize
  *
  * @return: error code
  */
-int iofw_io_init();
+int cfio_io_init();
 /**
  * @brief: finalize
  *
  * @return: error code
  */
-int iofw_io_final();
-int iofw_io_reader_done(int client_id, int *server_done);
-int iofw_io_writer_done(int client_id, int *server_done);
-int iofw_io_create(int client_proc);
-int iofw_io_def_dim(int client_proc);
-int iofw_io_def_var(int client_proc);
-int iofw_io_enddef(int client_proc);
-int iofw_io_put_vara(int client_proc);
-int iofw_io_close(int client_proc);
+int cfio_io_final();
+int cfio_io_reader_done(int client_id, int *server_done);
+int cfio_io_writer_done(int client_id, int *server_done);
+int cfio_io_create(int client_proc);
+int cfio_io_def_dim(int client_proc);
+int cfio_io_def_var(int client_proc);
+int cfio_io_enddef(int client_proc);
+int cfio_io_put_vara(int client_proc);
+int cfio_io_close(int client_proc);
 
 #endif

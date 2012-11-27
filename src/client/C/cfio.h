@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  iofw.h
+ *       Filename:  cfio.h
  *
  *    Description:  
  *
@@ -23,7 +23,7 @@
 
 #include "mpi.h"
 #include "map.h"
-#include "iofw_types.h"
+#include "cfio_types.h"
 
 #define CLIENT_BUF_SIZE 1024*1024*1024
 
@@ -32,7 +32,7 @@
 #define IOFW_PROC_BLANK	 IOFW_MAP_TYPE_BLANK
 
 #define IOFW_START(rank) \
-    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
+    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
 
 #define IOFW_END()	\
     }			
@@ -49,15 +49,15 @@
  *
  * @return: error code
  */
-int iofw_init(int x_proc_num, int y_proc_num, int ratio);
+int cfio_init(int x_proc_num, int y_proc_num, int ratio);
 
 /**
- * @brief iofw_Finalize : stop the iofw services, the function 
+ * @brief cfio_Finalize : stop the cfio services, the function 
  * should be called before the mpi_Finalize
  *
  * @return 
  */
-int iofw_finalize();
+int cfio_finalize();
 /**
  * @brief: get the process type, client, server or blank
  *
@@ -65,9 +65,9 @@ int iofw_finalize();
  *
  * @return: the proccess type
  */
-int iofw_proc_type(int rank);
+int cfio_proc_type(int rank);
 /**
- * @brief: iofw_create
+ * @brief: cfio_create
  *
  * @param path: the file anme of the new netCDF dataset
  * @param cmode: the creation mode flag
@@ -75,10 +75,10 @@ int iofw_proc_type(int rank);
  *
  * @return: 0 if success
  */
-int iofw_create(
+int cfio_create(
 	const char *path, int cmode, int *ncidp);
 /**
- * @brief: iofw_def_dim
+ * @brief: cfio_def_dim
  *
  * @param ncid: NetCDF group ID
  * @param name: Dimension name
@@ -87,10 +87,10 @@ int iofw_create(
  *
  * @return: 0 if success
  */
-int iofw_def_dim(
+int cfio_def_dim(
 	int ncid, const char *name, size_t len, int *idp);
 /**
- * @brief: iofw_def_var
+ * @brief: cfio_def_var
  *
  * @param io_proc_id: id of proc id 
  * @param ncid: netCDF ID
@@ -107,13 +107,13 @@ int iofw_def_dim(
  *
  * @return: 0 if success
  */
-int iofw_def_var(
+int cfio_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, 
 	int *varidp);
 /**
- * @brief: iofw_put_att
+ * @brief: cfio_put_att
  *
  * @param ncid: NetCDF ID
  * @param varid: Variable ID of the variable to which the attribute will be 
@@ -125,20 +125,20 @@ int iofw_def_var(
  *
  * @return: error code
  */
-int iofw_put_att(
+int cfio_put_att(
 	int ncid, int varid, const char *name, 
 	nc_type xtype, size_t len, const void *op);
 /**
- * @brief:iofw_ enddef
+ * @brief:cfio_ enddef
  *
  * @param ncid: netCDF ID
  *
  * @return: 0 if success
  */
-int iofw_enddef(
+int cfio_enddef(
 	int ncid);
 /**
- * @brief: iofw_put_vara_float
+ * @brief: cfio_put_vara_float
  *
  * @param ncid: netCDF ID
  * @param varid: variable ID
@@ -151,11 +151,11 @@ int iofw_enddef(
  *
  * @return: 
  */
-int iofw_put_vara_float(
+int cfio_put_vara_float(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp);
 /**
- * @brief: iofw_put_vara_double
+ * @brief: cfio_put_vara_double
  *
  * @param ncid: netCDF ID
  * @param varid: variable ID
@@ -168,17 +168,17 @@ int iofw_put_vara_float(
  *
  * @return: 
  */
-int iofw_put_vara_double(
+int cfio_put_vara_double(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const double *fp);
 /**
- * @brief: iofw_close
+ * @brief: cfio_close
  *
  * @param ncid: netCDF ID
  *
  * @return: 0 if success
  */
-int iofw_close(
+int cfio_close(
 	int ncid);
 
 #endif

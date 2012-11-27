@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  iofw.c
+ *       Filename:  cfio.c
  *
  *    Description:  
  *
@@ -20,14 +20,14 @@
 
 #include "mpi.h"
 
-#include "iofw.h"
+#include "cfio.h"
 #include "map.h"
 #include "id.h"
 #include "buffer.h"
 #include "msg.h"
 #include "debug.h"
 #include "times.h"
-#include "iofw_error.h"
+#include "cfio_error.h"
 
 /* my real rank in mpi_comm_world */
 static int rank;
@@ -35,7 +35,7 @@ static int rank;
 static int client_num;
 static MPI_Comm inter_comm;
 
-int iofw_init(int x_proc_num, int y_proc_num, int ratio)
+int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 {
     int rc, i;
     int size;
@@ -50,7 +50,7 @@ int iofw_init(int x_proc_num, int y_proc_num, int ratio)
     rc = MPI_Initialized(&i); 
     if( !i )
     {
-	error("MPI should be initialized before the iofw\n");
+	error("MPI should be initialized before the cfio\n");
 	return -1;
     }
 
@@ -70,7 +70,7 @@ int iofw_init(int x_proc_num, int y_proc_num, int ratio)
 	best_server_amount = 1;
     }
 
-    if((ret = iofw_map_init(
+    if((ret = cfio_map_init(
 		    x_proc_num, y_proc_num, server_proc_num, 
 		    best_server_amount, MPI_COMM_WORLD)) < 0)
     {
@@ -78,27 +78,27 @@ int iofw_init(int x_proc_num, int y_proc_num, int ratio)
 	return ret;
     }
 
-    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
     {
-	if((ret = iofw_server_init()) < 0)
+	if((ret = cfio_server_init()) < 0)
 	{
 	    error("");
 	    return ret;
 	}
-	if((ret = iofw_server_start()) < 0)
+	if((ret = cfio_server_start()) < 0)
 	{
 	    error("");
 	    return ret;
 	}
-    }else if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    }else if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
     {
-	if((ret = iofw_msg_init(CLIENT_BUF_SIZE)) < 0)
+	if((ret = cfio_msg_init(CLIENT_BUF_SIZE)) < 0)
 	{
 	    error("");
 	    return ret;
 	}
 
-	if((ret = iofw_id_init(IOFW_ID_INIT_CLIENT)) < 0)
+	if((ret = cfio_id_init(IOFW_ID_INIT_CLIENT)) < 0)
 	{
 	    error("");
 	    return ret;
@@ -109,38 +109,38 @@ int iofw_init(int x_proc_num, int y_proc_num, int ratio)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_finalize()
+int cfio_finalize()
 {
     int ret,flag;
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     ret = MPI_Finalized(&flag);
     if(flag)
     {
-	error("***You should not call MPI_Finalize before iofw_Finalized*****\n");
+	error("***You should not call MPI_Finalize before cfio_Finalized*****\n");
 	return IOFW_ERROR_FINAL_AFTER_MPI;
     }
-    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
     {
-	iofw_msg_pack_io_done(&msg, rank);
-	iofw_msg_isend(msg);
+	cfio_msg_pack_io_done(&msg, rank);
+	cfio_msg_isend(msg);
     }
     
-    if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
     {
-	iofw_server_final();
-    }else if(iofw_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+	cfio_server_final();
+    }else if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
     {
-	iofw_id_final();
-	iofw_msg_final();
+	cfio_id_final();
+	cfio_msg_final();
     }
 
-    iofw_map_final();
+    cfio_map_final();
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
 }
 
-int iofw_proc_type(int rank)
+int cfio_proc_type(int rank)
 {
     if(rank < 0)
     {
@@ -148,7 +148,7 @@ int iofw_proc_type(int rank)
 	return IOFW_ERROR_RANK_INVALID;
     }
 
-    return iofw_map_proc_type(rank);
+    return cfio_map_proc_type(rank);
 }
 
 /**
@@ -160,7 +160,7 @@ int iofw_proc_type(int rank)
  *
  * @return: 0 if success
  */
-int iofw_create(
+int cfio_create(
 	const char *path, int cmode, int *ncidp)
 {
     if(path == NULL || ncidp == NULL)
@@ -169,17 +169,17 @@ int iofw_create(
 	return IOFW_ERROR_ARG_NULL;
     }
 
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     int ret;
 
-    if((ret = iofw_id_assign_nc(ncidp)) < 0)
+    if((ret = cfio_id_assign_nc(ncidp)) < 0)
     {
 	error("");
 	return ret;
     }
 
-    iofw_msg_pack_create(&msg, rank, path, cmode, *ncidp);
-    iofw_msg_isend(msg);
+    cfio_msg_pack_create(&msg, rank, path, cmode, *ncidp);
+    cfio_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
@@ -194,7 +194,7 @@ int iofw_create(
  *
  * @return: 0 if success
  */
-int iofw_def_dim(
+int cfio_def_dim(
 	int ncid, const char *name, size_t len, int *idp)
 {
     if(name == NULL || idp == NULL)
@@ -208,22 +208,22 @@ int iofw_def_dim(
     debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
 	    ncid, name, len);
     
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
-    if((ret = iofw_id_assign_dim(ncid, idp)) < 0)
+    if((ret = cfio_id_assign_dim(ncid, idp)) < 0)
     {
 	error("");
 	return ret;
     }
 
-    iofw_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
-    iofw_msg_isend(msg);
+    cfio_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
+    cfio_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
 }
 
-int iofw_def_var(
+int cfio_def_var(
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, 
@@ -237,47 +237,47 @@ int iofw_def_var(
     
     debug(DEBUG_IOFW, "ndims = %d", ndims);
 
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     int ret;
 
-    if((ret = iofw_id_assign_var(ncid, varidp)) < 0)
+    if((ret = cfio_id_assign_var(ncid, varidp)) < 0)
     {
 	error("");
 	return ret;
     }
     
-    iofw_msg_pack_def_var(&msg, rank, ncid, name, xtype, 
+    cfio_msg_pack_def_var(&msg, rank, ncid, name, xtype, 
 	    ndims, dimids, start, count, *varidp);
-    iofw_msg_isend(msg);
+    cfio_msg_isend(msg);
     
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
 }
 
-int iofw_put_att(
+int cfio_put_att(
 	int ncid, int varid, const char *name, 
 	nc_type xtype, size_t len, const void *op)
 {
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     
-    if(iofw_map_get_client_index_of_server(rank) == 0)
+    if(cfio_map_get_client_index_of_server(rank) == 0)
     {
-      iofw_msg_pack_put_att(&msg, rank, ncid, varid, name,
+      cfio_msg_pack_put_att(&msg, rank, ncid, varid, name,
       	xtype, len, op);
-      iofw_msg_isend(msg);
+      cfio_msg_isend(msg);
     }
 
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
 }
 
-int iofw_enddef(
+int cfio_enddef(
 	int ncid)
 {
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
-    iofw_msg_pack_enddef(&msg, rank, ncid);
-    iofw_msg_isend(msg);
+    cfio_msg_pack_enddef(&msg, rank, ncid);
+    cfio_msg_isend(msg);
 
     debug(DEBUG_IOFW, "success return.");
     return IOFW_ERROR_NONE;
@@ -296,7 +296,7 @@ int iofw_enddef(
 //    const char *cur_fp;
 //    size_t desc_data_size, div_data_size;
 //    int i;
-//    iofw_msg_t *msg;
+//    cfio_msg_t *msg;
 //
 //    //times_start();
 //
@@ -363,9 +363,9 @@ int iofw_enddef(
 //	left_dim = count[div_dim];
 //	for(i = 0; i < count[div_dim]; i += div)
 //	{
-//	    iofw_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+//	    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
 //		    cur_start, cur_count, fp_type, cur_fp);
-//	    iofw_msg_isend(msg);
+//	    cfio_msg_isend(msg);
 //	    left_dim -= div;
 //	    cur_start[div_dim] += div;
 //	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
@@ -378,7 +378,7 @@ int iofw_enddef(
 //    return IOFW_ERROR_NONE;
 //}
 
-int iofw_put_vara_float(
+int cfio_put_vara_float(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const float *fp)
 {
@@ -388,7 +388,7 @@ int iofw_put_vara_float(
 	return IOFW_ERROR_ARG_NULL;
     }
 
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
     //times_start();
 
@@ -396,9 +396,9 @@ int iofw_put_vara_float(
 
     //_put_vara(io_proc_id, ncid, varid, dim,
     //  start, count, IOFW_FLOAT, fp, head_size, dim - 1);
-    iofw_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
 	    start, count, IOFW_FLOAT, fp);
-    iofw_msg_isend(msg);
+    cfio_msg_isend(msg);
 
     debug_mark(DEBUG_IOFW);
 
@@ -407,7 +407,7 @@ int iofw_put_vara_float(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_put_vara_double(
+int cfio_put_vara_double(
 	int ncid, int varid, int dim,
 	const size_t *start, const size_t *count, const double *fp)
 {
@@ -417,7 +417,7 @@ int iofw_put_vara_double(
 	return IOFW_ERROR_ARG_NULL;
     }
 
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
 
 	//times_start();
     debug(DEBUG_IOFW, "start :(%lu, %lu), count :(%lu, %lu)", 
@@ -427,9 +427,9 @@ int iofw_put_vara_double(
 
     //_put_vara(io_proc_id, ncid, varid, dim,
     //        start, count, IOFW_DOUBLE, fp, head_size, dim - 1);
-    iofw_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
 	    start, count, IOFW_DOUBLE, fp);
-    iofw_msg_isend(msg);
+    cfio_msg_isend(msg);
 
     debug_mark(DEBUG_IOFW);
 
@@ -438,23 +438,23 @@ int iofw_put_vara_double(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_close(
+int cfio_close(
 	int ncid)
 {
 
-    iofw_msg_t *msg;
+    cfio_msg_t *msg;
     int ret;
     //times_start();
 
-    if((ret = iofw_id_remove_nc(ncid)) < 0)
+    if((ret = cfio_id_remove_nc(ncid)) < 0)
     {
 	error("");
 	return ret;
     }
-    iofw_msg_pack_close(&msg, rank, ncid);
-    iofw_msg_isend(msg);
+    cfio_msg_pack_close(&msg, rank, ncid);
+    cfio_msg_isend(msg);
 
-    debug(DEBUG_IOFW, "Finish iofw_close");
+    debug(DEBUG_IOFW, "Finish cfio_close");
 
     return IOFW_ERROR_NONE;
 }
@@ -462,39 +462,39 @@ int iofw_close(
 /**
  *For Fortran Call
  **/
-int iofw_init_(int *x_proc_num, int *y_proc_num, int *ratio)
+int cfio_init_(int *x_proc_num, int *y_proc_num, int *ratio)
 {
-    return iofw_init(*x_proc_num, *y_proc_num, *ratio);
+    return cfio_init(*x_proc_num, *y_proc_num, *ratio);
 }
 
-int iofw_finalize_()
+int cfio_finalize_()
 {
-    return iofw_finalize();
+    return cfio_finalize();
 }
 
-int iofw_proc_type_(int *rank)
+int cfio_proc_type_(int *rank)
 {
-    return iofw_proc_type(*rank);
+    return cfio_proc_type(*rank);
 }
 
-int iofw_create_(
+int cfio_create_(
 	const char *path, int *cmode, int *ncidp)
 {
     debug(DEBUG_IOFW, "path = %s, cmode = %d", path, *cmode);
 
-    return iofw_create(path, *cmode, ncidp);
+    return cfio_create(path, *cmode, ncidp);
 }
-int iofw_def_dim_(
+int cfio_def_dim_(
 	int *ncid, const char *name, int *len, int *idp)
 {
     size_t _len;
 
     _len = (int)(*len);
 
-    return iofw_def_dim(*ncid, name, _len, idp);
+    return cfio_def_dim(*ncid, name, _len, idp);
 }
 
-int iofw_def_var_(
+int cfio_def_var_(
 	int *ncid, const char *name, int *xtype,
 	int *ndims, const int *dimids, 
 	const int *start, const int *count, int *varidp)
@@ -521,7 +521,7 @@ int iofw_def_var_(
 	_count[i] = count[i];
     }
 
-    ret = iofw_def_var(*ncid, name, *xtype, *ndims, dimids, 
+    ret = cfio_def_var(*ncid, name, *xtype, *ndims, dimids, 
 	    _start, _count, varidp);
     
     free(_start);
@@ -529,7 +529,7 @@ int iofw_def_var_(
     return ret;
 }
 
-int iofw_put_vara_double_(
+int cfio_put_vara_double_(
 	int *ncid, int *varid, int *dim,
 	const int *start, const int *count, const double *fp)
 {
@@ -554,7 +554,7 @@ int iofw_put_vara_double_(
 	_start[i] = start[i] - 1;
 	_count[i] = count[i];
     }
-    ret = iofw_put_vara_double(
+    ret = cfio_put_vara_double(
 	    *ncid, *varid, *dim, _start, _count, fp);
     
     free(_start);
@@ -562,15 +562,15 @@ int iofw_put_vara_double_(
     return ret;
 }
 
-int iofw_enddef_(
+int cfio_enddef_(
 	int *ncid)
 {
-    return iofw_enddef(*ncid);
+    return cfio_enddef(*ncid);
 }
 
-int iofw_close_(
+int cfio_close_(
 	int *ncid)
 {
-    return iofw_close(*ncid);
+    return cfio_close(*ncid);
 }
 

@@ -1,7 +1,7 @@
 /****************************************************************************
- *       Filename:  iofw_types.h
+ *       Filename:  cfio_types.h
  *
- *    Description:  define data types in iofw
+ *    Description:  define data types in cfio
  *
  *        Version:  1.0
  *        Created:  08/20/2012 03:30:19 PM
@@ -21,7 +21,7 @@
 #define IOFW_FLOAT  NC_FLOAT
 #define IOFW_DOUBLE NC_DOUBLE
 
-#define iofw_types_size(size, type) \
+#define cfio_types_size(size, type) \
     do{				    \
     switch(type) {		    \
 	case IOFW_BYTE :	    \

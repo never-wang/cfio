@@ -16,7 +16,7 @@
 #include <assert.h>
 
 #include "mpi.h"
-#include "iofw.h"
+#include "cfio.h"
 #include "debug.h"
 
 #define LAT 6
@@ -60,31 +60,31 @@ int main(int argc, char** argv)
     }
 
 
-    iofw_init( LAT_PROC, LON_PROC, ratio);
+    cfio_init( LAT_PROC, LON_PROC, ratio);
     IOFW_START(rank);
 
     char fileName[100];
     memset(fileName, 0, sizeof(fileName));
     sprintf(fileName,"%s.nc",path);
     int dimids[2];
-    iofw_create(fileName, 0, &ncidp);
+    cfio_create(fileName, 0, &ncidp);
     debug_mark(DEBUG_USER);
     int lat = LAT;
-    iofw_def_dim(ncidp, "lat", LAT,&dimids[0]);
-    iofw_def_dim(ncidp, "lon", LON,&dimids[1]);
+    cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
+    cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
 
-    iofw_put_att(ncidp, NC_GLOBAL, "test", NC_CHAR, strlen(test), test);
+    cfio_put_att(ncidp, NC_GLOBAL, "test", NC_CHAR, strlen(test), test);
 
-    iofw_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
-    iofw_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
-    iofw_enddef(ncidp);
-    //iofw_put_vara_float(ncidp,var1, 2,start, count,fp); 
+    cfio_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
+    cfio_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
+    cfio_enddef(ncidp);
+    //cfio_put_vara_float(ncidp,var1, 2,start, count,fp); 
 
-    iofw_close(ncidp);
+    cfio_close(ncidp);
     free(fp);
 
     IOFW_END();
-    iofw_finalize();
+    cfio_finalize();
     printf("Proc %d : fuck111111\n", rank);
     MPI_Finalize();
     printf("Proc %d : fuck22222\n", rank);

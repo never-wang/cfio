@@ -16,7 +16,7 @@
 #include <assert.h>
 
 #include "mpi.h"
-#include "iofw.h"
+#include "cfio.h"
 #include "debug.h"
 #include "times.h"
 #include "test_def.h"
@@ -63,50 +63,50 @@ int main(int argc, char** argv)
     count[1] = LON / LON_PROC;
     double *fp = malloc(count[0] * count[1] *sizeof(double));
 
-    printf("Proc %d : start(%lu, %lu) ; count(%lu, %lu)\n", 
-	    rank, start[0], start[1], count[0], count[1]);
+//    printf("Proc %d : start(%lu, %lu) ; count(%lu, %lu)\n", 
+//	    rank, start[0], start[1], count[0], count[1]);
 
     for( i = 0; i< count[0] * count[1]; i++)
     {
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    iofw_init( LAT_PROC, LON_PROC, IOFW_RATIO);
+    cfio_init( LAT_PROC, LON_PROC, IOFW_RATIO);
     IOFW_START(rank);
     for(i = 0; i < LOOP; i ++)
     {
 	sleep(SLEEP_TIME);
 	times_start();
-	sprintf(fileName,"%s/iofw-%d.nc", argv[3], i);
+	sprintf(fileName,"%s/cfio-%d.nc", argv[3], i);
 	int dimids[2];
-	iofw_create(fileName, 0, &ncidp);
+	cfio_create(fileName, 0, &ncidp);
 	int lat = LAT;
-	iofw_def_dim(ncidp, "lat", LAT,&dimids[0]);
-	iofw_def_dim(ncidp, "lon", LON,&dimids[1]);
+	cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
+	cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
 
 	for(j = 0; j < VALN; j++)
 	{
 	    sprintf(var_name, "time_v%d", j);
-	    iofw_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, 
+	    cfio_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, 
 		    start, count, &var[j]);
 	}
-	iofw_enddef(ncidp);
+	cfio_enddef(ncidp);
 
 	for(j = 0; j < VALN; j++)
 	{
-	    iofw_put_vara_double(ncidp,var[j], 2,start, count,fp);
+	    cfio_put_vara_double(ncidp,var[j], 2,start, count,fp);
 	}
-	//iofw_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
-	//iofw_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+	//cfio_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
+	//cfio_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
-	iofw_close(ncidp);
+	cfio_close(ncidp);
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }
     free(fp);
 
     IOFW_END();
-    iofw_finalize();
-    printf("proc %d iofw time : %f\n", rank, times_end());
+    cfio_finalize();
+    printf("proc %d cfio time : %f\n", rank, times_end());
     MPI_Finalize();
     printf("proc %d total time : %f\n", rank, times_end());
     times_final();

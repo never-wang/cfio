@@ -1,5 +1,5 @@
 /****************************************************************************
- *       Filename:  iofw_error.h
+ *       Filename:  cfio_error.h
  *
  *    Description:  macro define for errors
  *
@@ -24,8 +24,8 @@
 /* In server.c */
 #define IOFW_ERROR_PTHREAD_CREATE   -100
 #define IOFW_ERROR_UNEXPECTED_MSG   -101
-/* In iofw.c */
-#define IOFW_ERROR_FINAL_AFTER_MPI  -200    /* iofw_final should be called before
+/* In cfio.c */
+#define IOFW_ERROR_FINAL_AFTER_MPI  -200    /* cfio_final should be called before
 					       mpi_final*/
 #define IOFW_ERROR_RANK_INVALID	    -201    
 /* In msg.c */

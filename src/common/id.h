@@ -26,7 +26,7 @@
 #define IOFW_ID_INIT_CLIENT	    0
 #define IOFW_ID_INIT_SERVER	    1
 
-/* return value of iofw_id_get_* */
+/* return value of cfio_id_get_* */
 #define IOFW_ID_HASH_GET_NULL	    1	/* can't find the client id in Map Hash 
 					   Table*/
 #define DEFINE_MODE 0
@@ -43,15 +43,15 @@
 				     dim_len will to set to this value, mean that
 				     we don't need to call nc_def_dim */
 
-#define iofw_id_val_entry(ptr, member) \
-    (iofw_id_val_t *)((char *)ptr - (size_t)&(((iofw_id_val_t *)0)->member)) 
+#define cfio_id_val_entry(ptr, member) \
+    (cfio_id_val_t *)((char *)ptr - (size_t)&(((cfio_id_val_t *)0)->member)) 
 /** @brief: store recv data in var */
 typedef struct
 {
     char *buf;		    /* pointer to the data */
     size_t *start;	    /* vector of ndims start index of the variable */
     size_t *count;	    /* vector of ndims count index of the variable */
-}iofw_id_data_t;
+}cfio_id_data_t;
 /** @brief: store opened nc file 's information in client */
 typedef struct 
 {
@@ -59,14 +59,14 @@ typedef struct
     int var_a;     /* amount of defined var */
     int dim_a;     /* amount of defined dim */
     int id;        /* id assigned to the nc , should be index + 1*/
-}iofw_nc_t;
+}cfio_nc_t;
 
 /** @brief: store a nc file information in server */
 typedef struct 
 {
     int nc_id;		    /* id of nc file */
     int nc_status;	    /* the status of nc file : DEFINE_MODE or DATA_MODE */
-}iofw_id_nc_t;
+}cfio_id_nc_t;
 
 /** @brief: store a dimension information in server */
 typedef struct
@@ -77,7 +77,7 @@ typedef struct
     
     int dim_len;	    /* length of the dim */
     int global_dim_len;
-}iofw_id_dim_t;
+}cfio_id_dim_t;
 /** @brief: store a variable information in server */
 typedef struct
 {
@@ -91,15 +91,15 @@ typedef struct
     int *dim_ids;	    /* vector of ndims dimension ids for the variable */
     size_t *start;	    /* vector of ndims start index of the variable */
     size_t *count;	    /* vector of ndims count index of the variable */
-    iofw_id_data_t 
+    cfio_id_data_t 
 	*recv_data;	    /* pointer to data vector recieved from client */
-    int data_type;          /* type of data, define in iofw_types.h */
+    int data_type;          /* type of data, define in cfio_types.h */
     //size_t ele_size;	    /* size of each element in the variable array */
     char *data;		    /* data array for the variable */
     qlist_head_t 
 	*att_head;	    /* variable attribute list */
 
-}iofw_id_var_t;
+}cfio_id_var_t;
 /** @brief: store a variable's att */
 typedef struct
 {
@@ -108,7 +108,7 @@ typedef struct
     int len;		    /* len of the attribute data */
     char *data;		    /* data of the attribute */
     qlist_head_t link;
-}iofw_id_att_t;
+}cfio_id_att_t;
 
 /** @brief: id hash entry key */
 typedef struct
@@ -116,7 +116,7 @@ typedef struct
     int client_nc_id;	/* id of nc file in client */
     int client_dim_id;	/* id of nc dim in client */
     int client_var_id;	/* id of nc var in client */
-}iofw_id_key_t;
+}cfio_id_key_t;
 
 /** @brief: id hash entry key */
 typedef struct
@@ -126,12 +126,12 @@ typedef struct
     int client_var_id;	/* id of nc var in client */
     int client_var_a;	/* amount of defined var in client*/
     int client_dim_a;	/* amount of defined dim in client*/
-    iofw_id_nc_t *nc;   /* nc file infomation in server */
-    iofw_id_dim_t *dim; /* dim infomation in server */
-    iofw_id_var_t *var; /* nc var infomation in server */
+    cfio_id_nc_t *nc;   /* nc file infomation in server */
+    cfio_id_dim_t *dim; /* dim infomation in server */
+    cfio_id_var_t *var; /* nc var infomation in server */
     qlist_head_t hash_link;	
     qlist_head_t link; /* link for interator */
-}iofw_id_val_t;
+}cfio_id_val_t;
 
 /**
  * @brief: init 
@@ -140,13 +140,13 @@ typedef struct
  *
  * @return: error code
  */
-int iofw_id_init(int flag);
+int cfio_id_init(int flag);
 /**
  * @brief: finalize
  *
  * @return: error code
  */
-int iofw_id_final();
+int cfio_id_final();
 /**
  * @brief: assign a nc id in client
  *
@@ -154,15 +154,15 @@ int iofw_id_final();
  *
  * @return: error code
  */
-int iofw_id_assign_nc(int *nc_id);
+int cfio_id_assign_nc(int *nc_id);
 /**
- * @brief: remove a nc_id from the assign_table, it will be called in iofw_close
+ * @brief: remove a nc_id from the assign_table, it will be called in cfio_close
  *
  * @param nc_id: the nc_id
  *
  * @return: error code
  */
-int iofw_id_remove_nc(int nc_id);
+int cfio_id_remove_nc(int nc_id);
 /**
  * @brief: assign a nc dim id in client
  *
@@ -171,7 +171,7 @@ int iofw_id_remove_nc(int nc_id);
  *
  * @return: error code
  */
-int iofw_id_assign_dim(int nc_id, int *dim_id);
+int cfio_id_assign_dim(int nc_id, int *dim_id);
 /**
  * @brief: assign a nc var id in client
  *
@@ -180,7 +180,7 @@ int iofw_id_assign_dim(int nc_id, int *dim_id);
  *
  * @return: error code
  */
-int iofw_id_assign_var(int nc_id, int *var_id);
+int cfio_id_assign_var(int nc_id, int *var_id);
 /**
  * @brief: add a new map(client_nc_id->server_nc_id) in server
  *
@@ -189,7 +189,7 @@ int iofw_id_assign_var(int nc_id, int *var_id);
  *
  * @return: error code
  */
-int iofw_id_map_nc(int client_nc_id, int server_nc_id);
+int cfio_id_map_nc(int client_nc_id, int server_nc_id);
 /**
  * @brief: add a new map((client_nc_id, client_dim_id)->(server_nc_id, 
  *	server_dim_id)) in server
@@ -203,7 +203,7 @@ int iofw_id_map_nc(int client_nc_id, int server_nc_id);
  *
  * @return: error code
  */
-int iofw_id_map_dim(
+int cfio_id_map_dim(
 	int client_nc_id, int client_dim_id, 
 	int server_nc_id, int server_dim_id,
 	char *name, int dim_len);
@@ -224,16 +224,16 @@ int iofw_id_map_dim(
  *
  * @return: error code
  */
-int iofw_id_map_var(
+int cfio_id_map_var(
 	char *name, 
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
 	int ndims, int *dim_ids,
 	size_t *start, size_t *count,
 	int data_type, int client_num);
-int iofw_id_get_val(
+int cfio_id_get_val(
 	int client_nc_id, int client_var_id, int client_dim_id,
-	iofw_id_val_t **val);
+	cfio_id_val_t **val);
 /**
  * @brief: get server_nc_id by client_nc_id in server
  *
@@ -242,8 +242,8 @@ int iofw_id_get_val(
  *
  * @return: error code
  */
-int iofw_id_get_nc( 
-	int client_nc_id, iofw_id_nc_t **nc);
+int cfio_id_get_nc( 
+	int client_nc_id, cfio_id_nc_t **nc);
 /**
  * @brief: get (server_nc_id, server_dim_id) by (client_dim_id) in
  *	server
@@ -254,9 +254,9 @@ int iofw_id_get_nc(
  *
  * @return: error code
  */
-int iofw_id_get_dim(
+int cfio_id_get_dim(
 	int client_nc_id, int client_dim_id, 
-	iofw_id_dim_t **dim);
+	cfio_id_dim_t **dim);
 /**
  * @brief: get (server_nc_id, server_var_id) by (client_var_id) in
  *	server
@@ -267,9 +267,9 @@ int iofw_id_get_dim(
  *
  * @return: error code
  */
-int iofw_id_get_var(
+int cfio_id_get_var(
 	int client_nc_id, int client_var_id, 
-	iofw_id_var_t **var);
+	cfio_id_var_t **var);
 
 /**
  * @brief: put part of variable data in the recv data vector which is stored in the 
@@ -284,7 +284,7 @@ int iofw_id_get_var(
  *
  * @return: error code
  */
-int iofw_id_put_var(
+int cfio_id_put_var(
 	int client_nc_id, int client_var_id,
 	int client_index,
 	size_t *start, size_t *count, 
@@ -296,7 +296,7 @@ int iofw_id_put_var(
  *
  * @return: error code
  */
-int iofw_id_merge_var_data(iofw_id_var_t *var);
+int cfio_id_merge_var_data(cfio_id_var_t *var);
 
 
 #endif

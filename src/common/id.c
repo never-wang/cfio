@@ -16,8 +16,8 @@
 #include <assert.h>
 
 #include "id.h"
-#include "iofw_types.h"
-#include "iofw_error.h"
+#include "cfio_types.h"
+#include "cfio_error.h"
 #include "debug.h"
 #include "times.h"
 #include "quickhash.h"
@@ -32,9 +32,9 @@ static int _compare(void *key, struct qhash_head *link)
     assert(NULL != key);
     assert(NULL != link);
 
-    iofw_id_val_t *val = qlist_entry(link, iofw_id_val_t, hash_link);
+    cfio_id_val_t *val = qlist_entry(link, cfio_id_val_t, hash_link);
 
-    if(0 == memcmp(key, val, sizeof(iofw_id_key_t)))
+    if(0 == memcmp(key, val, sizeof(cfio_id_key_t)))
     {
         return 1;
     }
@@ -44,7 +44,7 @@ static int _compare(void *key, struct qhash_head *link)
 
 static int _hash(void *key, int table_size)
 {
-    iofw_id_key_t *_key = key;
+    cfio_id_key_t *_key = key;
     int a, b, c;
 
     a = _key->client_nc_id; b = _key->client_dim_id; c = _key->client_var_id;
@@ -55,7 +55,7 @@ static int _hash(void *key, int table_size)
     return h;
 }
 
-static void _val_free(iofw_id_val_t *val)
+static void _val_free(cfio_id_val_t *val)
 {
     if(NULL != val)
     {
@@ -189,7 +189,7 @@ static int _put_var(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_id_init(int flag)
+int cfio_id_init(int flag)
 {
     open_nc_a = 0;
     assign_table = NULL;
@@ -221,18 +221,18 @@ int iofw_id_init(int flag)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_id_final()
+int cfio_id_final()
 {
     if(NULL != assign_table)
     {
-	qhash_destroy_and_finalize(assign_table, iofw_id_val_t, 
+	qhash_destroy_and_finalize(assign_table, cfio_id_val_t, 
 		hash_link, _val_free);
 	assign_table = NULL;
     }
 
     if(NULL != map_table)
     {
-	qhash_destroy_and_finalize(map_table, iofw_id_val_t, hash_link, _val_free);
+	qhash_destroy_and_finalize(map_table, cfio_id_val_t, hash_link, _val_free);
 	map_table = NULL;
     }
 
@@ -240,26 +240,26 @@ int iofw_id_final()
     return IOFW_ERROR_NONE;
 }
 
-int iofw_id_assign_nc(int *nc_id)
+int cfio_id_assign_nc(int *nc_id)
 {
     assert(nc_id != NULL);
 
     int i;
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
 
     open_nc_a ++;
     
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = open_nc_a;
 
-    val = malloc(sizeof(iofw_id_val_t));
+    val = malloc(sizeof(cfio_id_val_t));
     if(val == NULL)
     {
 	error("malloc fail.");
 	return IOFW_ERROR_MALLOC;
     }
-    memset(val, 0, sizeof(iofw_id_val_t));
+    memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = open_nc_a;
     qhash_add(assign_table, &key, &(val->hash_link));
     *nc_id = open_nc_a;
@@ -269,12 +269,12 @@ int iofw_id_assign_nc(int *nc_id)
     return IOFW_ERROR_NONE;
 }
 
-int iofw_id_remove_nc(int nc_id)
+int cfio_id_remove_nc(int nc_id)
 {
-    iofw_id_key_t key;
+    cfio_id_key_t key;
     struct qhash_head *link;
     
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = nc_id;
 
     if(NULL == (link = qhash_search(assign_table, &key)))
@@ -289,15 +289,15 @@ int iofw_id_remove_nc(int nc_id)
     }
 }
 
-int iofw_id_assign_dim(int nc_id, int *dim_id)
+int cfio_id_assign_dim(int nc_id, int *dim_id)
 {
     assert(dim_id != NULL);
     
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
     struct qhash_head *link;
     
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = nc_id;
 
     if(NULL == (link = qhash_search(assign_table, &key)))
@@ -306,7 +306,7 @@ int iofw_id_assign_dim(int nc_id, int *dim_id)
 	return IOFW_ERROR_NC_NO_EXIST;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	val->client_dim_a ++;
 	*dim_id = val->client_dim_a;
 	debug(DEBUG_ID, "success return.");
@@ -314,15 +314,15 @@ int iofw_id_assign_dim(int nc_id, int *dim_id)
     }
 }
 
-int iofw_id_assign_var(int nc_id, int *var_id)
+int cfio_id_assign_var(int nc_id, int *var_id)
 {
     assert(var_id != NULL);
 
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
     struct qhash_head *link;
     
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = nc_id;
 
     if(NULL == (link = qhash_search(assign_table, &key)))
@@ -331,7 +331,7 @@ int iofw_id_assign_var(int nc_id, int *var_id)
 	return IOFW_ERROR_NC_NO_EXIST;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	val->client_var_a ++;
 	*var_id = val->client_var_a;
 	debug(DEBUG_ID, "success return.");
@@ -339,19 +339,19 @@ int iofw_id_assign_var(int nc_id, int *var_id)
     }
 }
 
-int iofw_id_map_nc(
+int cfio_id_map_nc(
 	int client_nc_id, int server_nc_id)
 {
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
 
-    val = malloc(sizeof(iofw_id_val_t));
-    memset(val, 0, sizeof(iofw_id_val_t));
+    val = malloc(sizeof(cfio_id_val_t));
+    memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = client_nc_id;
-    val->nc = malloc(sizeof(iofw_id_nc_t));
+    val->nc = malloc(sizeof(cfio_id_nc_t));
     val->nc->nc_id = server_nc_id;
     val->nc->nc_status = DEFINE_MODE;
 
@@ -367,30 +367,30 @@ int iofw_id_map_nc(
 /**
  * name : addr_copy
  **/
-int iofw_id_map_dim(
+int cfio_id_map_dim(
 	int client_nc_id, int client_dim_id, 
 	int server_nc_id, int server_dim_id,
 	char *name, int dim_len)
 {
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
-    iofw_id_val_t *nc_val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
+    cfio_id_val_t *nc_val;
     struct qhash_head *link;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
 
     link = qhash_search(map_table, &key);
-    nc_val = qlist_entry(link, iofw_id_val_t, hash_link);
+    nc_val = qlist_entry(link, cfio_id_val_t, hash_link);
     
     key.client_dim_id = client_dim_id;
 
-    val = malloc(sizeof(iofw_id_val_t));
-    memset(val, 0, sizeof(iofw_id_val_t));
+    val = malloc(sizeof(cfio_id_val_t));
+    memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = client_nc_id;
     val->client_dim_id = client_dim_id;
-    val->dim = malloc(sizeof(iofw_id_dim_t));
-    memset(val->dim, 0, sizeof(iofw_id_dim_t));
+    val->dim = malloc(sizeof(cfio_id_dim_t));
+    memset(val->dim, 0, sizeof(cfio_id_dim_t));
     val->dim->nc_id = server_nc_id;
     val->dim->dim_id = server_dim_id;
     val->dim->name = name;
@@ -409,7 +409,7 @@ int iofw_id_map_dim(
 /**
  * name, start, count , dim_ids : addr_copy
  **/
-int iofw_id_map_var(
+int cfio_id_map_var(
 	char *name, 
 	int client_nc_id, int client_var_id,
 	int server_nc_id, int server_var_id,
@@ -419,26 +419,26 @@ int iofw_id_map_var(
 {
     int i;
     size_t data_size;
-    iofw_id_val_t *nc_val;
+    cfio_id_val_t *nc_val;
 
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
     struct qhash_head *link;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     
     link = qhash_search(map_table, &key);
-    nc_val = qlist_entry(link, iofw_id_val_t, hash_link);
+    nc_val = qlist_entry(link, cfio_id_val_t, hash_link);
     
     key.client_var_id = client_var_id;
 
-    val = malloc(sizeof(iofw_id_val_t));
-    memset(val, 0, sizeof(iofw_id_val_t));
+    val = malloc(sizeof(cfio_id_val_t));
+    memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = client_nc_id;
     val->client_var_id = client_var_id;
 
-    val->var = malloc(sizeof(iofw_id_var_t));
+    val->var = malloc(sizeof(cfio_id_var_t));
     val->var->name = name;
     val->var->nc_id = server_nc_id;
     val->var->var_id = server_var_id;
@@ -449,8 +449,8 @@ int iofw_id_map_var(
     val->var->count = count;
 
     assert(client_num > 0);
-    val->var->recv_data = malloc(sizeof(iofw_id_data_t) * client_num);
-    memset(val->var->recv_data, 0, sizeof(iofw_id_data_t) * client_num);
+    val->var->recv_data = malloc(sizeof(cfio_id_data_t) * client_num);
+    memset(val->var->recv_data, 0, sizeof(cfio_id_data_t) * client_num);
     val->var->data_type = data_type;
     
     val->var->data = NULL;
@@ -469,14 +469,14 @@ int iofw_id_map_var(
     return IOFW_ERROR_NONE;
 }
 
-int iofw_id_get_val(
+int cfio_id_get_val(
 	int client_nc_id, int client_var_id, int client_dim_id,
-	iofw_id_val_t **val)
+	cfio_id_val_t **val)
 {
-    iofw_id_key_t key;
+    cfio_id_key_t key;
     struct qhash_head *link;
     
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     key.client_var_id = client_var_id;
     key.client_dim_id = client_dim_id;
@@ -487,19 +487,19 @@ int iofw_id_get_val(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	*val = qlist_entry(link, iofw_id_val_t, hash_link);
+	*val = qlist_entry(link, cfio_id_val_t, hash_link);
 	return IOFW_ERROR_NONE;
     }
 }
 
-int iofw_id_get_nc(
-	int client_nc_id, iofw_id_nc_t **nc)
+int cfio_id_get_nc(
+	int client_nc_id, cfio_id_nc_t **nc)
 {
-    iofw_id_key_t key;
+    cfio_id_key_t key;
     struct qhash_head *link;
-    iofw_id_val_t *val;
+    cfio_id_val_t *val;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
 
     if(NULL == (link = qhash_search(map_table, &key)))
@@ -508,7 +508,7 @@ int iofw_id_get_nc(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	assert(val->nc != NULL);
 	*nc = val->nc;
     
@@ -518,15 +518,15 @@ int iofw_id_get_nc(
     }
 }
 
-int iofw_id_get_dim(
+int cfio_id_get_dim(
 	int client_nc_id, int client_dim_id, 
-	iofw_id_dim_t **dim)
+	cfio_id_dim_t **dim)
 {
-    iofw_id_key_t key;
+    cfio_id_key_t key;
     struct qhash_head *link;
-    iofw_id_val_t *val;
+    cfio_id_val_t *val;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     key.client_dim_id = client_dim_id;
 
@@ -537,7 +537,7 @@ int iofw_id_get_dim(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	*dim = val->dim;
 	assert(val->dim != NULL);
 	debug(DEBUG_ID, "get (%d, %d, 0)", client_nc_id, client_dim_id);
@@ -545,15 +545,15 @@ int iofw_id_get_dim(
     }
 }
 
-int iofw_id_get_var(
+int cfio_id_get_var(
 	int client_nc_id, int client_var_id, 
-	iofw_id_var_t **var)
+	cfio_id_var_t **var)
 {
-    iofw_id_key_t key;
+    cfio_id_key_t key;
     struct qhash_head *link;
-    iofw_id_val_t *val;
+    cfio_id_val_t *val;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     key.client_var_id = client_var_id;
 
@@ -564,7 +564,7 @@ int iofw_id_get_var(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	assert(val->var != NULL);
 	*var = val->var;
 	debug(DEBUG_ID, "get (%d, 0, %d)", client_nc_id, client_var_id);
@@ -575,7 +575,7 @@ int iofw_id_get_var(
  * start, count , data : addr_copy
  **/
 
-int iofw_id_put_var(
+int cfio_id_put_var(
 	int client_nc_id, int client_var_id,
 	int client_index,
 	size_t *start, size_t *count, 
@@ -585,14 +585,14 @@ int iofw_id_put_var(
     assert(NULL != count);
     assert(NULL != data);
 
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
     struct qhash_head *link;
-    iofw_id_var_t *var;
+    cfio_id_var_t *var;
     int src_indx, dst_index;
     int i;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     key.client_var_id = client_var_id;
 
@@ -603,7 +603,7 @@ int iofw_id_put_var(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	var = val->var;
 
 	for(i = 0; i < var->ndims; i ++)
@@ -649,18 +649,18 @@ int iofw_id_put_var(
     }
 }
 
-int iofw_id_put_att(
+int cfio_id_put_att(
 	int client_nc_id, int client_var_id,
 	char *name, nc_type xtype, int len, char *data)
 {
-    iofw_id_key_t key;
-    iofw_id_val_t *val;
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
     struct qhash_head *link;
-    iofw_id_var_t *var;
-    iofw_id_att_t *att;
+    cfio_id_var_t *var;
+    cfio_id_att_t *att;
     int i;
 
-    memset(&key, 0, sizeof(iofw_id_key_t));
+    memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = client_nc_id;
     key.client_var_id = client_var_id;
 
@@ -671,10 +671,10 @@ int iofw_id_put_att(
 	return IOFW_ID_HASH_GET_NULL;
     }else
     {
-	val = qlist_entry(link, iofw_id_val_t, hash_link);
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	var = val->var;
 	
-	att = malloc(sizeof(iofw_id_att_t));
+	att = malloc(sizeof(cfio_id_att_t));
 	att->name = name;
 	att->xtype = xtype;
 	att->len = len;
@@ -687,7 +687,7 @@ int iofw_id_put_att(
     }
 } 
 
-int iofw_id_merge_var_data(iofw_id_var_t *var)
+int cfio_id_merge_var_data(cfio_id_var_t *var)
 {
     int i, j;
     int ret;
@@ -707,7 +707,7 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
 		    var->recv_data[i].start[j],var->recv_data[i].count[j]);
 	}
     
-	iofw_types_size(ele_size, var->data_type);
+	cfio_types_size(ele_size, var->data_type);
 	if((ret = _put_var(var->ndims, ele_size, 
 		var->start, var->count, var->data,
 		var->recv_data[i].start, var->recv_data[i].count,
@@ -741,11 +741,11 @@ int iofw_id_merge_var_data(iofw_id_var_t *var)
     return IOFW_ERROR_NONE;
 }
 
-void iofw_id_val_free(iofw_id_val_t *val)
+void cfio_id_val_free(cfio_id_val_t *val)
 {
     int i;
-    iofw_id_data_t *recv_data;
-    iofw_id_att_t *att, *next;
+    cfio_id_data_t *recv_data;
+    cfio_id_att_t *att, *next;
 
     debug(DEBUG_ID, "start free.");
 

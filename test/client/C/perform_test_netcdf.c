@@ -58,6 +58,7 @@ int main(int argc, char** argv)
     times_start();
     for(i = 0; i < LOOP; i ++)
     {
+	sleep(SLEEP_TIME);
 	times_start();
 	char fileName[100];
 	sprintf(fileName,"%s/netcdf-%d.nc", argv[1], i);

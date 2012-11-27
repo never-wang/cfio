@@ -17,7 +17,7 @@
 #include "mpi.h"
 #include "map.h"
 #include "debug.h"
-#include "iofw_error.h"
+#include "cfio_error.h"
 
 static int client_amount;
 static int client_x_num;
@@ -157,7 +157,7 @@ static int _gen_server_x_and_y(int best_server_amount)
     }
 }
 
-int iofw_map_init(
+int cfio_map_init(
 	int _client_x_num, int _client_y_num,
 	int _server_amount, int best_server_amount,
 	MPI_Comm _comm)
@@ -184,11 +184,11 @@ int iofw_map_init(
     debug(DEBUG_MAP, "success return.");
     return IOFW_ERROR_NONE;
 }
-int iofw_map_final()
+int cfio_map_final()
 {
     return IOFW_ERROR_NONE;
 }
-int iofw_map_proc_type(int proc_id)
+int cfio_map_proc_type(int proc_id)
 {
     assert(proc_id >= 0);
     /* client is 0 ~ client_amount - 1 , server is client_amount ~ server_amount
@@ -204,25 +204,25 @@ int iofw_map_proc_type(int proc_id)
 	return IOFW_MAP_TYPE_BLANK;
     }
 }
-int iofw_map_get_comm()
+int cfio_map_get_comm()
 {
     return comm; 
 }
 
-int iofw_map_get_server_amount()
+int cfio_map_get_server_amount()
 {
     return server_amount;
 }
-int iofw_map_get_client_amount()
+int cfio_map_get_client_amount()
 {
     debug(DEBUG_MAP, "client_amount : %d", client_amount);
     return client_amount;
 }
 
-int iofw_map_get_client_num_of_server(int server_id)
+int cfio_map_get_client_num_of_server(int server_id)
 {
 
-    assert(iofw_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
+    assert(cfio_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int client_num_per_server, low_server_num;
     //low_server_num = server_amount - (client_y_num % server_amount);
@@ -248,15 +248,15 @@ int iofw_map_get_client_num_of_server(int server_id)
     debug(DEBUG_MAP, "client number of server(%d) : %d", server_id, client_num);
     return client_num;
 }
-int iofw_map_get_server_index(int server_id)
+int cfio_map_get_server_index(int server_id)
 {
-    assert(iofw_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
+    assert(cfio_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
 
     return server_id - client_amount;
 }
-int iofw_map_get_client_index_of_server(int client_id)
+int cfio_map_get_client_index_of_server(int client_id)
 {
-    assert(iofw_map_proc_type(client_id) == IOFW_MAP_TYPE_CLIENT);
+    assert(cfio_map_proc_type(client_id) == IOFW_MAP_TYPE_CLIENT);
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int client_num_per_server, low_server_num;
 
@@ -298,8 +298,8 @@ int iofw_map_get_client_index_of_server(int client_id)
     return client_index;
 }
 
-int iofw_map_forwarding(
-	iofw_msg_t *msg)
+int cfio_map_forwarding(
+	cfio_msg_t *msg)
 {
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int x_proc, y_proc;
@@ -349,7 +349,7 @@ int iofw_map_forwarding(
 }
 
 /* no use in this vision */
-//int iofw_map_is_bitmap_full(
+//int cfio_map_is_bitmap_full(
 //	int server_id, uint8_t *bitmap, int *is_full)
 //{
 //    /* consider only partition of one dimension, and not  divisible(zheng cu)*/

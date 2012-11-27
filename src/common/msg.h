@@ -49,7 +49,7 @@ typedef struct
     MPI_Comm comm;	/* communication  */
     MPI_Request req;	/* MPI request of the send msg */
     qlist_head_t link;	/* quicklist head */
-}iofw_msg_t;
+}cfio_msg_t;
 
 /**
  * @brief: init the buffer and msg queue
@@ -58,13 +58,13 @@ typedef struct
  *
  * @return: error code
  */
-int iofw_msg_init(int buffer_size);
+int cfio_msg_init(int buffer_size);
 /**
  * @brief: finalize , free the buffer and msg queue
  *
  * @return: error code
  */
-int iofw_msg_final();
+int cfio_msg_final();
 /**
  * @brief: async send msg to other proc by mpi
  *
@@ -72,7 +72,7 @@ int iofw_msg_final();
  *
  * @return: error code
  */
-int iofw_msg_isend(iofw_msg_t *msg);
+int cfio_msg_isend(cfio_msg_t *msg);
 /**
  * @brief: recv msg from client
  *
@@ -82,139 +82,139 @@ int iofw_msg_isend(iofw_msg_t *msg);
  *
  * @return: error code
  */
-int iofw_msg_recv(int rank, MPI_Comm comm, iofw_msg_t **_msg);
+int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg);
 
 /**
  * @brief: get the first msg in msg queue
  *
  * @return: pointer to the first msg
  */
-iofw_msg_t *iofw_msg_get_first();
+cfio_msg_t *cfio_msg_get_first();
 /**
- * @brief: pack iofw_create function into struct iofw_msg_t
+ * @brief: pack cfio_create function into struct cfio_msg_t
  *
- * @param _msg: pointer to the struct iofw_msg_t
+ * @param _msg: pointer to the struct cfio_msg_t
  * @param client_proc_id: id of client proc who call the function
- * @param path: the file name of the new netCDF dataset, iofw_create's
+ * @param path: the file name of the new netCDF dataset, cfio_create's
  *	arg
- * @param cmode: the creation mode flag , arg of iofw_create
+ * @param cmode: the creation mode flag , arg of cfio_create
  * @param ncid: ncid assigned by client
  *
  * @return: error code
  */
-int iofw_msg_pack_create(
-	iofw_msg_t **_msg, int client_proc_id, 
+int cfio_msg_pack_create(
+	cfio_msg_t **_msg, int client_proc_id, 
 	const char *path, int cmode, int ncid);
 /**
- * @brief: pack iofw_def_dim into msg
+ * @brief: pack cfio_def_dim into msg
  *
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: NetCDF group ID, arg of iofw_def_dim
- * @param name: Dimension name, arg of iofw_def_dim
- * @param len: Length of dimension, arg of iofw_def_dim
+ * @param ncid: NetCDF group ID, arg of cfio_def_dim
+ * @param name: Dimension name, arg of cfio_def_dim
+ * @param len: Length of dimension, arg of cfio_def_dim
  * @param dimid: dim id assigned by client
  *
  * @return: error_code
  */
-int iofw_msg_pack_def_dim(
-	iofw_msg_t **_msg, int client_proc_id, 
+int cfio_msg_pack_def_dim(
+	cfio_msg_t **_msg, int client_proc_id, 
 	int ncid, const char *name, size_t len, int dimid);
 /**
- * @brief: pack iofw_def_var into msg
+ * @brief: pack cfio_def_var into msg
  *
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: netCDF ID, arg of iofw_def_var
- * @param name: variable name, arg of iofw_def_var
+ * @param ncid: netCDF ID, arg of cfio_def_var
+ * @param name: variable name, arg of cfio_def_var
  * @param xtype: predefined netCDF external data type, arg of 
- *	iofw_def_var
+ *	cfio_def_var
  * @param ndims: number of dimensions for the variable, arg of 
- *	iofw_def_var
+ *	cfio_def_var
  * @param dimids: vector of ndims dimension IDs corresponding to the
- *	variable dimensions, arg of iofw_def_var
+ *	variable dimensions, arg of cfio_def_var
  * @param start: a vector of size_t intergers specifying the index in 
  *	the variable where the first of the data values will be written,
- *	arg of iofw_put_vara_float
+ *	arg of cfio_put_vara_float
  * @param count: a vector of size_t intergers specifying the edge lengths
  *	along each dimension of the block of data values to be written, 
- *	arg of iofw_put_vara_float
+ *	arg of cfio_put_vara_float
  * @param varid: var id assigned by client
  *
  * @return: error code
  */
-int iofw_msg_pack_def_var(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_def_var(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, const char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, int varid);
 /**
- * @brief: pack iofw_put_att into msg
+ * @brief: pack cfio_put_att into msg
  *
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: netCDF ID, arg of iofw_put_att
- * @param varid: variable ID, arg of iofw_put_att
- * @param name: variable name, arg of iofw_put_att
- * @param xtype: predefined netCDF external data type, arg of iofw_put_att
+ * @param ncid: netCDF ID, arg of cfio_put_att
+ * @param varid: variable ID, arg of cfio_put_att
+ * @param name: variable name, arg of cfio_put_att
+ * @param xtype: predefined netCDF external data type, arg of cfio_put_att
  * @param len: number of values provided for the attribute
  * @param op: Pointer to values
  *
  * @return: error code
  */
-int iofw_msg_pack_put_att(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_put_att(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, int varid, const char *name, 
 	nc_type xtype, size_t len, const void *op);
 /**
- * @brief: pack iofw_enddef into msg
+ * @brief: pack cfio_enddef into msg
  
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: netCDF ID, arg of iofw_enddef
+ * @param ncid: netCDF ID, arg of cfio_enddef
  *
  * @return: error code
  */
-int iofw_msg_pack_enddef(
-	iofw_msg_t **_msg, int client_proc_id, 
+int cfio_msg_pack_enddef(
+	cfio_msg_t **_msg, int client_proc_id, 
 	int ncid);
 /**
- * @brief: pack iofw_put_vara_float into msg
+ * @brief: pack cfio_put_vara_float into msg
  *
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: netCDF ID, arg of iofw_put_vara_float
- * @param varid: variable ID, arg of iofw_put_vara_float
+ * @param ncid: netCDF ID, arg of cfio_put_vara_float
+ * @param varid: variable ID, arg of cfio_put_vara_float
  * @param ndims: the dimensionality fo variable
  * @param start: a vector of size_t intergers specifying the index in 
  *	the variable where the first of the data values will be written,
- *	arg of iofw_put_vara_float
+ *	arg of cfio_put_vara_float
  * @param count: a vector of size_t intergers specifying the edge lengths
  *	along each dimension of the block of data values to be written, 
- *	arg of iofw_put_vara_float
+ *	arg of cfio_put_vara_float
  * @param fp_type: type of data, can be IOFW_BYTE, IOFW_CHAR, IOFW_SHROT, 
  *	IOFW_INT, IOFW_FLOAT, IOFW_DOUBLE
  * @param fp : pointer to where data is stored, arg of 
- *	iofw_put_vara_float
+ *	cfio_put_vara_float
  *
  * @return: 
  */
-int iofw_msg_pack_put_vara(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_put_vara(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid, int varid, int ndims,
 	const size_t *start, const size_t *count, 
 	const int fp_type, const void *fp);
 /**
- * @brief: pack iofw_close into msg
+ * @brief: pack cfio_close into msg
  *
  * @param _msg: pointer to the msg
  * @param client_proc_id: id of client proc who call the function
- * @param ncid: netCDF ID, arg of iofw_close
+ * @param ncid: netCDF ID, arg of cfio_close
  *
  * @return: error code
  */
-int iofw_msg_pack_close(
-	iofw_msg_t **_msg, int client_proc_id,
+int cfio_msg_pack_close(
+	cfio_msg_t **_msg, int client_proc_id,
 	int ncid);
 
 /**
@@ -226,8 +226,8 @@ int iofw_msg_pack_close(
  *
  * @return: error code
  */
-int iofw_msg_pack_io_done(
-	iofw_msg_t **_msg, int client_proc_id);
+int cfio_msg_pack_io_done(
+	cfio_msg_t **_msg, int client_proc_id);
 /**
  * @brief: unpack funciton code from the buffer
  *
@@ -236,8 +236,8 @@ int iofw_msg_pack_io_done(
  *
  * @return: error code
  */
-int iofw_msg_unpack_func_code(
-	iofw_msg_t *msg,
+int cfio_msg_unpack_func_code(
+	cfio_msg_t *msg,
 	uint32_t *func_code);
 /**
  * @brief: unpack arguments for ifow_create function
@@ -249,7 +249,7 @@ int iofw_msg_unpack_func_code(
  *
  * @return: error code
  */
-int iofw_msg_unpack_create(
+int cfio_msg_unpack_create(
 	char **path, int *cmode, int *ncid);
 /**
  * @brief: unpack arguments for ifow_def_dim function
@@ -261,10 +261,10 @@ int iofw_msg_unpack_create(
  *
  * @return: error code
  */
-int iofw_msg_unpack_def_dim(
+int cfio_msg_unpack_def_dim(
 	int *ncid, char **name, size_t *len,int *dimid);
 /**
- * @brief: unpack arguments for the iofw_def_var function
+ * @brief: unpack arguments for the cfio_def_var function
  *
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param name: pointer to where variable name is to be stored, need to be freed by
@@ -282,12 +282,12 @@ int iofw_msg_unpack_def_dim(
  *
  * @return: error code
  */
-int iofw_msg_unpack_def_var(
+int cfio_msg_unpack_def_var(
 	int *ncid, char **name, nc_type *xtype,
 	int *ndims, int **dimids, 
 	size_t **start, size_t **count, int *varid);
 /**
- * @brief: unpack arguments for iofw_put_att
+ * @brief: unpack arguments for cfio_put_att
  *
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param varid: pointer to where variable ID is to be stored 
@@ -300,20 +300,20 @@ int iofw_msg_unpack_def_var(
  *
  * @return: 
  */
-int iofw_msg_unpack_put_att(
+int cfio_msg_unpack_put_att(
 	int *ncid, int *varid, char **name, 
 	nc_type *xtype, int *len, void **op);
 /**
- * @brief: unpack arguments for the iofw_enddef function 
+ * @brief: unpack arguments for the cfio_enddef function 
  *
  * @param ncid: pointer to where netCDF ID is to be stored
  *
  * @return: error code
  */
-int iofw_msg_unpack_enddef(
+int cfio_msg_unpack_enddef(
 	int *ncid);
 /**
- * @brief: unpack arguments for function : iofw_msg_unpack_put_vara_**
+ * @brief: unpack arguments for function : cfio_msg_unpack_put_vara_**
  *
  * @param ncid: pointer to where netCDF ID is to be stored
  * @param varid: pointer to where variable ID is to be stored 
@@ -330,17 +330,17 @@ int iofw_msg_unpack_enddef(
  *
  * @return: error code
  */
-int iofw_msg_unpack_put_vara(
+int cfio_msg_unpack_put_vara(
 	int *ncid, int *varid, int *ndims, 
 	size_t **start, size_t **count,
 	int *data_len, int *fp_type, char **fp);
 /**
- * @brief: unpack arguments for the iofw_close function
+ * @brief: unpack arguments for the cfio_close function
  *
  * @param ncid: pointer to where netCDF ID is to be stored
  *
  * @return: error code
  */
-int iofw_msg_unpack_close(int *ncid);
+int cfio_msg_unpack_close(int *ncid);
 
 #endif
