@@ -181,7 +181,7 @@ static inline int _recv_client_io(
 	    cfio_map_get_client_index_of_server(client_id));
     *io_info = val;
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 /**
@@ -206,7 +206,7 @@ static inline int _remove_client_io(
 
     free(io_info);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 static inline int _handle_def(cfio_id_val_t *val)
@@ -223,10 +223,10 @@ static inline int _handle_def(cfio_id_val_t *val)
     {
 	dim = val->dim;
 	cfio_id_get_nc(val->client_nc_id, &nc);
-	assert(nc->nc_id != IOFW_ID_NC_INVALID);
+	assert(nc->nc_id != CFIO_ID_NC_INVALID);
 	dim->nc_id = nc->nc_id;
 	debug(DEBUG_IO, "dim_len = %d", dim->dim_len);
-	if(dim->dim_len != IOFW_ID_DIM_LOCAL_NULL)
+	if(dim->dim_len != CFIO_ID_DIM_LOCAL_NULL)
 	{
 	    ret = nc_def_dim(nc->nc_id,dim->name,dim->dim_len,&dim->dim_id);
 	}else
@@ -237,7 +237,7 @@ static inline int _handle_def(cfio_id_val_t *val)
 	{
 	    debug(DEBUG_IO, "%d", dim->nc_id);
 	    error("def dim(%s) error(%s)",dim->name,nc_strerror(ret));
-	    return IOFW_ERROR_NC;
+	    return CFIO_ERROR_NC;
 	}
 	ret = nc_put_att(nc->nc_id, NC_GLOBAL, dim->name,
 		NC_INT, 1, &dim->global_dim_len); 
@@ -245,9 +245,9 @@ static inline int _handle_def(cfio_id_val_t *val)
 	{
 	    error("put dim(%s) global dim_len error(%s)",
 		    dim->name,nc_strerror(ret));
-	    return IOFW_ERROR_NC;
+	    return CFIO_ERROR_NC;
 	}
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 
     if(NULL != val->var)
@@ -264,14 +264,14 @@ static inline int _handle_def(cfio_id_val_t *val)
 	if(ret != NC_NOERR)
 	{
 	    error("def var(%s) error(%s)",var->name,nc_strerror(ret));
-	    return IOFW_ERROR_NC;
+	    return CFIO_ERROR_NC;
 	}
 
 	start = malloc(sizeof(int) * var->ndims);
 	if(start == NULL)
 	{
 	    error("malloc fail.");
-	    return IOFW_ERROR_MALLOC;
+	    return CFIO_ERROR_MALLOC;
 	}
 	for(i = 0; i < var->ndims; i ++)
 	{
@@ -282,7 +282,7 @@ static inline int _handle_def(cfio_id_val_t *val)
 	if(ret != NC_NOERR)
 	{
 	    error("put var(%s) start attr error(%s)",var->name,nc_strerror(ret));
-	    return IOFW_ERROR_NC;
+	    return CFIO_ERROR_NC;
 	}
 
 	qlist_for_each_entry(att, var->att_head, link)
@@ -293,7 +293,7 @@ static inline int _handle_def(cfio_id_val_t *val)
 	    {
 		error("put var(%s) attr(%s) error(%s)",
 			var->name, att->name, nc_strerror(ret));
-		return IOFW_ERROR_NC;
+		return CFIO_ERROR_NC;
 	    }
 
 	}
@@ -310,11 +310,11 @@ static inline int _handle_def(cfio_id_val_t *val)
 
 	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
 		ele_size ,  data_size);
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 
     error("no def can do , this is impossible.");
-    return IOFW_ERROR_NC;
+    return CFIO_ERROR_NC;
 }
 /**
  * @brief: update a var's start and count, still store in cur_start and cur_count
@@ -352,7 +352,7 @@ int cfio_io_init()
     io_table = qhash_init(_compare, _hash, IO_HASH_TABLE_SIZE);
     MPI_Comm_rank(MPI_COMM_WORLD, &server_id);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_io_final()
@@ -363,7 +363,7 @@ int cfio_io_final()
 	io_table = NULL;
     }
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_io_reader_done(int client_id, int *server_done)
@@ -379,7 +379,7 @@ int cfio_io_reader_done(int client_id, int *server_done)
 	*server_done = 1;
     }
 
-    return IOFW_ERROR_NONE;	
+    return CFIO_ERROR_NONE;	
 }
 
 int cfio_io_writer_done(int client_id, int *server_done)
@@ -395,7 +395,7 @@ int cfio_io_writer_done(int client_id, int *server_done)
 	*server_done = 1;
     }
 
-    return IOFW_ERROR_NONE;	
+    return CFIO_ERROR_NONE;	
 }
 
 int cfio_io_create(int client_id)
@@ -414,7 +414,7 @@ int cfio_io_create(int client_id)
 
 #ifdef SVR_UNPACK_ONLY
     free(_path);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
     /* TODO  */
@@ -423,9 +423,9 @@ int cfio_io_create(int client_id)
 
     //_recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
 
-    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+    if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
-	cfio_id_map_nc(client_nc_id, IOFW_ID_NC_INVALID);
+	cfio_id_map_nc(client_nc_id, CFIO_ID_NC_INVALID);
 	//if(_bitmap_full(io_info->client_bitmap))
 	//{
 	ret = nc_create(path,cmode,&nc_id);	
@@ -433,7 +433,7 @@ int cfio_io_create(int client_id)
 	{
 	    error("Error happened when open %s error(%s)", 
 		    path, nc_strerror(ret));
-	    return_code = IOFW_ERROR_NC;
+	    return_code = CFIO_ERROR_NC;
 
 	    goto RETURN;
 	}
@@ -445,17 +445,17 @@ int cfio_io_create(int client_id)
 	{
 	    error("Error happened when put sub_amount attr error(%s)", 
 		    nc_strerror(ret));
-	    return_code = IOFW_ERROR_NC;
+	    return_code = CFIO_ERROR_NC;
 
 	    goto RETURN;
 	}
 
-	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+	if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    assert(1);
 	}else
 	{
-	    assert(IOFW_ID_NC_INVALID == nc->nc_id);
+	    assert(CFIO_ID_NC_INVALID == nc->nc_id);
 
 	    nc->nc_id = nc_id;
 	}
@@ -465,7 +465,7 @@ int cfio_io_create(int client_id)
     debug(DEBUG_IO, "nc create(%s) success", path);
     //}
 
-    return_code = IOFW_ERROR_NONE;
+    return_code = CFIO_ERROR_NONE;
 
 RETURN:
     if(NULL != path)
@@ -497,29 +497,29 @@ int cfio_io_def_dim(int client_id)
 
     cfio_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
     
-    debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
+    debug(DEBUG_CFIO, "ncid = %d, name = %s, len = %lu",
 	    client_nc_id, name, len);
 
 #ifdef SVR_UNPACK_ONLY
     free(name);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, client_dim_id, 0, &io_info);
 	
-    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+    if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
-	return_code = IOFW_ERROR_INVALID_NC;
+	return_code = CFIO_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
 
-    if(IOFW_ID_HASH_GET_NULL == 
+    if(CFIO_ID_HASH_GET_NULL == 
             cfio_id_get_dim(client_nc_id, client_dim_id, &dim))
     {
-        cfio_id_map_dim(client_nc_id, client_dim_id, IOFW_ID_NC_INVALID, 
-        	IOFW_ID_DIM_INVALID, name, len);
+        cfio_id_map_dim(client_nc_id, client_dim_id, CFIO_ID_NC_INVALID, 
+        	CFIO_ID_DIM_INVALID, name, len);
 	debug_mark(DEBUG_IO);
     }else
     {
@@ -528,15 +528,15 @@ int cfio_io_def_dim(int client_id)
 
     //if(_bitmap_full(io_info->client_bitmap))
     //{
-    //    if(IOFW_ID_NC_INVALID == nc->nc_id)
+    //    if(CFIO_ID_NC_INVALID == nc->nc_id)
     //    {
-    //        return_code = IOFW_ERROR_INVALID_NC;
+    //        return_code = CFIO_ERROR_INVALID_NC;
     //        debug(DEBUG_IO, "Invalid NC ID.");
     //        goto RETURN;
     //    }
     //    if(nc->nc_status != DEFINE_MODE)
     //    {
-    //        return_code = IOFW_ERROR_NC_NOT_DEFINE;
+    //        return_code = CFIO_ERROR_NC_NOT_DEFINE;
     //        debug(DEBUG_IO, "Only can define dim in DEFINE_MODE.");
     //        goto RETURN;
     //    }
@@ -545,18 +545,18 @@ int cfio_io_def_dim(int client_id)
     //    if( ret != NC_NOERR )
     //    {
     //        error("def dim(%s) error(%s)",name,nc_strerror(ret));
-    //        return_code = IOFW_ERROR_NC;
+    //        return_code = CFIO_ERROR_NC;
     //        goto RETURN;
     //    }
     //    
-    //    if(IOFW_ID_HASH_GET_NULL == 
+    //    if(CFIO_ID_HASH_GET_NULL == 
     //    	cfio_id_get_dim(client_nc_id, client_dim_id, &dim))
     //    {
     //        cfio_id_map_dim(client_nc_id, client_dim_id, nc->nc_id, 
     //    	    dim_id, len);
     //    }else
     //    {
-    //        assert(IOFW_ID_DIM_INVALID == dim->dim_id);
+    //        assert(CFIO_ID_DIM_INVALID == dim->dim_id);
     //        /**
     //         * TODO this should be a return error
     //         **/
@@ -570,7 +570,7 @@ int cfio_io_def_dim(int client_id)
     //    debug(DEBUG_IO, "define dim(%s) success", name);
     //}
 
-    return_code = IOFW_ERROR_NONE;
+    return_code = CFIO_ERROR_NONE;
 
 RETURN :
     return return_code;
@@ -603,13 +603,13 @@ int cfio_io_def_var(int client_id)
     free(start);
     free(count);
     free(client_dim_ids);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
     if( ret < 0 )
     {
 	error("unpack_msg_def_var failed");
-	return IOFW_ERROR_MSG_UNPACK;
+	return CFIO_ERROR_MSG_UNPACK;
     }
     dims = malloc(ndims * sizeof(cfio_id_dim_t *));
     dims_len = malloc(ndims * sizeof(size_t));
@@ -617,25 +617,25 @@ int cfio_io_def_var(int client_id)
     //_recv_client_io(
     //        client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
-    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+    if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
-	return_code = IOFW_ERROR_INVALID_NC;
+	return_code = CFIO_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
 	
     for(i = 0; i < ndims; i ++)
     {
-	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_dim(
+	if(CFIO_ID_HASH_GET_NULL == cfio_id_get_dim(
 		    client_nc_id, client_dim_ids[i], &dims[i]))
 	{
 	    debug(DEBUG_IO, "Invalid Dim.");
-	    return_code = IOFW_ERROR_INVALID_DIM;
+	    return_code = CFIO_ERROR_INVALID_DIM;
 	    goto RETURN;
 	}
     }
 
-    if(IOFW_ID_HASH_GET_NULL == 
+    if(CFIO_ID_HASH_GET_NULL == 
 	    cfio_id_get_var(client_nc_id, client_var_id, &var))
     {
 	/**
@@ -644,7 +644,7 @@ int cfio_io_def_var(int client_id)
 	 **/
 	client_num = cfio_map_get_client_num_of_server(server_id);
 	cfio_id_map_var(name, client_nc_id, client_var_id, 
-		IOFW_ID_NC_INVALID, IOFW_ID_VAR_INVALID, 
+		CFIO_ID_NC_INVALID, CFIO_ID_VAR_INVALID, 
 		ndims, client_dim_ids, start, count, xtype, client_num);
 	/**
 	 *set each dim's len for the var
@@ -695,7 +695,7 @@ int cfio_io_def_var(int client_id)
 	free(count);
 	free(client_dim_ids);
     }
-    return_code = IOFW_ERROR_NONE;
+    return_code = CFIO_ERROR_NONE;
 
 RETURN :
     if(dims != NULL)
@@ -727,18 +727,18 @@ int cfio_io_put_att(int client_id)
     if( ret < 0 )
     {
 	error("");
-	return IOFW_ERROR_MSG_UNPACK;
+	return CFIO_ERROR_MSG_UNPACK;
     }
 
 #if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
     free(name);
     free(data);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
-    if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+    if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
-	return_code = IOFW_ERROR_INVALID_NC;
+	return_code = CFIO_ERROR_INVALID_NC;
 	debug(DEBUG_IO, "Invalid NC ID.");
 	goto RETURN;
     }
@@ -750,22 +750,22 @@ int cfio_io_put_att(int client_id)
 	{
 	    error("Error happened when put sub_amount attr error(%s)", 
 		    nc_strerror(ret));
-	    return_code = IOFW_ERROR_NC;
+	    return_code = CFIO_ERROR_NC;
 
 	    goto RETURN;
 	}
     }
     else
     {
-	if(IOFW_ID_HASH_GET_NULL == cfio_id_put_att(
+	if(CFIO_ID_HASH_GET_NULL == cfio_id_put_att(
 		    client_nc_id, client_var_id, name, xtype, len, data))
 	{
 	    error("");
-	    return_code = IOFW_ERROR_INVALID_NC;
+	    return_code = CFIO_ERROR_INVALID_NC;
 	    goto RETURN;
 	}
     }
-    return_code = IOFW_ERROR_NONE;
+    return_code = CFIO_ERROR_NONE;
 
 RETURN:
     return return_code;
@@ -784,11 +784,11 @@ int cfio_io_enddef(int client_id)
     if( ret < 0 )
     {
 	error("unapck msg error");
-	return IOFW_ERROR_MSG_UNPACK;
+	return CFIO_ERROR_MSG_UNPACK;
     }
 
 #ifdef SVR_UNPACK_ONLY
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
     _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
@@ -796,10 +796,10 @@ int cfio_io_enddef(int client_id)
     if(_bitmap_full(io_info->client_bitmap))
     {
 
-	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+	if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
-	    return IOFW_ERROR_INVALID_NC;
+	    return CFIO_ERROR_INVALID_NC;
 	}
 
 	if(DEFINE_MODE == nc->nc_status)
@@ -816,14 +816,14 @@ int cfio_io_enddef(int client_id)
 	    if(ret < 0)
 	    {
 		error("enddef error(%s)",nc_strerror(ret));
-		return IOFW_ERROR_NC;
+		return CFIO_ERROR_NC;
 	    }
 
 	    nc->nc_status = DATA_MODE;
 	}
 	_remove_client_io(io_info);
     }
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_io_put_vara(int client_id)
@@ -849,14 +849,14 @@ int cfio_io_put_vara(int client_id)
     if( ret < 0 )
     {
 	error("");
-	return IOFW_ERROR_MSG_UNPACK;
+	return CFIO_ERROR_MSG_UNPACK;
     }
 
 #if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
     free(start);
     free(count);
     free(data);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
     //float *_data = data;
     //for(i = 0; i < 4; i ++)
@@ -870,11 +870,11 @@ int cfio_io_put_vara(int client_id)
 
     client_index = cfio_map_get_client_index_of_server(client_id);
     //TODO  check whether data_type is right
-    if(IOFW_ID_HASH_GET_NULL == cfio_id_put_var(
+    if(CFIO_ID_HASH_GET_NULL == cfio_id_put_var(
 		client_nc_id, client_var_id, client_index, 
 		start, count, (char*)data))
     {
-	return_code = IOFW_ERROR_INVALID_VAR;
+	return_code = CFIO_ERROR_INVALID_VAR;
 	debug(DEBUG_IO, "Invalid var.");
 	goto RETURN;
     }
@@ -883,18 +883,18 @@ int cfio_io_put_vara(int client_id)
     {
         debug(DEBUG_IO, "bit map full");
 
-        if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc) ||
-        	IOFW_ID_NC_INVALID == nc->nc_id)
+        if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc) ||
+        	CFIO_ID_NC_INVALID == nc->nc_id)
         {
-            return_code = IOFW_ERROR_INVALID_NC;
+            return_code = CFIO_ERROR_INVALID_NC;
             debug(DEBUG_IO, "Invalid nc.");
             goto RETURN;
         }
-        if(IOFW_ID_HASH_GET_NULL == 
+        if(CFIO_ID_HASH_GET_NULL == 
         	cfio_id_get_var(client_nc_id, client_var_id, &var) ||
-        	IOFW_ID_VAR_INVALID == var->var_id)
+        	CFIO_ID_VAR_INVALID == var->var_id)
         {
-            return_code = IOFW_ERROR_INVALID_VAR;
+            return_code = CFIO_ERROR_INVALID_VAR;
             debug(DEBUG_IO, "Invalid var.");
             goto RETURN;
         }
@@ -902,13 +902,13 @@ int cfio_io_put_vara(int client_id)
         if(ndims != var->ndims)
         {
             debug(DEBUG_IO, "wrong ndims.");
-            return_code = IOFW_ERROR_WRONG_NDIMS;
+            return_code = CFIO_ERROR_WRONG_NDIMS;
             goto RETURN;
         }
 
         if(NULL == var->data)
         {
-            return_code = IOFW_ERROR_INVALID_VAR;
+            return_code = CFIO_ERROR_INVALID_VAR;
             debug(DEBUG_IO, "Var data is NULL.");
             goto RETURN;
         }
@@ -924,7 +924,7 @@ int cfio_io_put_vara(int client_id)
 	put_start = malloc(var->ndims * sizeof(size_t));
 	if(NULL == put_start)
 	{
-	    return_code = IOFW_ERROR_MALLOC;
+	    return_code = CFIO_ERROR_MALLOC;
 	    goto RETURN;
 	}
         for(i = 0; i < var->ndims; i ++)
@@ -934,23 +934,23 @@ int cfio_io_put_vara(int client_id)
 
         switch(var->data_type)
         {
-            case IOFW_BYTE :
+            case CFIO_BYTE :
         	break;
-            case IOFW_CHAR :
+            case CFIO_CHAR :
         	break;
-            case IOFW_SHORT :
+            case CFIO_SHORT :
         	ret = nc_put_vara_short(nc->nc_id, var->var_id, 
         		put_start, var->count, (short*)var->data);
         	break;
-            case IOFW_INT :
+            case CFIO_INT :
         	ret = nc_put_vara_int(nc->nc_id, var->var_id, 
         		put_start, var->count, (int*)var->data);
         	break;
-            case IOFW_FLOAT :
+            case CFIO_FLOAT :
         	ret = nc_put_vara_float(nc->nc_id, var->var_id, 
         		put_start, var->count, (float*)var->data);
         	break;
-            case IOFW_DOUBLE :
+            case CFIO_DOUBLE :
         	ret = nc_put_vara_double(nc->nc_id, var->var_id, 
         		put_start, var->count, (double*)var->data);
         	break;
@@ -960,12 +960,12 @@ int cfio_io_put_vara(int client_id)
         {
             error("write nc(%d) var (%d) failure(%s)",
         	    nc->nc_id,var->var_id,nc_strerror(ret));
-            return_code = IOFW_ERROR_NC;
+            return_code = CFIO_ERROR_NC;
         }
         _remove_client_io(io_info);
     }
 
-    return_code = IOFW_ERROR_NONE;	
+    return_code = CFIO_ERROR_NONE;	
 
 RETURN :
     return return_code;
@@ -989,7 +989,7 @@ int cfio_io_close(int client_id)
     }
 
 #ifdef SVR_UNPACK_ONLY
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 #endif
 
     _recv_client_io(client_id, func_code, client_nc_id, 0, 0, &io_info);
@@ -999,17 +999,17 @@ int cfio_io_close(int client_id)
     {
 	/*TODO handle memory free*/
 
-	if(IOFW_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
+	if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
 	{
 	    debug(DEBUG_IO, "Invalid NC.");
-	    return IOFW_ERROR_INVALID_NC;
+	    return CFIO_ERROR_INVALID_NC;
 	}
 	ret = nc_close(nc->nc_id);
 
 	if( ret != NC_NOERR )
 	{
 	    error("close nc(%d) file failure,%s\n",nc->nc_id,nc_strerror(ret));
-	    return IOFW_ERROR_NC;
+	    return CFIO_ERROR_NC;
 	}
 	_remove_client_io(io_info);
 	
@@ -1025,6 +1025,6 @@ int cfio_io_close(int client_id)
 	free(nc_val);
     }
     debug(DEBUG_IO, "success return.");
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 

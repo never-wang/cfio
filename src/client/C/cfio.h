@@ -27,14 +27,14 @@
 
 #define CLIENT_BUF_SIZE 1024*1024*1024
 
-#define IOFW_PROC_CLIENT IOFW_MAP_TYPE_CLIENT
-#define IOFW_PROC_SERVER IOFW_MAP_TYPE_SERVER
-#define IOFW_PROC_BLANK	 IOFW_MAP_TYPE_BLANK
+#define CFIO_PROC_CLIENT CFIO_MAP_TYPE_CLIENT
+#define CFIO_PROC_SERVER CFIO_MAP_TYPE_SERVER
+#define CFIO_PROC_BLANK	 CFIO_MAP_TYPE_BLANK
 
-#define IOFW_START(rank) \
-    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT) {
+#define CFIO_START(rank) \
+    if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT) {
 
-#define IOFW_END()	\
+#define CFIO_END()	\
     }			
 	
 /**

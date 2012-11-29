@@ -23,11 +23,11 @@
 #define MAP_HASH_TABLE_SIZE 1024
 #define ASSIGN_HASH_TABLE_SIZE 1024
 
-#define IOFW_ID_INIT_CLIENT	    0
-#define IOFW_ID_INIT_SERVER	    1
+#define CFIO_ID_INIT_CLIENT	    0
+#define CFIO_ID_INIT_SERVER	    1
 
 /* return value of cfio_id_get_* */
-#define IOFW_ID_HASH_GET_NULL	    1	/* can't find the client id in Map Hash 
+#define CFIO_ID_HASH_GET_NULL	    1	/* can't find the client id in Map Hash 
 					   Table*/
 #define DEFINE_MODE 0
 #define DATA_MODE   1
@@ -36,10 +36,10 @@
  * special id assigned to nc, dim and var when the real server nc ,dim or var id 
  * hasn't been created
  **/
-#define IOFW_ID_NC_INVALID -1   
-#define IOFW_ID_DIM_INVALID -1
-#define IOFW_ID_VAR_INVALID -1
-#define IOFW_ID_DIM_LOCAL_NULL -1 /* when the def_var not be called, the local 
+#define CFIO_ID_NC_INVALID -1   
+#define CFIO_ID_DIM_INVALID -1
+#define CFIO_ID_VAR_INVALID -1
+#define CFIO_ID_DIM_LOCAL_NULL -1 /* when the def_var not be called, the local 
 				     dim_len will to set to this value, mean that
 				     we don't need to call nc_def_dim */
 

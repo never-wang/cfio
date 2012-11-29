@@ -44,8 +44,8 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     int server_proc_num;
     int best_server_amount;
 
-    //set_debug_mask(DEBUG_IOFW | DEBUG_MSG | DEBUG_BUF);
-    //set_debug_mask(DEBUG_IOFW | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
+    //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);
+    //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -78,7 +78,7 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	return ret;
     }
 
-    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_SERVER)
     {
 	if((ret = cfio_server_init()) < 0)
 	{
@@ -90,7 +90,7 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	    error("");
 	    return ret;
 	}
-    }else if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
 	if((ret = cfio_msg_init(CLIENT_BUF_SIZE)) < 0)
 	{
@@ -98,15 +98,15 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	    return ret;
 	}
 
-	if((ret = cfio_id_init(IOFW_ID_INIT_CLIENT)) < 0)
+	if((ret = cfio_id_init(CFIO_ID_INIT_CLIENT)) < 0)
 	{
 	    error("");
 	    return ret;
 	}
     }
 
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_finalize()
@@ -118,26 +118,26 @@ int cfio_finalize()
     if(flag)
     {
 	error("***You should not call MPI_Finalize before cfio_Finalized*****\n");
-	return IOFW_ERROR_FINAL_AFTER_MPI;
+	return CFIO_ERROR_FINAL_AFTER_MPI;
     }
-    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
 	cfio_msg_pack_io_done(&msg, rank);
 	cfio_msg_isend(msg);
     }
     
-    if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_SERVER)
+    if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_SERVER)
     {
 	cfio_server_final();
-    }else if(cfio_map_proc_type(rank) == IOFW_MAP_TYPE_CLIENT)
+    }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
 	cfio_id_final();
 	cfio_msg_final();
     }
 
     cfio_map_final();
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_proc_type(int rank)
@@ -145,7 +145,7 @@ int cfio_proc_type(int rank)
     if(rank < 0)
     {
 	error("rank should be positive.");
-	return IOFW_ERROR_RANK_INVALID;
+	return CFIO_ERROR_RANK_INVALID;
     }
 
     return cfio_map_proc_type(rank);
@@ -166,7 +166,7 @@ int cfio_create(
     if(path == NULL || ncidp == NULL)
     {
 	error("args should not be NULL.");
-	return IOFW_ERROR_ARG_NULL;
+	return CFIO_ERROR_ARG_NULL;
     }
 
     cfio_msg_t *msg;
@@ -181,8 +181,8 @@ int cfio_create(
     cfio_msg_pack_create(&msg, rank, path, cmode, *ncidp);
     cfio_msg_isend(msg);
 
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 /**
  * @brief: def_dim
@@ -200,12 +200,12 @@ int cfio_def_dim(
     if(name == NULL || idp == NULL)
     {
 	error("args should not be NULL.");
-	return IOFW_ERROR_ARG_NULL;
+	return CFIO_ERROR_ARG_NULL;
     }
     
     int ret;
 
-    debug(DEBUG_IOFW, "ncid = %d, name = %s, len = %lu",
+    debug(DEBUG_CFIO, "ncid = %d, name = %s, len = %lu",
 	    ncid, name, len);
     
     cfio_msg_t *msg;
@@ -219,8 +219,8 @@ int cfio_def_dim(
     cfio_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
     cfio_msg_isend(msg);
 
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_def_var(
@@ -232,10 +232,10 @@ int cfio_def_var(
     if(name == NULL || varidp == NULL || start == NULL || count == NULL)
     {
 	error("args should not be NULL.");
-	return IOFW_ERROR_ARG_NULL;
+	return CFIO_ERROR_ARG_NULL;
     }
     
-    debug(DEBUG_IOFW, "ndims = %d", ndims);
+    debug(DEBUG_CFIO, "ndims = %d", ndims);
 
     cfio_msg_t *msg;
     int ret;
@@ -250,8 +250,8 @@ int cfio_def_var(
 	    ndims, dimids, start, count, *varidp);
     cfio_msg_isend(msg);
     
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_put_att(
@@ -267,8 +267,8 @@ int cfio_put_att(
       cfio_msg_isend(msg);
     }
 
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_enddef(
@@ -279,8 +279,8 @@ int cfio_enddef(
     cfio_msg_pack_enddef(&msg, rank, ncid);
     cfio_msg_isend(msg);
 
-    debug(DEBUG_IOFW, "success return.");
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "success return.");
+    return CFIO_ERROR_NONE;
 }
 
 //TODO Maybe can rewrite so better performance
@@ -300,7 +300,7 @@ int cfio_enddef(
 //
 //    //times_start();
 //
-//    debug(DEBUG_IOFW, "dim = %d; div_dim = %d", dim, div_dim);
+//    debug(DEBUG_CFIO, "dim = %d; div_dim = %d", dim, div_dim);
 //
 //    cur_start = malloc(dim * sizeof(size_t));
 //    cur_count = malloc(dim *sizeof(size_t));
@@ -315,20 +315,20 @@ int cfio_enddef(
 //    }
 //    switch(fp_type)
 //    {
-//	case IOFW_BYTE :
+//	case CFIO_BYTE :
 //	    break;
-//	case IOFW_CHAR :
+//	case CFIO_CHAR :
 //	    break;
-//	case IOFW_SHORT :
+//	case CFIO_SHORT :
 //	    desc_data_size *= sizeof(short);
 //	    break;
-//	case IOFW_INT :
+//	case CFIO_INT :
 //	    desc_data_size *= sizeof(int);
 //	    break;
-//	case IOFW_FLOAT :
+//	case CFIO_FLOAT :
 //	    desc_data_size *= sizeof(float);
 //	    break;
-//	case IOFW_DOUBLE :
+//	case CFIO_DOUBLE :
 //	    desc_data_size *= sizeof(double);
 //	    break;
 //    }
@@ -341,7 +341,7 @@ int cfio_enddef(
 //	div_data_size -= desc_data_size;
 //	div --;
 //    }
-//    debug(DEBUG_IOFW, "desc_data_size = %lu, div_data_size = %lu, div = %d",
+//    debug(DEBUG_CFIO, "desc_data_size = %lu, div_data_size = %lu, div = %d",
 //	    desc_data_size, div_data_size, div);
 //
 //    if(0 == div_data_size)
@@ -374,8 +374,8 @@ int cfio_enddef(
 //    }
 //
 //    //debug(DEBUG_TIME, "%f ms", times_end());
-//    debug(DEBUG_IOFW, "success return.");
-//    return IOFW_ERROR_NONE;
+//    debug(DEBUG_CFIO, "success return.");
+//    return CFIO_ERROR_NONE;
 //}
 
 int cfio_put_vara_float(
@@ -385,7 +385,7 @@ int cfio_put_vara_float(
     if(start == NULL || count == NULL || fp == NULL)
     {
 	error("args should not be NULL.");
-	return IOFW_ERROR_ARG_NULL;
+	return CFIO_ERROR_ARG_NULL;
     }
 
     cfio_msg_t *msg;
@@ -395,16 +395,16 @@ int cfio_put_vara_float(
     //head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
 
     //_put_vara(io_proc_id, ncid, varid, dim,
-    //  start, count, IOFW_FLOAT, fp, head_size, dim - 1);
+    //  start, count, CFIO_FLOAT, fp, head_size, dim - 1);
     cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
-	    start, count, IOFW_FLOAT, fp);
+	    start, count, CFIO_FLOAT, fp);
     cfio_msg_isend(msg);
 
-    debug_mark(DEBUG_IOFW);
+    debug_mark(DEBUG_CFIO);
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_put_vara_double(
@@ -414,28 +414,28 @@ int cfio_put_vara_double(
     if(start == NULL || count == NULL || fp == NULL)
     {
 	error("args should not be NULL.");
-	return IOFW_ERROR_ARG_NULL;
+	return CFIO_ERROR_ARG_NULL;
     }
 
     cfio_msg_t *msg;
 
 	//times_start();
-    debug(DEBUG_IOFW, "start :(%lu, %lu), count :(%lu, %lu)", 
+    debug(DEBUG_CFIO, "start :(%lu, %lu), count :(%lu, %lu)", 
 	    start[0], start[1], count[0], count[1]);
 
     //head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
 
     //_put_vara(io_proc_id, ncid, varid, dim,
-    //        start, count, IOFW_DOUBLE, fp, head_size, dim - 1);
+    //        start, count, CFIO_DOUBLE, fp, head_size, dim - 1);
     cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
-	    start, count, IOFW_DOUBLE, fp);
+	    start, count, CFIO_DOUBLE, fp);
     cfio_msg_isend(msg);
 
-    debug_mark(DEBUG_IOFW);
+    debug_mark(DEBUG_CFIO);
 
 	//debug(DEBUG_TIME, "%f ms", times_end());
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_close(
@@ -454,9 +454,11 @@ int cfio_close(
     cfio_msg_pack_close(&msg, rank, ncid);
     cfio_msg_isend(msg);
 
-    debug(DEBUG_IOFW, "Finish cfio_close");
+    cfio_msg_test();
 
-    return IOFW_ERROR_NONE;
+    debug(DEBUG_CFIO, "Finish cfio_close");
+
+    return CFIO_ERROR_NONE;
 }
 
 /**
@@ -480,7 +482,7 @@ int cfio_proc_type_(int *rank)
 int cfio_create_(
 	const char *path, int *cmode, int *ncidp)
 {
-    debug(DEBUG_IOFW, "path = %s, cmode = %d", path, *cmode);
+    debug(DEBUG_CFIO, "path = %s, cmode = %d", path, *cmode);
 
     return cfio_create(path, *cmode, ncidp);
 }
@@ -505,15 +507,15 @@ int cfio_def_var_(
     _start = malloc((*ndims) * sizeof(size_t));
     if(NULL == _start)
     {
-	debug(DEBUG_IOFW, "malloc fail");
-	return IOFW_ERROR_MALLOC;
+	debug(DEBUG_CFIO, "malloc fail");
+	return CFIO_ERROR_MALLOC;
     }
     _count = malloc((*ndims) * sizeof(size_t));
     if(NULL == _count)
     {
 	free(_start);
-	debug(DEBUG_IOFW, "malloc fail");
-	return IOFW_ERROR_MALLOC;
+	debug(DEBUG_CFIO, "malloc fail");
+	return CFIO_ERROR_MALLOC;
     }
     for(i = 0; i < (*ndims); i ++)
     {
@@ -539,15 +541,15 @@ int cfio_put_vara_double_(
     _start = malloc((*dim) * sizeof(size_t));
     if(NULL == _start)
     {
-	debug(DEBUG_IOFW, "malloc fail");
-	return IOFW_ERROR_MALLOC;
+	debug(DEBUG_CFIO, "malloc fail");
+	return CFIO_ERROR_MALLOC;
     }
     _count = malloc((*dim) * sizeof(size_t));
     if(NULL == _count)
     {
 	free(_start);
-	debug(DEBUG_IOFW, "malloc fail");
-	return IOFW_ERROR_MALLOC;
+	debug(DEBUG_CFIO, "malloc fail");
+	return CFIO_ERROR_MALLOC;
     }
     for(i = 0; i < (*dim); i ++)
     {

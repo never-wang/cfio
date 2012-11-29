@@ -15,3 +15,4 @@
 //#undef SVR_RECV_ONLY //now can't use
 #undef SVR_UNPACK_ONLY
 #undef SVR_META_ONLY
+#define MSG_CLOSE_WAIT

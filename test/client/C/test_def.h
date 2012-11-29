@@ -18,10 +18,10 @@
 #define LAT 4096
 #define LON 2048
 
-#define LOOP 20
-#define VALN 8
+#define LOOP 1
+#define VALN 16
 
 #define SLEEP_TIME 1
-#define IOFW_RATIO 8
+#define CFIO_RATIO 8
 
 #endif

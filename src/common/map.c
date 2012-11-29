@@ -85,14 +85,14 @@ static int _gen_server_x_and_y(int best_server_amount)
     if(factor_x == NULL)
     {
 	error("malloc fail for factor_x.");
-	return IOFW_ERROR_MALLOC;
+	return CFIO_ERROR_MALLOC;
     }
     factor_y = malloc(client_y_num * sizeof(int));
     if(factor_y == NULL)
     {
 	free(factor_x);
 	error("malloc fail for factor_y.");
-	return IOFW_ERROR_MALLOC;
+	return CFIO_ERROR_MALLOC;
     }
     _get_factor(client_x_num, factor_x, &factor_x_num);
     _get_factor(client_y_num, factor_y, &factor_y_num);
@@ -137,7 +137,7 @@ static int _gen_server_x_and_y(int best_server_amount)
 		    best_server_amount + client_amount);
 	    free(factor_x);
 	    free(factor_y);
-	    return IOFW_ERROR_INVALID_INIT_ARG;
+	    return CFIO_ERROR_INVALID_INIT_ARG;
 	}
 	/* reassign server amount for some on may start more proc than needed */
 	server_amount = best_server_amount; 
@@ -146,14 +146,14 @@ static int _gen_server_x_and_y(int best_server_amount)
 	free(factor_x);
 	free(factor_y);
 	debug(DEBUG_MAP, "success return");
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }else
     {
 	error("You should start proper amount of proccess, the best value is %d",
 		best_server_amount + client_amount);
 	free(factor_x);
 	free(factor_y);
-	return IOFW_ERROR_INVALID_INIT_ARG;
+	return CFIO_ERROR_INVALID_INIT_ARG;
     }
 }
 
@@ -182,11 +182,11 @@ int cfio_map_init(
     }
     
     debug(DEBUG_MAP, "success return.");
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 int cfio_map_final()
 {
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 int cfio_map_proc_type(int proc_id)
 {
@@ -195,13 +195,13 @@ int cfio_map_proc_type(int proc_id)
      * + client_amount - 1 */
     if(proc_id < client_amount)
     {
-	return IOFW_MAP_TYPE_CLIENT;
+	return CFIO_MAP_TYPE_CLIENT;
     }else if(proc_id < client_amount + server_amount)
     {
-	return IOFW_MAP_TYPE_SERVER;
+	return CFIO_MAP_TYPE_SERVER;
     }else
     {
-	return IOFW_MAP_TYPE_BLANK;
+	return CFIO_MAP_TYPE_BLANK;
     }
 }
 int cfio_map_get_comm()
@@ -222,7 +222,7 @@ int cfio_map_get_client_amount()
 int cfio_map_get_client_num_of_server(int server_id)
 {
 
-    assert(cfio_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
+    assert(cfio_map_proc_type(server_id) == CFIO_MAP_TYPE_SERVER);
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int client_num_per_server, low_server_num;
     //low_server_num = server_amount - (client_y_num % server_amount);
@@ -250,13 +250,13 @@ int cfio_map_get_client_num_of_server(int server_id)
 }
 int cfio_map_get_server_index(int server_id)
 {
-    assert(cfio_map_proc_type(server_id) == IOFW_MAP_TYPE_SERVER);
+    assert(cfio_map_proc_type(server_id) == CFIO_MAP_TYPE_SERVER);
 
     return server_id - client_amount;
 }
 int cfio_map_get_client_index_of_server(int client_id)
 {
-    assert(cfio_map_proc_type(client_id) == IOFW_MAP_TYPE_CLIENT);
+    assert(cfio_map_proc_type(client_id) == CFIO_MAP_TYPE_CLIENT);
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int client_num_per_server, low_server_num;
 
@@ -345,7 +345,7 @@ int cfio_map_forwarding(
 
     debug(DEBUG_MAP, "client(%d)->server(%d)", msg->src, msg->dst);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 /* no use in this vision */
@@ -390,7 +390,7 @@ int cfio_map_forwarding(
 //	if(bitmap[i] != 255)
 //	{
 //	    *is_full = 0;
-//	    return IOFW_ERROR_NONE;
+//	    return CFIO_ERROR_NONE;
 //	}
 //    }
 //
@@ -399,23 +399,23 @@ int cfio_map_forwarding(
 //	if((bitmap[start_index] >> head) != (1 << (tail - head)) - 1)
 //	{
 //	    *is_full = 0;
-//	    return IOFW_ERROR_NONE;
+//	    return CFIO_ERROR_NONE;
 //	}
 //    }else
 //    {
 //    if((bitmap[start_index] >> head) != ((1 << (8 - head)) - 1))
 //    {
 //	*is_full = 0;
-//	return IOFW_ERROR_NONE;
+//	return CFIO_ERROR_NONE;
 //    }
 //    if(bitmap[end_index] != ((1 << tail) - 1))
 //    {
 //	*is_full = 0;
-//	return IOFW_ERROR_NONE;
+//	return CFIO_ERROR_NONE;
 //    }
 //    }
 //
 //    *is_full = 1;
 //    debug(DEBUG_MAP, "success return, bitmap is full."); 
-//    return IOFW_ERROR_NONE;
+//    return CFIO_ERROR_NONE;
 //}

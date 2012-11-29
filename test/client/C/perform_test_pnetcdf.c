@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     LAT_PROC = atoi(argv[1]);
     LON_PROC = atoi(argv[2]);
     assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_CFIO | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	sprintf(fileName,"%s/pnetcdf-%d.nc", argv[3], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
-	ncmpi_create(MPI_COMM_WORLD, fileName, 0, MPI_INFO_NULL, &ncidp);
+	ncmpi_create(MPI_COMM_WORLD, fileName, NC_64BIT_OFFSET, MPI_INFO_NULL, &ncidp);
 	debug_mark(DEBUG_USER);
 	int lat = LAT;
 	ncmpi_def_dim(ncidp, "lat", lat,&dimids[0]);

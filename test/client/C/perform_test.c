@@ -71,15 +71,15 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
-    cfio_init( LAT_PROC, LON_PROC, IOFW_RATIO);
-    IOFW_START(rank);
+    cfio_init( LAT_PROC, LON_PROC, CFIO_RATIO);
+    CFIO_START(rank);
     for(i = 0; i < LOOP; i ++)
     {
 	sleep(SLEEP_TIME);
 	times_start();
 	sprintf(fileName,"%s/cfio-%d.nc", argv[3], i);
 	int dimids[2];
-	cfio_create(fileName, 0, &ncidp);
+	cfio_create(fileName, NC_64BIT_OFFSET, &ncidp);
 	int lat = LAT;
 	cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
 	cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     }
     free(fp);
 
-    IOFW_END();
+    CFIO_END();
     cfio_finalize();
     printf("proc %d cfio time : %f\n", rank, times_end());
     MPI_Finalize();

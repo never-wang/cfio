@@ -56,16 +56,16 @@ cfio_buf_t *cfio_buf_open(size_t size, int *error)
 
     if(NULL == buf_p)
     {
-	SET_ERROR(error, IOFW_ERROR_MALLOC);
+	SET_ERROR(error, CFIO_ERROR_MALLOC);
 	error("malloc for buf fail.");
 	return NULL;
     }
 
-    buf_p->magic = IOFW_BUF_MAGIC;
+    buf_p->magic = CFIO_BUF_MAGIC;
     buf_p->size = size;
     buf_p->start_addr = (char *)buf_p + sizeof(cfio_buf_t);
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
-    buf_p->magic2 = IOFW_BUF_MAGIC;
+    buf_p->magic2 = CFIO_BUF_MAGIC;
 
     return buf_p;
 }
@@ -78,18 +78,18 @@ int cfio_buf_close(cfio_buf_t *buf_p)
 	buf_p = NULL;
     }
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_buf_clear(cfio_buf_t *buf_p)
 {
     assert(NULL != buf_p);
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC);
 
     buf_p->free_addr = buf_p->used_addr = buf_p->start_addr;
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 size_t cfio_buf_pack_size(
@@ -104,14 +104,14 @@ int cfio_buf_pack_data(
     assert(NULL != data);
     assert(NULL != buf_p);
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC);
 
     assert(free_buf_size(buf_p) >= size);
 
     put_buf_data(buf_p, data, size);
     use_buf(buf_p, size);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 int cfio_buf_unpack_data(
 	void *data, size_t size, cfio_buf_t *buf_p)
@@ -120,13 +120,13 @@ int cfio_buf_unpack_data(
     assert(NULL != buf_p);
     volatile size_t used_size;
 
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC);
 
     assert(used_buf_size(buf_p) >= size);
 
     get_buf_data(buf_p, data, size);
     free_buf(buf_p, size);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 size_t cfio_buf_pack_array_size(
@@ -149,7 +149,7 @@ int cfio_buf_pack_data_array(
 
     assert(NULL != buf_p);
 
-    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC));
+    assert((buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC));
 
     assert((free_buf_size(buf_p) >= (data_size + sizeof(int))));
 
@@ -158,7 +158,7 @@ int cfio_buf_pack_data_array(
     put_buf_data(buf_p, data, data_size);
     use_buf(buf_p, data_size);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_buf_unpack_data_array(
@@ -172,7 +172,7 @@ int cfio_buf_unpack_data_array(
     volatile size_t used_size;
     int _len;
     
-    assert((buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC));
+    assert((buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC));
     
     assert(used_buf_size(buf_p) >= sizeof(int));
 
@@ -185,7 +185,7 @@ int cfio_buf_unpack_data_array(
 
     if(0 == _len)
     {
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 
     data_size = _len * size;
@@ -198,7 +198,7 @@ int cfio_buf_unpack_data_array(
     get_buf_data(buf_p, *data, data_size);
     free_buf(buf_p, data_size);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_buf_unpack_data_array_ptr(
@@ -212,7 +212,7 @@ int cfio_buf_unpack_data_array_ptr(
     volatile size_t used_size;
     int _len;
     
-    assert(buf_p->magic == IOFW_BUF_MAGIC && buf_p->magic2 == IOFW_BUF_MAGIC);
+    assert(buf_p->magic == CFIO_BUF_MAGIC && buf_p->magic2 == CFIO_BUF_MAGIC);
 
     assert(used_buf_size(buf_p) >= sizeof(int));
 
@@ -229,5 +229,5 @@ int cfio_buf_unpack_data_array_ptr(
 
     (*data) = buf_p->used_addr;
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }

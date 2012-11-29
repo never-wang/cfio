@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     times_init();
 
     rank = 0;
-    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_IOFW | DEBUG_ID); 
+    //set_debug_mask(DEBUG_USER | DEBUG_MSG | DEBUG_CFIO | DEBUG_ID); 
     //set_debug_mask(DEBUG_ID); 
     //set_debug_mask(DEBUG_TIME); 
     start[0] = 0;
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 	sprintf(fileName,"%s/netcdf-%d.nc", argv[1], i);
 	int dimids[2];
 	debug_mark(DEBUG_USER);
-	nc_create(fileName, 0, &ncidp);
+	nc_create(fileName, NC_64BIT_OFFSET, &ncidp);
 	debug_mark(DEBUG_USER);
 	int lat = LAT;
 	nc_def_dim(ncidp, "lat", lat,&dimids[0]);

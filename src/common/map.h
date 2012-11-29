@@ -18,9 +18,9 @@
 
 #define GEN_SERVER_ERROR	0.4
 
-#define IOFW_MAP_TYPE_SERVER	1
-#define IOFW_MAP_TYPE_CLIENT	2
-#define IOFW_MAP_TYPE_BLANK	3 /* the proc who do nothing, because someon may 
+#define CFIO_MAP_TYPE_SERVER	1
+#define CFIO_MAP_TYPE_CLIENT	2
+#define CFIO_MAP_TYPE_BLANK	3 /* the proc who do nothing, because someon may 
 				     start more proc than needed*/
 /**
  * @brief: cfio map var init, only be called in cfio_init adn cfio_server's main
@@ -49,7 +49,7 @@ int cfio_map_final();
  *
  * @param proc_id: proc id
  *
- * @return: IOFW_MAP_TYPE_SERVER, IOFW_MAP_TYPE_CLIENT or IOFW_MAP_TYPE_BLANK
+ * @return: CFIO_MAP_TYPE_SERVER, CFIO_MAP_TYPE_CLIENT or CFIO_MAP_TYPE_BLANK
  */
 int cfio_map_proc_type(int porc_id);
 /**

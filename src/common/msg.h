@@ -73,6 +73,7 @@ int cfio_msg_final();
  * @return: error code
  */
 int cfio_msg_isend(cfio_msg_t *msg);
+int cfio_msg_test();
 /**
  * @brief: recv msg from client
  *
@@ -192,8 +193,8 @@ int cfio_msg_pack_enddef(
  * @param count: a vector of size_t intergers specifying the edge lengths
  *	along each dimension of the block of data values to be written, 
  *	arg of cfio_put_vara_float
- * @param fp_type: type of data, can be IOFW_BYTE, IOFW_CHAR, IOFW_SHROT, 
- *	IOFW_INT, IOFW_FLOAT, IOFW_DOUBLE
+ * @param fp_type: type of data, can be CFIO_BYTE, CFIO_CHAR, CFIO_SHROT, 
+ *	CFIO_INT, CFIO_FLOAT, CFIO_DOUBLE
  * @param fp : pointer to where data is stored, arg of 
  *	cfio_put_vara_float
  *
@@ -324,8 +325,8 @@ int cfio_msg_unpack_enddef(
  * @param count: pointer to where the size of to be written data dimension len
  *	value to be stored
  * @param data_len: pointer to the size of data 
- * @param fp_type: pointer to type of data, can be IOFW_BYTE, IOFW_CHAR, 
- *	IOFW_SHROT, IOFW_INT, IOFW_FLOAT, IOFW_DOUBLE
+ * @param fp_type: pointer to type of data, can be CFIO_BYTE, CFIO_CHAR, 
+ *	CFIO_SHROT, CFIO_INT, CFIO_FLOAT, CFIO_DOUBLE
  * @param fp: where the data is stored
  *
  * @return: error code

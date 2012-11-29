@@ -19,7 +19,7 @@
 
 #include "debug.h"
 
-#define IOFW_BUF_MAGIC 0xABCD
+#define CFIO_BUF_MAGIC 0xABCD
 
 #define SET_ERROR(pnt, val) \
     do { \

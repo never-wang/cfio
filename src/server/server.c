@@ -53,35 +53,35 @@ static int decode(cfio_msg_t *msg)
 	    cfio_io_create(client_id);
 	    debug(DEBUG_SERVER, "server %d done nc_create for client %d\n",
 		    rank,client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_NC_DEF_DIM:
 	    debug(DEBUG_SERVER,"server %d recv nc_def_dim from client %d",
 		    rank, client_id);
 	    cfio_io_def_dim(client_id);
 	    debug(DEBUG_SERVER, "server %d done nc_def_dim for client %d\n",
 		    rank,client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_NC_DEF_VAR:
 	    debug(DEBUG_SERVER,"server %d recv nc_def_var from client %d",
 		    rank, client_id);
 	    cfio_io_def_var(client_id);
 	    debug(DEBUG_SERVER, "server %d done nc_def_var for client %d\n",
 		    rank,client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_PUT_ATT:
 	    debug(DEBUG_SERVER, "server %d recv nc_put_att from client %d",
 		    rank, client_id);
 	    cfio_io_put_att(client_id);
 	    debug(DEBUG_SERVER, "server %d done nc_put_att from client %d",
 		    rank, client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
 	    debug(DEBUG_SERVER,"server %d recv nc_enddef from client %d",
 		    rank, client_id);
 	    cfio_io_enddef(client_id);
 	    debug(DEBUG_SERVER, "server %d done nc_enddef for client %d\n",
 		    rank,client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_NC_PUT_VARA:
 	    debug(DEBUG_SERVER,"server %d recv nc_put_vara from client %d",
 		    rank, client_id);
@@ -89,25 +89,25 @@ static int decode(cfio_msg_t *msg)
 	    debug(DEBUG_SERVER, 
 		    "server %d done nc_put_vara_float from client %d\n", 
 		    rank, client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_NC_CLOSE:
 	    debug(DEBUG_SERVER,"server %d recv nc_close from client %d",
 		    rank, client_id);
 	    cfio_io_close(client_id);
 	    debug(DEBUG_SERVER,"server %d received nc_close from client %d\n",
 		    rank, client_id);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	case FUNC_END_IO:
 	    debug(DEBUG_SERVER,"server %d recv client_end_io from client %d",
 		    rank, msg->src);
 	    cfio_io_reader_done(msg->src, &reader_done);
 	    debug(DEBUG_SERVER, "server %d done client_end_io for client %d\n",
 		    rank,msg->src);
-	    return IOFW_ERROR_NONE;
+	    return CFIO_ERROR_NONE;
 	default:
 	    error("server %d received unexpected msg from client %d",
 		    rank, client_id);
-	    return IOFW_ERROR_UNEXPECTED_MSG;
+	    return CFIO_ERROR_UNEXPECTED_MSG;
     }	
 }
 
@@ -156,14 +156,14 @@ int cfio_server_start()
     if( (ret = pthread_create(&reader,NULL,cfio_reader,NULL))<0  )
     {
         error("Thread Writer create error()");
-        return IOFW_ERROR_PTHREAD_CREATE;
+        return CFIO_ERROR_PTHREAD_CREATE;
     }
 #endif
 
     if( (ret = pthread_create(&writer,NULL,cfio_writer,NULL))<0  )
     {
         error("Thread Reader create error()");
-        return IOFW_ERROR_PTHREAD_CREATE;
+        return CFIO_ERROR_PTHREAD_CREATE;
     }
 
 #ifndef SVR_RECV_ONLY
@@ -171,7 +171,7 @@ int cfio_server_start()
 #endif
 
     pthread_join(writer, NULL);
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_server_init()
@@ -190,7 +190,7 @@ int cfio_server_init()
     reader_done = 0;
     writer_done = 0;
     
-    if((ret = cfio_id_init(IOFW_ID_INIT_SERVER)) < 0)
+    if((ret = cfio_id_init(CFIO_ID_INIT_SERVER)) < 0)
     {
 	error("");
 	return ret;
@@ -202,7 +202,7 @@ int cfio_server_init()
 	return ret;
     }
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_server_final()
@@ -211,5 +211,5 @@ int cfio_server_final()
     cfio_id_final();
     cfio_msg_final();
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }

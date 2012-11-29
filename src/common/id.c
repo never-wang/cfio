@@ -160,7 +160,7 @@ static int _put_var(
     if(NULL == src_index)
     {
 	error("malloc for src_index fail.");
-	return IOFW_ERROR_MALLOC;
+	return CFIO_ERROR_MALLOC;
     }
     for(i = 0; i < ndims; i ++)
     {
@@ -186,7 +186,7 @@ static int _put_var(
     }
     memcpy(dst_data, src_data, ele_size);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_init(int flag)
@@ -197,20 +197,20 @@ int cfio_id_init(int flag)
 
     switch(flag)
     {
-	case IOFW_ID_INIT_CLIENT :
+	case CFIO_ID_INIT_CLIENT :
 	    assign_table = qhash_init(_compare, _hash, ASSIGN_HASH_TABLE_SIZE);
 	    if(assign_table == NULL)
 	    {
 		error("assign_table init fail.");
-		return IOFW_ERROR_HASH_TABLE_INIT;
+		return CFIO_ERROR_HASH_TABLE_INIT;
 	    }
 	    break;
-	case IOFW_ID_INIT_SERVER :
+	case CFIO_ID_INIT_SERVER :
 	    map_table = qhash_init(_compare,_hash, MAP_HASH_TABLE_SIZE);
 	    if(map_table == NULL)
 	    {
 		error("map_table init fail.");
-		return IOFW_ERROR_HASH_TABLE_INIT;
+		return CFIO_ERROR_HASH_TABLE_INIT;
 	    }
 	    break;
 	default :
@@ -218,7 +218,7 @@ int cfio_id_init(int flag)
 	    break;
     }
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_final()
@@ -237,7 +237,7 @@ int cfio_id_final()
     }
 
     debug(DEBUG_ID, "success return.");
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_assign_nc(int *nc_id)
@@ -257,7 +257,7 @@ int cfio_id_assign_nc(int *nc_id)
     if(val == NULL)
     {
 	error("malloc fail.");
-	return IOFW_ERROR_MALLOC;
+	return CFIO_ERROR_MALLOC;
     }
     memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = open_nc_a;
@@ -266,7 +266,7 @@ int cfio_id_assign_nc(int *nc_id)
     debug(DEBUG_ID, "assign nc_id = %d", *nc_id);
 
     debug(DEBUG_ID, "success return.");
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_remove_nc(int nc_id)
@@ -280,12 +280,12 @@ int cfio_id_remove_nc(int nc_id)
     if(NULL == (link = qhash_search(assign_table, &key)))
     {
 	error("nc_id(%d) not found in assign_table.", nc_id);
-	return IOFW_ERROR_NC_NO_EXIST;
+	return CFIO_ERROR_NC_NO_EXIST;
     }else
     {
 	qhash_del(link);
 	debug(DEBUG_ID, "success return.");
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -303,14 +303,14 @@ int cfio_id_assign_dim(int nc_id, int *dim_id)
     if(NULL == (link = qhash_search(assign_table, &key)))
     {
 	error("nc_id(%d) not found in assign_table.", nc_id);
-	return IOFW_ERROR_NC_NO_EXIST;
+	return CFIO_ERROR_NC_NO_EXIST;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	val->client_dim_a ++;
 	*dim_id = val->client_dim_a;
 	debug(DEBUG_ID, "success return.");
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -328,14 +328,14 @@ int cfio_id_assign_var(int nc_id, int *var_id)
     if(NULL == (link = qhash_search(assign_table, &key)))
     {
 	error("nc_id(%d) not found in assign_table.", nc_id);
-	return IOFW_ERROR_NC_NO_EXIST;
+	return CFIO_ERROR_NC_NO_EXIST;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	val->client_var_a ++;
 	*var_id = val->client_var_a;
 	debug(DEBUG_ID, "success return.");
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -361,7 +361,7 @@ int cfio_id_map_nc(
     debug(DEBUG_ID, "map ((%d, 0, 0)->(%d, 0, 0)", 
 	     client_nc_id, server_nc_id);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 /**
@@ -394,7 +394,7 @@ int cfio_id_map_dim(
     val->dim->nc_id = server_nc_id;
     val->dim->dim_id = server_dim_id;
     val->dim->name = name;
-    val->dim->dim_len = IOFW_ID_DIM_LOCAL_NULL;
+    val->dim->dim_len = CFIO_ID_DIM_LOCAL_NULL;
     val->dim->global_dim_len = dim_len;
 
     qhash_add(map_table, &key, &(val->hash_link));
@@ -403,7 +403,7 @@ int cfio_id_map_dim(
     debug(DEBUG_ID, "map ((%d, %d, 0)->(%d, %d, 0))",
 	    client_nc_id, client_dim_id, server_nc_id, server_dim_id);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 /**
@@ -466,7 +466,7 @@ int cfio_id_map_var(
     debug(DEBUG_ID, "client_num = %d",  
 	    client_num);
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_get_val(
@@ -484,11 +484,11 @@ int cfio_id_get_val(
     if(NULL == (link = qhash_search(map_table, &key)))
     {
 	debug(DEBUG_ID, "get nc (%d, 0, 0) null", client_nc_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	*val = qlist_entry(link, cfio_id_val_t, hash_link);
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -505,7 +505,7 @@ int cfio_id_get_nc(
     if(NULL == (link = qhash_search(map_table, &key)))
     {
 	debug(DEBUG_ID, "get nc (%d, 0, 0) null", client_nc_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
@@ -514,7 +514,7 @@ int cfio_id_get_nc(
     
 	debug(DEBUG_ID, "get (%d, 0, 0)", client_nc_id);
 	
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -534,14 +534,14 @@ int cfio_id_get_dim(
     {
 	debug(DEBUG_ID, "get dim (%d, %d, 0) null" ,
 		client_nc_id, client_dim_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	*dim = val->dim;
 	assert(val->dim != NULL);
 	debug(DEBUG_ID, "get (%d, %d, 0)", client_nc_id, client_dim_id);
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -561,14 +561,14 @@ int cfio_id_get_var(
     {
 	debug(DEBUG_ID, "get var (%d, 0, %d) null",
 		client_nc_id, client_var_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	assert(val->var != NULL);
 	*var = val->var;
 	debug(DEBUG_ID, "get (%d, 0, %d)", client_nc_id, client_var_id);
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 /**
@@ -600,7 +600,7 @@ int cfio_id_put_var(
     {
 	debug(DEBUG_ID, "Can't find var (%d, 0, %d)", 
 		client_nc_id, client_var_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
@@ -616,7 +616,7 @@ int cfio_id_put_var(
 			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
 			client_nc_id, client_var_id, 
 			i, var->start[i], i, var->count[i]);
-		return IOFW_ERROR_EXCEED_BOUND;
+		return CFIO_ERROR_EXCEED_BOUND;
 	    }
 	}
 
@@ -645,7 +645,7 @@ int cfio_id_put_var(
 	debug(DEBUG_ID, "client_index = %d", client_index);
 
 	debug(DEBUG_ID, "put var ((%d, 0, %d)", client_nc_id, client_var_id);
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 }
 
@@ -668,7 +668,7 @@ int cfio_id_put_att(
     {
 	debug(DEBUG_ID, "Can't find var (%d, 0, %d)", 
 		client_nc_id, client_var_id);
-	return IOFW_ID_HASH_GET_NULL;
+	return CFIO_ID_HASH_GET_NULL;
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
@@ -683,7 +683,7 @@ int cfio_id_put_att(
 
 	debug(DEBUG_ID, "put att(%s)", att->name);
 	
-	return IOFW_ERROR_NONE;
+	return CFIO_ERROR_NONE;
     }
 } 
 
@@ -738,7 +738,7 @@ int cfio_id_merge_var_data(cfio_id_var_t *var)
 	//printf("\n");
     }
 
-    return IOFW_ERROR_NONE;
+    return CFIO_ERROR_NONE;
 }
 
 void cfio_id_val_free(cfio_id_val_t *val)

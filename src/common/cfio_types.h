@@ -14,32 +14,32 @@
  ***************************************************************************/
 #include "netcdf.h"
 
-#define IOFW_BYTE   NC_BYTE
-#define IOFW_CHAR   NC_CHAR
-#define IOFW_SHORT  NC_SHORT
-#define IOFW_INT    NC_INT
-#define IOFW_FLOAT  NC_FLOAT
-#define IOFW_DOUBLE NC_DOUBLE
+#define CFIO_BYTE   NC_BYTE
+#define CFIO_CHAR   NC_CHAR
+#define CFIO_SHORT  NC_SHORT
+#define CFIO_INT    NC_INT
+#define CFIO_FLOAT  NC_FLOAT
+#define CFIO_DOUBLE NC_DOUBLE
 
 #define cfio_types_size(size, type) \
     do{				    \
     switch(type) {		    \
-	case IOFW_BYTE :	    \
+	case CFIO_BYTE :	    \
 	    size = 1;		    \
 	    break;		    \
-	case IOFW_CHAR :	    \
+	case CFIO_CHAR :	    \
 	    size = 1;		    \
 	    break;		    \
-	case IOFW_SHORT :	    \
+	case CFIO_SHORT :	    \
 	    size = sizeof(short);   \
 	    break;		    \
-	case IOFW_INT :		    \
+	case CFIO_INT :		    \
 	    size = sizeof(int);	    \
 	    break;		    \
-	case IOFW_FLOAT :	    \
+	case CFIO_FLOAT :	    \
 	    size = sizeof(float);   \
 	    break;		    \
-	case IOFW_DOUBLE :	    \
+	case CFIO_DOUBLE :	    \
 	    size = sizeof(double);  \
 	    break;		    \
     }} while(0)
