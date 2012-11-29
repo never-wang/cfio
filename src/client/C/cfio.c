@@ -260,12 +260,12 @@ int cfio_put_att(
 {
     cfio_msg_t *msg;
     
-    if(cfio_map_get_client_index_of_server(rank) == 0)
-    {
-      cfio_msg_pack_put_att(&msg, rank, ncid, varid, name,
-      	xtype, len, op);
-      cfio_msg_isend(msg);
-    }
+    //if(cfio_map_get_client_index_of_server(rank) == 0)
+    //{
+    cfio_msg_pack_put_att(&msg, rank, ncid, varid, name,
+	    xtype, len, op);
+    cfio_msg_isend(msg);
+    //}
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;

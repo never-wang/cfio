@@ -717,11 +717,13 @@ int cfio_io_put_att(int client_id)
     int return_code, ret;
     cfio_id_nc_t *nc;
     cfio_id_var_t *var;
+    cfio_io_val_t *io_info;
     char *name;
     nc_type xtype;
     int len;
     char *data;
 
+    int func_code = FUNC_PUT_ATT;
     ret = cfio_msg_unpack_put_att(
 	    &client_nc_id, &client_var_id, &name, &xtype, &len, (void **)&data);
     if( ret < 0 )
@@ -735,6 +737,9 @@ int cfio_io_put_att(int client_id)
     free(data);
     return CFIO_ERROR_NONE;
 #endif
+    
+    _recv_client_io(
+	    client_id, func_code, client_nc_id, 0, client_var_id, &io_info);
 
     if(CFIO_ID_HASH_GET_NULL == cfio_id_get_nc(client_nc_id, &nc))
     {
@@ -743,27 +748,31 @@ int cfio_io_put_att(int client_id)
 	goto RETURN;
     }
 
-    if(client_var_id == NC_GLOBAL)
+    if(_bitmap_full(io_info->client_bitmap))
     {
-	ret = nc_put_att(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
-	if(ret != NC_NOERR)
+	if(client_var_id == NC_GLOBAL)
 	{
-	    error("Error happened when put sub_amount attr error(%s)", 
-		    nc_strerror(ret));
-	    return_code = CFIO_ERROR_NC;
+	    ret = nc_put_att(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
+	    if(ret != NC_NOERR)
+	    {
+		error("Error happened when put sub_amount attr error(%s)", 
+			nc_strerror(ret));
+		return_code = CFIO_ERROR_NC;
 
-	    goto RETURN;
+		goto RETURN;
+	    }
 	}
-    }
-    else
-    {
-	if(CFIO_ID_HASH_GET_NULL == cfio_id_put_att(
-		    client_nc_id, client_var_id, name, xtype, len, data))
+	else
 	{
-	    error("");
-	    return_code = CFIO_ERROR_INVALID_NC;
-	    goto RETURN;
+	    if(CFIO_ID_HASH_GET_NULL == cfio_id_put_att(
+			client_nc_id, client_var_id, name, xtype, len, data))
+	    {
+		error("");
+		return_code = CFIO_ERROR_INVALID_NC;
+		goto RETURN;
+	    }
 	}
+        _remove_client_io(io_info);
     }
     return_code = CFIO_ERROR_NONE;
 

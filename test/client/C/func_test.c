@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     cfio_put_att(ncidp, NC_GLOBAL, "test", NC_CHAR, strlen(test), test);
 
     cfio_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
-    //cfio_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
+    cfio_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
     cfio_enddef(ncidp);
     cfio_put_vara_float(ncidp,var1, 2,start, count,fp); 
 

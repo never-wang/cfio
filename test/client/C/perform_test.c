@@ -83,12 +83,15 @@ int main(int argc, char** argv)
 	int lat = LAT;
 	cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
 	cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
+	//cfio_put_att(ncidp, NC_GLOBAL, "global", NC_CHAR, 6, "global");
 
 	for(j = 0; j < VALN; j++)
 	{
 	    sprintf(var_name, "time_v%d", j);
 	    cfio_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, 
 		    start, count, &var[j]);
+	//    cfio_put_att(ncidp, var[j], "global", NC_CHAR, 
+	//	    strlen(var_name), var_name );
 	}
 	cfio_enddef(ncidp);
 

@@ -230,6 +230,7 @@ int cfio_msg_test()
 		removable = 0;
 	    }
 	}
+#endif
     }
 
     return CFIO_ERROR_NONE;
