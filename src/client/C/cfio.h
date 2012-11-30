@@ -25,7 +25,7 @@
 #include "map.h"
 #include "cfio_types.h"
 
-#define CLIENT_BUF_SIZE 1024*1024*1024
+#define CLIENT_BUF_SIZE ((size_t)512*1024*1024)
 
 #define CFIO_PROC_CLIENT CFIO_MAP_TYPE_CLIENT
 #define CFIO_PROC_SERVER CFIO_MAP_TYPE_SERVER

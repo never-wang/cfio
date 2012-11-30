@@ -18,8 +18,8 @@
 #define LAT 4096
 #define LON 2048
 
-#define LOOP 1
-#define VALN 16
+#define LOOP 4
+#define VALN 64
 
 #define SLEEP_TIME 1
 #define CFIO_RATIO 8

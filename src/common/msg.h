@@ -21,7 +21,7 @@
 #include "buffer.h"
 #include "quicklist.h"
 
-#define MSG_MAX_SIZE 1024*1024*256
+#define MSG_MAX_SIZE 1024*1024*65
 /* define for control messge */
 
 /**
@@ -58,7 +58,7 @@ typedef struct
  *
  * @return: error code
  */
-int cfio_msg_init(int buffer_size);
+int cfio_msg_init(size_t buffer_size);
 /**
  * @brief: finalize , free the buffer and msg queue
  *

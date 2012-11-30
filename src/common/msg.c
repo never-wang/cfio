@@ -48,7 +48,7 @@ static inline cfio_msg_t *create_msg()
     return msg;
 }
 
-int cfio_msg_init(int buffer_size)
+int cfio_msg_init(size_t buffer_size)
 {
     int error;
 
@@ -137,6 +137,7 @@ int cfio_msg_isend(
 
     debug(DEBUG_MSG, "isend: src=%d; dst=%d; comm = %d; size = %lu", 
 	    msg->src, msg->dst, msg->comm, msg->size);
+    assert(msg->size <= MSG_MAX_SIZE);
 
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, tag, msg->comm, &(msg->req));
