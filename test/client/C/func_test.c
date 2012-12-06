@@ -22,10 +22,10 @@
 #define LAT 6
 #define LON 6
 
-#define LAT_PROC 1
-#define LON_PROC 1
+#define LAT_PROC 2
+#define LON_PROC 2
 
-#define ratio 1
+#define ratio 4
 
 int main(int argc, char** argv)
 {
@@ -43,8 +43,11 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER | DEBUG_MSG); 
-    set_debug_mask(DEBUG_ID | DEBUG_IO); 
+    if(rank == 0)
+    {
+	set_debug_mask(DEBUG_CFIO | DEBUG_MSG); 
+    }
+    //set_debug_mask(DEBUG_ID | DEBUG_IO); 
     //set_debug_mask(DEBUG_TIME); 
     //set_debug_mask(DEBUG_SERVER); 
     size_t start[2],count[2];

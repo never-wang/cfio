@@ -18,7 +18,7 @@
 #define LAT 4096
 #define LON 2048
 
-#define LOOP 4
+#define LOOP 5
 #define VALN 64
 
 #define SLEEP_TIME 1

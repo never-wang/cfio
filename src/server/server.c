@@ -131,17 +131,25 @@ static void * cfio_reader(void *argv)
 static void* cfio_writer(void *argv)
 {
     cfio_msg_t *msg;
+    int i, server_index, client_num;
+
+    server_index = cfio_map_get_server_index(rank);
+    client_num = cfio_map_get_client_num_of_server(rank);
 
     while(!writer_done)
     {
-	cfio_msg_recv(rank, cfio_map_get_comm(), &msg);
-	if(msg->func_code == FUNC_END_IO)
+	/*  recv from client one by one, to make sure that data recv and output in time */
+	for(i = server_index * client_num; i < (server_index + 1) * client_num; i ++)
 	{
-	    debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
-		    rank, msg->src);
-	    cfio_io_writer_done(msg->src, &writer_done);
-	    debug(DEBUG_SERVER, "server(writer) %d done client_end_io for client %d\n",
-		    rank,msg->src);
+	    cfio_msg_recv(i, rank, cfio_map_get_comm(), &msg);
+	    if(msg->func_code == FUNC_END_IO)
+	    {
+		debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
+			rank, msg->src);
+		cfio_io_writer_done(msg->src, &writer_done);
+		debug(DEBUG_SERVER, "server(writer) %d done client_end_io for client %d\n",
+			rank,msg->src);
+	    }
 	}
     }
     debug(DEBUG_SERVER, "Server(%d) Writer done", rank);

@@ -78,11 +78,8 @@ int cfio_msg_final()
 
     if(msg_head != NULL)
     {
-	i ++;
-	debug(DEBUG_MSG, "wait msg : %d", i);
         qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
         {
-	    MPI_Wait(&msg->req, &status);
             free(msg);
         }
         free(msg_head);
@@ -101,20 +98,23 @@ int cfio_msg_final()
  */
 static void cfio_msg_client_buf_free()
 {
-    cfio_msg_t *msg, *next;
-    int done;
-    MPI_Status status;
+    //cfio_msg_t *msg, *next;
+    //int done;
+    //MPI_Status status;
 
     //debug(DEBUG_MSG, "should not be here");
     //assert(0);
 
-    msg = qlist_entry(qlist_pop(&msg_head->link), cfio_msg_t, link);
-    MPI_Wait(&msg->req, &status);
+    //msg = qlist_entry(qlist_pop(&msg_head->link), cfio_msg_t, link);
+    //MPI_Wait(&msg->req, &status);
 
-    assert(check_used_addr(msg->addr, buffer));
-    buffer->used_addr = msg->addr;
-    free_buf(buffer, msg->size);
-    free(msg);
+    //assert(check_used_addr(msg->addr, buffer));
+    //buffer->used_addr = msg->addr;
+    //free_buf(buffer, msg->size);
+    //free(msg);
+    pthread_mutex_lock(&full_mutex);
+    pthread_cond_wait(&full_cond, &full_mutex);
+    pthread_mutex_unlock(&full_mutex);
 
     return;
 }
@@ -122,8 +122,29 @@ static void cfio_msg_client_buf_free()
 static void cfio_msg_server_buf_free()
 {
 
+    pthread_mutex_lock(&full_mutex);
     pthread_cond_wait(&full_cond, &full_mutex);
+    pthread_mutex_unlock(&full_mutex);
     return;
+}
+
+int cfio_msg_signal()
+{
+    pthread_cond_signal(&empty_cond);
+
+    return CFIO_ERROR_NONE;
+}
+int cfio_msg_send(
+	cfio_msg_t *msg)
+{
+    MPI_Send(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
+	    msg->comm);
+
+    assert(check_used_addr(msg->addr, buffer));
+    buffer->used_addr = msg->addr;
+    free_buf(buffer, msg->size);
+
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_msg_isend(
@@ -139,8 +160,8 @@ int cfio_msg_isend(
 	    msg->src, msg->dst, msg->comm, msg->size);
     assert(msg->size <= MSG_MAX_SIZE);
 
-    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
-	    msg->dst, tag, msg->comm, &(msg->req));
+//    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
+//	    msg->dst, tag, msg->comm, &(msg->req));
     //MPI_Wait(&(msg->req), &status);
     //assert(check_used_addr(msg->addr, buffer));
     //buffer->used_addr = msg->addr;
@@ -151,7 +172,10 @@ int cfio_msg_isend(
     // **/
     //free(msg);
 
+    pthread_mutex_lock(&mutex);
     qlist_add_tail(&(msg->link), &(msg_head->link));
+    pthread_mutex_unlock(&mutex);
+    pthread_cond_signal(&empty_cond);
 
     //debug(DEBUG_TIME, "%f ms", times_end());
     debug(DEBUG_MSG, "success return.");
@@ -159,7 +183,7 @@ int cfio_msg_isend(
     return CFIO_ERROR_NONE;
 }
 
-int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg)
+int cfio_msg_recv(int src, int rank, MPI_Comm comm, cfio_msg_t **_msg)
 {
     MPI_Status status;
     int size;
@@ -169,7 +193,7 @@ int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg)
     ensure_free_space(buffer, MSG_MAX_SIZE, cfio_msg_server_buf_free);
     //debug(DEBUG_TIME, "%f", times_end());
 
-    MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, MPI_ANY_SOURCE, 
+    MPI_Recv(buffer->free_addr, MSG_MAX_SIZE, MPI_BYTE, src,  
 	    MPI_ANY_TAG, comm, &status);
     MPI_Get_count(&status, MPI_BYTE, &size);
     debug(DEBUG_MSG, "recv: size = %d", size);
@@ -196,8 +220,8 @@ int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg)
     /* need lock */
     pthread_mutex_lock(&mutex);
     qlist_add_tail(&(msg->link), &(msg_head->link));
-    pthread_cond_signal(&empty_cond);
     pthread_mutex_unlock(&mutex);
+    pthread_cond_signal(&empty_cond);
     
     //debug(DEBUG_MSG, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_MSG, "success return");
@@ -245,20 +269,17 @@ cfio_msg_t *cfio_msg_get_first()
 
     pthread_cond_signal(&full_cond);
 
-    while(NULL == msg)
+    pthread_mutex_lock(&mutex);
+    link = qlist_pop(&(msg_head->link));
+    if(NULL == link)
     {
-	pthread_mutex_lock(&mutex);
-	link = qlist_pop(&(msg_head->link));
-	if(NULL == link)
-	{
-	    msg = NULL;
-	    pthread_cond_wait(&empty_cond, &mutex);
-	}else
-	{
-	    msg = qlist_entry(link, cfio_msg_t, link);
-	}
-	pthread_mutex_unlock(&mutex);
+	msg = NULL;
+	pthread_cond_wait(&empty_cond, &mutex);
+    }else
+    {
+	msg = qlist_entry(link, cfio_msg_t, link);
     }
+    pthread_mutex_unlock(&mutex);
 
     if(msg != NULL)
     {
@@ -359,8 +380,6 @@ int cfio_msg_pack_def_var(
     msg->size += cfio_buf_data_size(sizeof(int));
 
     ensure_free_space(buffer, msg->size, cfio_msg_client_buf_free);
-    
-    debug_mark(DEBUG_MSG);
     
     msg->addr = buffer->free_addr;
 
@@ -589,6 +608,7 @@ int cfio_msg_pack_io_done(
     
     msg = create_msg();
     msg->src = client_proc_id;
+    msg->func_code = code;
     
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
     

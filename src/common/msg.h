@@ -65,6 +65,8 @@ int cfio_msg_init(size_t buffer_size);
  * @return: error code
  */
 int cfio_msg_final();
+int cfio_msg_signal();
+int cfio_msg_send(cfio_msg_t *msg);
 /**
  * @brief: async send msg to other proc by mpi
  *
@@ -83,7 +85,7 @@ int cfio_msg_test();
  *
  * @return: error code
  */
-int cfio_msg_recv(int rank, MPI_Comm comm, cfio_msg_t **_msg);
+int cfio_msg_recv(int src, int rank, MPI_Comm comm, cfio_msg_t **_msg);
 
 /**
  * @brief: get the first msg in msg queue

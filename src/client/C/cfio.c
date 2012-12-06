@@ -35,6 +35,34 @@ static int rank;
 static int client_num;
 static MPI_Comm inter_comm;
 
+static pthread_t sender;
+
+static void* sender_thread(void *arg)
+{
+    cfio_msg_t *msg;
+    int sender_finish = 0;
+
+    while(sender_finish == 0)
+    {
+	debug_mark(DEBUG_CFIO);
+	msg = cfio_msg_get_first();
+	debug_mark(DEBUG_CFIO);
+	if(msg != NULL)
+	{
+	    debug_mark(DEBUG_CFIO);
+	    cfio_msg_send(msg);
+	    if(msg->func_code == FUNC_END_IO)
+	    {
+		sender_finish = 1;
+	    }
+	}
+	free(msg);
+    }
+
+    debug(DEBUG_MSG, "Proc %d : sender finish", rank);
+    return (void*)0;
+}
+
 int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 {
     int rc, i;
@@ -103,6 +131,12 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	    error("");
 	    return ret;
 	}
+	
+	if( (ret = pthread_create(&sender,NULL,sender_thread,NULL))<0  )
+	{
+	    error("Thread Writer create error()");
+	    return CFIO_ERROR_PTHREAD_CREATE;
+	}
     }
 
     debug(DEBUG_CFIO, "success return.");
@@ -132,6 +166,9 @@ int cfio_finalize()
     }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
 	cfio_id_final();
+
+	pthread_join(sender, NULL);
+
 	cfio_msg_final();
     }
 
@@ -454,7 +491,7 @@ int cfio_close(
     cfio_msg_pack_close(&msg, rank, ncid);
     cfio_msg_isend(msg);
 
-    cfio_msg_test();
+    //cfio_msg_test();
 
     debug(DEBUG_CFIO, "Finish cfio_close");
 
