@@ -76,117 +76,12 @@ static void _val_free(cfio_id_val_t *val)
 		free(val->var->recv_data);
 		val->var->recv_data = NULL;
 	    }
-	    if(NULL != val->var->data)
-	    {
-		free(val->var->data);
-		val->var->data = NULL;
-	    }
 	    free(val->var);
 	    val->var = NULL;
 	}
 	free(val);
 	val = NULL;
     }
-}
-
-static void _inc_src_index(
-	const int ndims, const size_t ele_size, 
-	const size_t *dst_dims_len, char **dst_addr, 
-	const size_t *src_dims_len, size_t *src_index)
-{
-    int dim;
-    size_t sub_size, last_sub_size;
-
-    dim = ndims - 1;
-    src_index[dim] ++;
-
-    sub_size = ele_size;
-    while(src_index[dim] >= src_dims_len[dim])
-    {
-	*dst_addr -= (src_dims_len[dim] - 1) * sub_size;
-	src_index[dim] = 0;
-	sub_size *= dst_dims_len[dim];
-	dim --;
-	src_index[dim] ++;
-    }
-
-    *dst_addr += sub_size;
-}
-
-/**
- * @brief: put the src data array into the dst data array, src and dst both are
- *	sub-array of a total data array
- *
- * @param ndims: number of dimensions for the variable
- * @param ele_size: size of each element in the variable array
- * @param dst_start: start index of the dst data array
- * @param dst_count: count of teh dst data array
- * @param dst_data: pointer to the dst data array
- * @param src_start: start index of the src data array
- * @param src_count: count of teh src data array
- * @param src_data: pointer to the src data array
- */
-static int _put_var(
-	int ndims, size_t ele_size,
-	size_t *dst_start, size_t *dst_count, char *dst_data, 
-	size_t *src_start, size_t *src_count, char *src_data)
-{
-    int i;
-    size_t src_len;
-    size_t dst_offset, sub_size;
-    size_t *src_index;
-
-    //float *_data = src_data;
-    //for(i = 0; i < 4; i ++)
-    //{
-    //    printf("%f, ", _data[i]);
-    //}
-    //printf("\n");
-
-    assert(NULL != dst_start);
-    assert(NULL != dst_count);
-    assert(NULL != dst_data);
-    assert(NULL != src_start);
-    assert(NULL != src_count);
-    assert(NULL != src_data);
-
-    src_len = 1;
-    for(i = 0; i < ndims; i ++)
-    {
-	src_len *= src_count[i];
-    }
-
-    src_index = malloc(sizeof(size_t) * ndims);
-    if(NULL == src_index)
-    {
-	error("malloc for src_index fail.");
-	return CFIO_ERROR_MALLOC;
-    }
-    for(i = 0; i < ndims; i ++)
-    {
-	src_index[i] = 0;
-    }
-
-    sub_size = 1;
-    dst_offset = 0;
-    for(i = ndims - 1; i >= 0; i --)
-    {
-	dst_offset += (src_start[i] - dst_start[i]) * sub_size;
-	sub_size *= dst_count[i];
-    }
-    //debug(DEBUG_ID, "dst_offset = %d", dst_offset);
-    dst_data += ele_size * dst_offset;
-
-    for(i = 0; i < src_len - 1; i ++)
-    {
-	memcpy(dst_data, src_data, ele_size);
-	_inc_src_index(ndims, ele_size, dst_count, &dst_data, 
-		src_count, src_index);
-	src_data += ele_size;
-    }
-    memcpy(dst_data, src_data, ele_size);
-
-    return CFIO_ERROR_NONE;
 }
 
 int cfio_id_init(int flag)
@@ -452,8 +347,6 @@ int cfio_id_map_var(
     val->var->recv_data = malloc(sizeof(cfio_id_data_t) * client_num);
     memset(val->var->recv_data, 0, sizeof(cfio_id_data_t) * client_num);
     val->var->data_type = data_type;
-    
-    val->var->data = NULL;
 
     val->var->att_head = malloc(sizeof(qlist_head_t));
     INIT_QLIST_HEAD(val->var->att_head);
@@ -687,60 +580,6 @@ int cfio_id_put_att(
     }
 } 
 
-int cfio_id_merge_var_data(cfio_id_var_t *var)
-{
-    int i, j;
-    int ret;
-    size_t ele_size;
-    
-    for(i = 0; i < var->client_num; i++)
-    {
-	debug(DEBUG_ID, "merge data of client(%d)", i);
-
-	assert(NULL != var->recv_data[i].buf);
-	assert(NULL != var->recv_data[i].start);
-	assert(NULL != var->recv_data[i].count);
-
-	for(j = 0; j < var->ndims; j ++)
-	{
-	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", j, 
-		    var->recv_data[i].start[j],var->recv_data[i].count[j]);
-	}
-    
-	cfio_types_size(ele_size, var->data_type);
-	if((ret = _put_var(var->ndims, ele_size, 
-		var->start, var->count, var->data,
-		var->recv_data[i].start, var->recv_data[i].count,
-		var->recv_data[i].buf)) < 0)
-	{
-	    error("");
-	    return ret;
-	}
-	//float *_data = var->recv_data[i].buf;
-	//for(j = 0; j < 4; j ++)
-	//{
-	//    printf("%f, ", _data[j]);
-	//}
-	//printf("\n");
-
-	free(var->recv_data[i].buf);	
-	var->recv_data[i].buf = NULL;	
-	free(var->recv_data[i].start);	
-	var->recv_data[i].start = NULL;	
-	free(var->recv_data[i].count);	
-	var->recv_data[i].count = NULL;	
-	
-	//_data = var->data;
-	//for(j = 0; j < 12; j ++)
-	//{
-	//    printf("%f, ", _data[j]);
-	//}
-	//printf("\n");
-    }
-
-    return CFIO_ERROR_NONE;
-}
-
 void cfio_id_val_free(cfio_id_val_t *val)
 {
     int i;
@@ -811,11 +650,6 @@ void cfio_id_val_free(cfio_id_val_t *val)
 		}
 		free(recv_data);
 		recv_data = NULL;
-	    }
-	    if(NULL != val->var->data)
-	    {
-		free(val->var->data);
-		val->var->data = NULL;
 	    }
 	    if(NULL != val->var->att_head)
 	    {

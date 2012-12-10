@@ -95,7 +95,6 @@ typedef struct
 	*recv_data;	    /* pointer to data vector recieved from client */
     int data_type;          /* type of data, define in cfio_types.h */
     //size_t ele_size;	    /* size of each element in the variable array */
-    char *data;		    /* data array for the variable */
     qlist_head_t 
 	*att_head;	    /* variable attribute list */
 

@@ -44,12 +44,10 @@ static void* sender_thread(void *arg)
 
     while(sender_finish == 0)
     {
-	debug_mark(DEBUG_CFIO);
 	msg = cfio_msg_get_first();
 	debug_mark(DEBUG_CFIO);
 	if(msg != NULL)
 	{
-	    debug_mark(DEBUG_CFIO);
 	    cfio_msg_send(msg);
 	    if(msg->func_code == FUNC_END_IO)
 	    {
