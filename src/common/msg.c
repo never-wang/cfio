@@ -50,7 +50,7 @@ static inline cfio_msg_t *create_msg()
 
 int cfio_msg_init(size_t buffer_size)
 {
-    int error;
+    int error, ret;
 
     msg_head = malloc(sizeof(cfio_msg_t));
     if(NULL == msg_head)
@@ -76,6 +76,18 @@ int cfio_msg_final()
     MPI_Status status;
     int i = 0;
 
+    //if(msg_head != NULL)
+    //{
+    //    i ++;
+    //    debug(DEBUG_MSG, "wait msg : %d", i);
+    //    qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
+    //    {
+    //        MPI_Wait(&msg->req, &status);
+    //        free(msg);
+    //    }
+    //    free(msg_head);
+    //    msg_head = NULL;
+    //}
     if(msg_head != NULL)
     {
         qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
@@ -143,7 +155,6 @@ int cfio_msg_send(
     assert(check_used_addr(msg->addr, buffer));
     buffer->used_addr = msg->addr;
     free_buf(buffer, msg->size);
-
     return CFIO_ERROR_NONE;
 }
 
@@ -171,7 +182,6 @@ int cfio_msg_isend(
     // *TODO , it's not good to put free here
     // **/
     //free(msg);
-
     pthread_mutex_lock(&mutex);
     qlist_add_tail(&(msg->link), &(msg_head->link));
     pthread_mutex_unlock(&mutex);
@@ -183,7 +193,8 @@ int cfio_msg_isend(
     return CFIO_ERROR_NONE;
 }
 
-int cfio_msg_recv(int src, int rank, MPI_Comm comm, cfio_msg_t **_msg)
+int cfio_msg_recv(
+	int src, int rank, MPI_Comm comm, cfio_msg_t **_msg, uint32_t *func_code)
 {
     MPI_Status status;
     int size;
@@ -211,6 +222,7 @@ int cfio_msg_recv(int src, int rank, MPI_Comm comm, cfio_msg_t **_msg)
     msg->dst = rank;
     // get the func_code but not unpack it
     msg->func_code = *((uint32_t*)msg->addr); 
+    *func_code = msg->func_code;
     *_msg = msg;
 
 #ifndef SVR_RECV_ONLY
@@ -283,8 +295,9 @@ cfio_msg_t *cfio_msg_get_first()
 
     if(msg != NULL)
     {
-	debug(DEBUG_MSG, "get msg->size = %lu", msg->size);
+	debug(DEBUG_MSG, "get msg size : %lu", msg->size);
     }
+
     return msg;
 }
 
@@ -688,14 +701,15 @@ int cfio_msg_unpack_put_att(
 	int *ncid, int *varid, char **name, 
 	nc_type *xtype, int *len, void **op)
 {
-    size_t data_size;
+    size_t att_size;
 
     cfio_buf_unpack_data(ncid, sizeof(int), buffer);
     cfio_buf_unpack_data(varid, sizeof(int), buffer);
     cfio_buf_unpack_str(name, buffer);
     cfio_buf_unpack_data(xtype, sizeof(nc_type), buffer);
-    cfio_types_size(data_size, *xtype);
-    cfio_buf_unpack_data_array(op, len, data_size, buffer);
+    
+    cfio_types_size(att_size, *xtype);
+    cfio_buf_unpack_data_array(op, len, att_size, buffer);
 
     debug(DEBUG_MSG, "ncid = %d, varid = %d, name = %s, len = %d",
 	    *ncid, *varid, *name, *len);

@@ -52,14 +52,14 @@ typedef struct
     size_t *start;	    /* vector of ndims start index of the variable */
     size_t *count;	    /* vector of ndims count index of the variable */
 }cfio_id_data_t;
-/** @brief: store opened nc file 's information in client */
-typedef struct 
+
+/* quicklist entry for var and dim's name */
+typedef struct
 {
-    uint8_t used;  /* indicate if the id has been used by an opened nc file */
-    int var_a;     /* amount of defined var */
-    int dim_a;     /* amount of defined dim */
-    int id;        /* id assigned to the nc , should be index + 1*/
-}cfio_nc_t;
+    char *name;		    /* name of dim or var */
+    int id;		    /* id of dim or var */
+    qlist_head_t link;
+}cfio_id_client_name_t;
 
 /** @brief: store a nc file information in server */
 typedef struct 
@@ -95,7 +95,6 @@ typedef struct
 	*recv_data;	    /* pointer to data vector recieved from client */
     int data_type;          /* type of data, define in cfio_types.h */
     //size_t ele_size;	    /* size of each element in the variable array */
-    char *data;		    /* data array for the variable */
     qlist_head_t 
 	*att_head;	    /* variable attribute list */
 
@@ -124,8 +123,13 @@ typedef struct
     int client_nc_id;	/* id of nc file in client */
     int client_dim_id;	/* id of nc dim in client */
     int client_var_id;	/* id of nc var in client */
+    
+    /* only in client */
     int client_var_a;	/* amount of defined var in client*/
     int client_dim_a;	/* amount of defined dim in client*/
+    qlist_head_t *var_head, *dim_head;
+		  /* quicklist to store var and dim name that defined before*/
+   
     cfio_id_nc_t *nc;   /* nc file infomation in server */
     cfio_id_dim_t *dim; /* dim infomation in server */
     cfio_id_var_t *var; /* nc var infomation in server */
@@ -171,7 +175,7 @@ int cfio_id_remove_nc(int nc_id);
  *
  * @return: error code
  */
-int cfio_id_assign_dim(int nc_id, int *dim_id);
+int cfio_id_assign_dim(int nc_id, char *dim_name, int *dim_id);
 /**
  * @brief: assign a nc var id in client
  *
@@ -180,7 +184,7 @@ int cfio_id_assign_dim(int nc_id, int *dim_id);
  *
  * @return: error code
  */
-int cfio_id_assign_var(int nc_id, int *var_id);
+int cfio_id_assign_var(int nc_id, char *var_name, int *var_id);
 /**
  * @brief: add a new map(client_nc_id->server_nc_id) in server
  *
@@ -298,5 +302,6 @@ int cfio_id_put_var(
  */
 int cfio_id_merge_var_data(cfio_id_var_t *var);
 
+void cfio_id_val_free(cfio_id_val_t *val);
 
 #endif

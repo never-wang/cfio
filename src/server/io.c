@@ -209,6 +209,107 @@ static inline int _remove_client_io(
     return CFIO_ERROR_NONE;
 }
 
+static void _inc_src_index(
+	const int ndims, const size_t ele_size, 
+	const size_t *dst_dims_len, char **dst_addr, 
+	const size_t *src_dims_len, size_t *src_index)
+{
+    int dim;
+    size_t sub_size, last_sub_size;
+
+    dim = ndims - 1;
+    src_index[dim] ++;
+
+    sub_size = ele_size;
+    while(src_index[dim] >= src_dims_len[dim])
+    {
+	*dst_addr -= (src_dims_len[dim] - 1) * sub_size;
+	src_index[dim] = 0;
+	sub_size *= dst_dims_len[dim];
+	dim --;
+	src_index[dim] ++;
+    }
+
+    *dst_addr += sub_size;
+}
+
+/**
+ * @brief: put the src data array into the dst data array, src and dst both are
+ *	sub-array of a total data array
+ *
+ * @param ndims: number of dimensions for the variable
+ * @param ele_size: size of each element in the variable array
+ * @param dst_start: start index of the dst data array
+ * @param dst_count: count of teh dst data array
+ * @param dst_data: pointer to the dst data array
+ * @param src_start: start index of the src data array
+ * @param src_count: count of teh src data array
+ * @param src_data: pointer to the src data array
+ */
+static int _put_var(
+	int ndims, size_t ele_size,
+	size_t *dst_start, size_t *dst_count, char *dst_data, 
+	size_t *src_start, size_t *src_count, char *src_data)
+{
+    int i;
+    size_t src_len;
+    size_t dst_offset, sub_size;
+    size_t *src_index;
+
+    //float *_data = src_data;
+    //for(i = 0; i < 4; i ++)
+    //{
+    //    printf("%f, ", _data[i]);
+    //}
+    //printf("\n");
+
+    assert(NULL != dst_start);
+    assert(NULL != dst_count);
+    assert(NULL != dst_data);
+    assert(NULL != src_start);
+    assert(NULL != src_count);
+    assert(NULL != src_data);
+
+    src_len = 1;
+    for(i = 0; i < ndims; i ++)
+    {
+	src_len *= src_count[i];
+    }
+
+    src_index = malloc(sizeof(size_t) * ndims);
+    if(NULL == src_index)
+    {
+	error("malloc for src_index fail.");
+	return CFIO_ERROR_MALLOC;
+    }
+    for(i = 0; i < ndims; i ++)
+    {
+	src_index[i] = 0;
+    }
+
+    sub_size = 1;
+    dst_offset = 0;
+    for(i = ndims - 1; i >= 0; i --)
+    {
+	dst_offset += (src_start[i] - dst_start[i]) * sub_size;
+	sub_size *= dst_count[i];
+    }
+    //debug(DEBUG_ID, "dst_offset = %d", dst_offset);
+    dst_data += ele_size * dst_offset;
+
+    for(i = 0; i < src_len - 1; i ++)
+    {
+	memcpy(dst_data, src_data, ele_size);
+	_inc_src_index(ndims, ele_size, dst_count, &dst_data, 
+		src_count, src_index);
+	src_data += ele_size;
+    }
+    memcpy(dst_data, src_data, ele_size);
+
+    return CFIO_ERROR_NONE;
+}
+
+
 static inline int _handle_def(cfio_id_val_t *val)
 {
     int ret, i;
@@ -298,18 +399,18 @@ static inline int _handle_def(cfio_id_val_t *val)
 
 	}
 
-	data_size = 1;
-	for(i = 0; i < var->ndims; i ++)
-	{
-	    data_size *= var->count[i];
-	    //debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
-	    //        i, var->start[i], var->count[i]);
-	}
-	cfio_types_size(ele_size, var->data_type);
-	var->data = malloc(ele_size * data_size);
+	//data_size = 1;
+	//for(i = 0; i < var->ndims; i ++)
+	//{
+	//    data_size *= var->count[i];
+	//    //debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
+	//    //        i, var->start[i], var->count[i]);
+	//}
+	//cfio_types_size(ele_size, var->data_type);
+	//var->data = malloc(ele_size * data_size);
 
-	debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
-		ele_size ,  data_size);
+	//debug(DEBUG_IO, "malloc for var->data, size = %lu * %lu", 
+	//	ele_size ,  data_size);
 	return CFIO_ERROR_NONE;
     }
 
@@ -325,7 +426,7 @@ static inline int _handle_def(cfio_id_val_t *val)
  * @param new_start: new start which is to be updated into cur_start 
  * @param new_count: new count which is to be updated into cur_count
  */
-void _updata_start_and_count(int ndims, 
+void _update_start_and_count(int ndims, 
 	size_t *cur_start, size_t *cur_count,
 	size_t *new_start, size_t *new_count)
 {
@@ -345,6 +446,55 @@ void _updata_start_and_count(int ndims,
 	cur_start[i] = min_start;
 	cur_count[i] = max_end - min_start;
     }
+}
+/* merge var data */
+void _merge_var_data(
+	cfio_id_var_t *var, size_t *start, size_t *count, char **_data)
+{
+    int i;
+    size_t data_size, ele_size;
+    char *data;
+
+    for(i = 0; i < var->ndims; i ++)
+    {
+	start[i] = var->recv_data[0].start[i];
+	count[i] = var->recv_data[0].count[i];
+    }
+
+    for(i = 1; i < var->client_num; i ++)
+    {
+	_update_start_and_count(var->ndims,start, count,
+		var->recv_data[i].start, var->recv_data[i].count);
+    }
+	
+    data_size = 1;
+    for(i = 0; i < var->ndims; i ++)
+    {
+	data_size *= count[i];
+    }
+    cfio_types_size(ele_size, var->data_type);
+    data = malloc(ele_size * data_size);
+
+    debug(DEBUG_IO, "malloc for data, size = %lu * %lu", 
+	    ele_size ,  data_size);
+
+    for(i = 0; i < var->client_num; i ++)
+    {
+	_put_var(var->ndims, ele_size, 
+		start, count, data,
+		var->recv_data[i].start, var->recv_data[i].count,
+		var->recv_data[i].buf);
+
+	free(var->recv_data[i].buf);	
+	var->recv_data[i].buf = NULL;	
+	free(var->recv_data[i].start);	
+	var->recv_data[i].start = NULL;	
+	free(var->recv_data[i].count);	
+	var->recv_data[i].count = NULL;	
+	
+    }
+    
+    *_data = data;	
 }
 
 int cfio_io_init()
@@ -651,7 +801,7 @@ int cfio_io_def_var(int client_id)
 	 **/
 	for(i = 0; i < ndims; i ++)
 	{
-	    if(count[i] > dims[i]->dim_len)
+	    if((int)count[i] > (int)dims[i]->dim_len)
 	    {
 		dims[i]->dim_len = count[i];
 	    }
@@ -671,7 +821,7 @@ int cfio_io_def_var(int client_id)
 	    debug(DEBUG_IO, "New var dim %d: start(%lu), count(%lu)", 
 		    i, start[i], count[i]);
 	}
-	_updata_start_and_count(ndims, var->start, var->count, start, count);
+	_update_start_and_count(ndims, var->start, var->count, start, count);
 	for(i = 0; i < ndims; i ++)
 	{
 	    debug(DEBUG_IO, "count = %lu; dim_len = %d", 
@@ -772,13 +922,13 @@ int cfio_io_put_att(int client_id)
 		goto RETURN;
 	    }
 	}
-        _remove_client_io(io_info);
+	_remove_client_io(io_info);
     }
     return_code = CFIO_ERROR_NONE;
 
 RETURN:
-    return return_code;
-}
+	return return_code;
+    }
 
 int cfio_io_enddef(int client_id)
 {
@@ -843,8 +993,10 @@ int cfio_io_put_vara(int client_id)
     cfio_io_val_t *io_info;
     int client_nc_id, client_var_id;
     size_t *start, *count;
+    size_t *total_start = NULL, *total_count = NULL;
     size_t data_size;
     char *data;
+    char *total_data = NULL;
     int data_len, data_type, client_index;
     size_t *put_start;
 
@@ -914,20 +1066,15 @@ int cfio_io_put_vara(int client_id)
             return_code = CFIO_ERROR_WRONG_NDIMS;
             goto RETURN;
         }
-
-        if(NULL == var->data)
-        {
-            return_code = CFIO_ERROR_INVALID_VAR;
-            debug(DEBUG_IO, "Var data is NULL.");
-            goto RETURN;
-        }
         
-        cfio_id_merge_var_data(var);
+	total_start = malloc(sizeof(size_t) * var->ndims);
+	total_count = malloc(sizeof(size_t) * var->ndims);
+        _merge_var_data(var, total_start, total_count, &total_data);
 
         for(i = 0; i < var->ndims; i ++)
         {
             debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
-        	    i, var->start[i], var->count[i]);
+        	    i, total_start[i], total_count[i]);
         }
         
 	put_start = malloc(var->ndims * sizeof(size_t));
@@ -938,7 +1085,7 @@ int cfio_io_put_vara(int client_id)
 	}
         for(i = 0; i < var->ndims; i ++)
         {
-            put_start[i] = 0;
+            put_start[i] = total_start[i] - var->start[i];
         }
 
         switch(var->data_type)
@@ -949,19 +1096,19 @@ int cfio_io_put_vara(int client_id)
         	break;
             case CFIO_SHORT :
         	ret = nc_put_vara_short(nc->nc_id, var->var_id, 
-        		put_start, var->count, (short*)var->data);
+        		put_start, total_count, (short*)total_data);
         	break;
             case CFIO_INT :
         	ret = nc_put_vara_int(nc->nc_id, var->var_id, 
-        		put_start, var->count, (int*)var->data);
+        		put_start, total_count, (int*)total_data);
         	break;
             case CFIO_FLOAT :
         	ret = nc_put_vara_float(nc->nc_id, var->var_id, 
-        		put_start, var->count, (float*)var->data);
+        		put_start, total_count, (float*)total_data);
         	break;
             case CFIO_DOUBLE :
         	ret = nc_put_vara_double(nc->nc_id, var->var_id, 
-        		put_start, var->count, (double*)var->data);
+        		put_start, total_count, (double*)total_data);
         	break;
         }
 
@@ -977,6 +1124,22 @@ int cfio_io_put_vara(int client_id)
     return_code = CFIO_ERROR_NONE;	
 
 RETURN :
+
+    if(total_data != NULL)
+    {
+	free(total_data);
+	total_data = NULL;
+    }
+    if(total_count != NULL)
+    {
+	free(total_count);
+	total_count = NULL;
+    }
+    if(total_start != NULL)
+    {
+	free(total_start);
+	total_start = NULL;
+    }
     return return_code;
 
 }

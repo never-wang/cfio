@@ -85,14 +85,15 @@ int cfio_msg_test();
  *
  * @return: error code
  */
-int cfio_msg_recv(int src, int rank, MPI_Comm comm, cfio_msg_t **_msg);
+int cfio_msg_recv(
+	int src, int rank, MPI_Comm comm, cfio_msg_t **_msg, uint32_t *func_code);
 
 /**
  * @brief: get the first msg in msg queue
  *
  * @return: pointer to the first msg
  */
-cfio_msg_t *cfio_msg_get_first();
+cfio_msg_t* cfio_msg_get_first();
 /**
  * @brief: pack cfio_create function into struct cfio_msg_t
  *
