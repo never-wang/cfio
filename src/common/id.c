@@ -27,6 +27,20 @@ static int open_nc_a;  /* amount of opened nc file , assigned as new nc id*/
 static struct qhash_table *assign_table; /* used for assign id in client*/
 static struct qhash_table *map_table;	/* used for map id in server */
 
+static int _compare_client_name(struct qhash_head *link, void *key)
+{
+    assert(NULL != key);
+    assert(NULL != link);
+
+    cfio_id_client_name_t *name = qlist_entry(link, cfio_id_client_name_t, link);
+
+    if(strcmp((char *)key, name->name) == 0)
+    {
+	return 1;
+    }
+
+    return 0;
+}
 static int _compare(void *key, struct qhash_head *link)
 {
     assert(NULL != key);
@@ -156,6 +170,20 @@ int cfio_id_assign_nc(int *nc_id)
     }
     memset(val, 0, sizeof(cfio_id_val_t));
     val->client_nc_id = open_nc_a;
+    val->var_head = malloc(sizeof(qlist_head_t));
+    if(val->var_head == NULL)
+    {
+	error("malloc fail.");
+	return CFIO_ERROR_MALLOC;
+    }
+    val->dim_head = malloc(sizeof(qlist_head_t));
+    if(val->dim_head == NULL)
+    {
+	error("malloc fail.");
+	return CFIO_ERROR_MALLOC;
+    }
+    INIT_QLIST_HEAD(val->var_head);
+    INIT_QLIST_HEAD(val->dim_head);
     qhash_add(assign_table, &key, &(val->hash_link));
     *nc_id = open_nc_a;
     debug(DEBUG_ID, "assign nc_id = %d", *nc_id);
@@ -179,19 +207,21 @@ int cfio_id_remove_nc(int nc_id)
     }else
     {
 	qhash_del(link);
+	cfio_id_val_free(qlist_entry(link, cfio_id_val_t, hash_link));
 	debug(DEBUG_ID, "success return.");
 	return CFIO_ERROR_NONE;
     }
 }
 
-int cfio_id_assign_dim(int nc_id, int *dim_id)
+int cfio_id_assign_dim(int nc_id, char *dim_name, int *dim_id)
 {
     assert(dim_id != NULL);
     
     cfio_id_key_t key;
     cfio_id_val_t *val;
+    cfio_id_client_name_t *name_entry;
     struct qhash_head *link;
-    
+
     memset(&key, 0, sizeof(cfio_id_key_t));
     key.client_nc_id = nc_id;
 
@@ -202,19 +232,38 @@ int cfio_id_assign_dim(int nc_id, int *dim_id)
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
-	val->client_dim_a ++;
-	*dim_id = val->client_dim_a;
+	link = qlist_find(val->dim_head, _compare_client_name, dim_name);
+	if(link == NULL)
+	{
+	    val->client_dim_a ++;
+	    *dim_id = val->client_dim_a;
+	    name_entry = malloc(sizeof(cfio_id_client_name_t));
+	    if(name_entry == NULL)
+	    {
+		error("malloc fail.");
+		return CFIO_ERROR_MALLOC;
+	    }
+
+	    name_entry->name = strdup(dim_name);
+	    name_entry->id = *dim_id;
+	    qlist_add(&name_entry->link, val->dim_head);
+	}else
+	{
+	    name_entry = qlist_entry(link, cfio_id_client_name_t, link);
+	    *dim_id = name_entry->id;
+	}
 	debug(DEBUG_ID, "success return.");
 	return CFIO_ERROR_NONE;
     }
 }
 
-int cfio_id_assign_var(int nc_id, int *var_id)
+int cfio_id_assign_var(int nc_id, char *var_name, int *var_id)
 {
     assert(var_id != NULL);
 
     cfio_id_key_t key;
     cfio_id_val_t *val;
+    cfio_id_client_name_t *name_entry;
     struct qhash_head *link;
     
     memset(&key, 0, sizeof(cfio_id_key_t));
@@ -227,8 +276,26 @@ int cfio_id_assign_var(int nc_id, int *var_id)
     }else
     {
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
-	val->client_var_a ++;
-	*var_id = val->client_var_a;
+	link = qlist_find(val->var_head, _compare_client_name, var_name);
+	if(link == NULL)
+	{
+	    val->client_var_a ++;
+	    *var_id = val->client_var_a;
+	    name_entry = malloc(sizeof(cfio_id_client_name_t));
+	    if(name_entry == NULL)
+	    {
+		error("malloc fail.");
+		return CFIO_ERROR_MALLOC;
+	    }
+
+	    name_entry->name = strdup(var_name);
+	    name_entry->id = *var_id;
+	    qlist_add(&name_entry->link, val->var_head);
+	}else
+	{
+	    name_entry = qlist_entry(link, cfio_id_client_name_t, link);
+	    *var_id = name_entry->id;
+	}
 	debug(DEBUG_ID, "success return.");
 	return CFIO_ERROR_NONE;
     }
@@ -585,6 +652,7 @@ void cfio_id_val_free(cfio_id_val_t *val)
     int i;
     cfio_id_data_t *recv_data;
     cfio_id_att_t *att, *next;
+    cfio_id_client_name_t *name, *name_next;
 
     debug(DEBUG_ID, "start free.");
 
@@ -673,7 +741,37 @@ void cfio_id_val_free(cfio_id_val_t *val)
 	    }
 	    free(val->var);
 	    val->var = NULL;
+	} /* end var */
+	/* free var name list and dim name list */
+	if(val->var_head != NULL)
+	{
+	    qlist_for_each_entry_safe(name, name_next, val->var_head, link)
+	    {
+		if(name->name != NULL)
+		{
+		    free(name->name);
+		    name->name = NULL;
+		}
+		free(name);
+	    }
+	    free(val->var_head);
+	    val->var_head = NULL;
 	}
+	if(val->dim_head != NULL)
+	{
+	    qlist_for_each_entry_safe(name, name_next, val->dim_head, link)
+	    {
+		if(name->name != NULL)
+		{
+		    free(name->name);
+		    name->name = NULL;
+		}
+		free(name);
+	    }
+	    free(val->dim_head);
+	    val->dim_head = NULL;
+	}
+	
 	free(val);
 	val = NULL;
     }

@@ -7,8 +7,8 @@ FC=mpiifort
 
 #AM_PATH_CHECK
 
-#CPPFLAGS="$CPPFLAGS -mcmodel=large -shared-intel -g"
-CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS -shared-intel"
+#CPPFLAGS="$CPPFLAGS"
 
 AC_ARG_WITH([dependency],
 	    [AC_HELP_STRING([--with-dependency=DIR],

@@ -922,13 +922,13 @@ int cfio_io_put_att(int client_id)
 		goto RETURN;
 	    }
 	}
-        _remove_client_io(io_info);
+	_remove_client_io(io_info);
     }
     return_code = CFIO_ERROR_NONE;
 
 RETURN:
-    return return_code;
-}
+	return return_code;
+    }
 
 int cfio_io_enddef(int client_id)
 {

@@ -1,5 +1,5 @@
-include_HEADERS=iofw.mod
+include_HEADERS=cfio.mod
 
-noinst_LIBRARIES=liboff.a
-liboff_a_SOURCES=iofw.F90
-iofw.mod: iofw.o
+lib_LIBRARIES=libcfiof.a
+libcfiof_a_SOURCES=cfio.F90
+cfio.mod: cfio.o

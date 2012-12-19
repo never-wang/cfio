@@ -45,7 +45,6 @@ static void* sender_thread(void *arg)
     while(sender_finish == 0)
     {
 	msg = cfio_msg_get_first();
-	debug_mark(DEBUG_CFIO);
 	if(msg != NULL)
 	{
 	    cfio_msg_send(msg);
@@ -57,7 +56,7 @@ static void* sender_thread(void *arg)
 	free(msg);
     }
 
-    debug(DEBUG_MSG, "Proc %d : sender finish", rank);
+    debug(DEBUG_CFIO, "Proc %d : sender finish", rank);
     return (void*)0;
 }
 
@@ -70,8 +69,9 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     int server_proc_num;
     int best_server_amount;
 
-    //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);
+    //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);d:w
     //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
+    //set_debug_mask(DEBUG_SERVER | DEBUG_CFIO | DEBUG_IO | DEBUG_ID);
 
     rc = MPI_Initialized(&i); 
     if( !i )
@@ -146,29 +146,35 @@ int cfio_finalize()
     int ret,flag;
     cfio_msg_t *msg;
 
+    debug_mark(DEBUG_CFIO);
     ret = MPI_Finalized(&flag);
+    debug_mark(DEBUG_CFIO);
     if(flag)
     {
 	error("***You should not call MPI_Finalize before cfio_Finalized*****\n");
 	return CFIO_ERROR_FINAL_AFTER_MPI;
     }
+    debug_mark(DEBUG_CFIO);
     if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
 	cfio_msg_pack_io_done(&msg, rank);
 	cfio_msg_isend(msg);
     }
+    debug_mark(DEBUG_CFIO);
     
     if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_SERVER)
     {
 	cfio_server_final();
     }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
-	cfio_id_final();
-
+	debug_mark(DEBUG_CFIO);
 	pthread_join(sender, NULL);
+	
+	cfio_id_final();
 
 	cfio_msg_final();
     }
+    debug_mark(DEBUG_CFIO);
 
     cfio_map_final();
     debug(DEBUG_CFIO, "success return.");
@@ -177,13 +183,19 @@ int cfio_finalize()
 
 int cfio_proc_type(int rank)
 {
+    int type;
+
     if(rank < 0)
     {
 	error("rank should be positive.");
 	return CFIO_ERROR_RANK_INVALID;
     }
 
-    return cfio_map_proc_type(rank);
+    type = cfio_map_proc_type(rank);
+
+    debug(DEBUG_CFIO, "rank(%d)'s type = %d", rank, type);
+
+    return type;
 }
 
 /**
@@ -245,7 +257,7 @@ int cfio_def_dim(
     
     cfio_msg_t *msg;
 
-    if((ret = cfio_id_assign_dim(ncid, idp)) < 0)
+    if((ret = cfio_id_assign_dim(ncid, name, idp)) < 0)
     {
 	error("");
 	return ret;
@@ -275,7 +287,7 @@ int cfio_def_var(
     cfio_msg_t *msg;
     int ret;
 
-    if((ret = cfio_id_assign_var(ncid, varidp)) < 0)
+    if((ret = cfio_id_assign_var(ncid, name, varidp)) < 0)
     {
 	error("");
 	return ret;
@@ -301,6 +313,8 @@ int cfio_put_att(
 	    xtype, len, op);
     cfio_msg_isend(msg);
     //}
+    debug(DEBUG_CFIO, "ncid = %d, var_id = %d, name = %s, len = %lu",
+	    ncid, varid, name, len);
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
@@ -431,6 +445,8 @@ int cfio_put_vara_float(
 
     //_put_vara(io_proc_id, ncid, varid, dim,
     //  start, count, CFIO_FLOAT, fp, head_size, dim - 1);
+    debug(DEBUG_CFIO, "start :(%lu, %lu), count :(%lu, %lu)", 
+	    start[0], start[1], count[0], count[1]);
     cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
 	    start, count, CFIO_FLOAT, fp);
     cfio_msg_isend(msg);
@@ -473,6 +489,37 @@ int cfio_put_vara_double(
     return CFIO_ERROR_NONE;
 }
 
+int cfio_put_vara_int(
+	int ncid, int varid, int dim,
+	const size_t *start, const size_t *count, const int *fp)
+{
+    if(start == NULL || count == NULL || fp == NULL)
+    {
+	error("args should not be NULL.");
+	return CFIO_ERROR_ARG_NULL;
+    }
+
+    cfio_msg_t *msg;
+
+	//times_start();
+    debug(DEBUG_CFIO, "start :(%lu, %lu), count :(%lu, %lu)", 
+	    start[0], start[1], count[0], count[1]);
+
+    //head_size = 6 * sizeof(int) + 2 * dim * sizeof(size_t);
+
+    //_put_vara(io_proc_id, ncid, varid, dim,
+    //        start, count, CFIO_DOUBLE, fp, head_size, dim - 1);
+    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+	    start, count, CFIO_INT, fp);
+    cfio_msg_isend(msg);
+
+    debug_mark(DEBUG_CFIO);
+
+	//debug(DEBUG_TIME, "%f ms", times_end());
+
+    return CFIO_ERROR_NONE;
+}
+
 int cfio_close(
 	int ncid)
 {
@@ -499,115 +546,243 @@ int cfio_close(
 /**
  *For Fortran Call
  **/
-int cfio_init_(int *x_proc_num, int *y_proc_num, int *ratio)
+void cfio_init_c_(int *x_proc_num, int *y_proc_num, int *ratio, int *ierr)
 {
-    return cfio_init(*x_proc_num, *y_proc_num, *ratio);
+    *ierr = cfio_init(*x_proc_num, *y_proc_num, *ratio);
+
+    return;
 }
 
-int cfio_finalize_()
+void cfio_finalize_c_(int *ierr)
 {
-    return cfio_finalize();
+    *ierr = cfio_finalize();
+
+    return;
 }
 
-int cfio_proc_type_(int *rank)
+void cfio_proc_type_c_(int *rank, int *type)
 {
-    return cfio_proc_type(*rank);
+    *type = cfio_proc_type(*rank);
+    debug(DEBUG_CFIO, "rank(%d)'s type = %d", *rank, *type);
+    return;
 }
 
-int cfio_create_(
-	const char *path, int *cmode, int *ncidp)
+void cfio_create_c_(
+	char *path, int *len, int *cmode, int *ncidp, int *ierr)
 {
     debug(DEBUG_CFIO, "path = %s, cmode = %d", path, *cmode);
 
-    return cfio_create(path, *cmode, ncidp);
+    path[*len] = 0;
+
+    *ierr = cfio_create(path, *cmode, ncidp);
+
+    return;
 }
-int cfio_def_dim_(
-	int *ncid, const char *name, int *len, int *idp)
+void cfio_def_dim_c_(
+	int *ncid, char *name, int *name_len, int *len, int *idp, int *ierr)
 {
     size_t _len;
 
     _len = (int)(*len);
 
-    return cfio_def_dim(*ncid, name, _len, idp);
+    name[*name_len] = 0;
+
+    *ierr = cfio_def_dim(*ncid, name, _len, idp);
+
+    return;
 }
 
-int cfio_def_var_(
-	int *ncid, const char *name, int *xtype,
-	int *ndims, const int *dimids, 
-	const int *start, const int *count, int *varidp)
+void cfio_def_var_c_(
+	int *ncid, char *name, int *name_len,
+	int *xtype, int *ndims, int *dimids, 
+	int *start, const int *count, int *varidp,
+	int *ierr)
 {
     size_t *_start, *_count;
-    int i, ret;
+    int *_dimids;
+    int i, j;
 
     _start = malloc((*ndims) * sizeof(size_t));
     if(NULL == _start)
     {
 	debug(DEBUG_CFIO, "malloc fail");
-	return CFIO_ERROR_MALLOC;
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
     }
     _count = malloc((*ndims) * sizeof(size_t));
     if(NULL == _count)
     {
 	free(_start);
 	debug(DEBUG_CFIO, "malloc fail");
-	return CFIO_ERROR_MALLOC;
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
     }
-    for(i = 0; i < (*ndims); i ++)
+    _dimids = malloc((*ndims) * sizeof(int));
+    if(NULL == _count)
     {
-	_start[i] = start[i] - 1;
-	_count[i] = count[i];
+	free(_start);
+	free(_count);
+	debug(DEBUG_CFIO, "malloc fail");
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
+    }
+    for(i = 0, j = (*ndims) - 1; i < (*ndims); i ++, j --)
+    {
+	_start[i] = start[j] - 1;
+	_count[i] = count[j];
+	_dimids[i] = dimids[j];
     }
 
-    ret = cfio_def_var(*ncid, name, *xtype, *ndims, dimids, 
+    name[*name_len] = 0;
+
+    *ierr = cfio_def_var(*ncid, name, *xtype, *ndims, _dimids, 
 	    _start, _count, varidp);
     
     free(_start);
     free(_count);
-    return ret;
+    free(_dimids);
+    return;
 }
 
-int cfio_put_vara_double_(
-	int *ncid, int *varid, int *dim,
-	const int *start, const int *count, const double *fp)
+void cfio_put_att_c_(
+	int *ncid, int *varid, char *name, int *name_len,
+	nc_type *xtype, int *len, const void *op, int *ierr)
+{
+    int _varid;
+
+    /* NF90_GLOBAL = 0 but NC_GLOBAL = -1 */
+    if(*varid == 0)
+    {
+	_varid = -1;
+    }else
+    {
+	_varid = *varid;
+    }
+    name[*name_len] = 0;
+
+    *ierr = cfio_put_att(*ncid, _varid, name, *xtype, *len, op);
+
+    return;
+}
+void cfio_put_vara_float_c_(
+	int *ncid, int *varid, int *ndims,
+	const int *start, const int *count, const float *fp, int *ierr)
 {
     size_t *_start, *_count;
-    int i, ret;
+    int i, j;
 
-    _start = malloc((*dim) * sizeof(size_t));
+    debug(DEBUG_CFIO, "start :(%d, %d), count :(%d, %d)", 
+	    start[0], start[1], count[0], count[1]);
+    
+    _start = malloc((*ndims) * sizeof(size_t));
     if(NULL == _start)
     {
 	debug(DEBUG_CFIO, "malloc fail");
-	return CFIO_ERROR_MALLOC;
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
     }
-    _count = malloc((*dim) * sizeof(size_t));
+    _count = malloc((*ndims) * sizeof(size_t));
     if(NULL == _count)
     {
 	free(_start);
 	debug(DEBUG_CFIO, "malloc fail");
-	return CFIO_ERROR_MALLOC;
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
     }
-    for(i = 0; i < (*dim); i ++)
+    for(i = 0, j = (*ndims) - 1; i < (*ndims); i ++, j --)
     {
-	_start[i] = start[i] - 1;
-	_count[i] = count[i];
+	_start[i] = start[j] - 1;
+	_count[i] = count[j];
     }
-    ret = cfio_put_vara_double(
-	    *ncid, *varid, *dim, _start, _count, fp);
+    *ierr = cfio_put_vara_float(
+	    *ncid, *varid, *ndims, _start, _count, fp);
     
     free(_start);
     free(_count);
-    return ret;
+    return;
 }
 
-int cfio_enddef_(
-	int *ncid)
+void cfio_put_vara_double_c_(
+	int *ncid, int *varid, int *ndims,
+	const int *start, const int *count, const double *fp, int *ierr)
 {
-    return cfio_enddef(*ncid);
+    size_t *_start, *_count;
+    int i, j;
+
+    _start = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_CFIO, "malloc fail");
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
+    }
+    _count = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_CFIO, "malloc fail");
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
+    }
+    for(i = 0, j = (*ndims) - 1; i < (*ndims); i ++, j --)
+    {
+	_start[i] = start[j] - 1;
+	_count[i] = count[j];
+    }
+    *ierr = cfio_put_vara_double(
+	    *ncid, *varid, *ndims, _start, _count, fp);
+    
+    free(_start);
+    free(_count);
+    return;
 }
 
-int cfio_close_(
-	int *ncid)
+void cfio_put_vara_int_c_(
+	int *ncid, int *varid, int *ndims,
+	const int *start, const int *count, const int *fp, int *ierr)
 {
-    return cfio_close(*ncid);
+    size_t *_start, *_count;
+    int i, j;
+
+    _start = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _start)
+    {
+	debug(DEBUG_CFIO, "malloc fail");
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
+    }
+    _count = malloc((*ndims) * sizeof(size_t));
+    if(NULL == _count)
+    {
+	free(_start);
+	debug(DEBUG_CFIO, "malloc fail");
+	*ierr = CFIO_ERROR_MALLOC;
+	return;
+    }
+    for(i = 0, j = (*ndims) - 1; i < (*ndims); i ++, j --)
+    {
+	_start[i] = start[j] - 1;
+	_count[i] = count[j];
+    }
+    *ierr = cfio_put_vara_int(
+	    *ncid, *varid, *ndims, _start, _count, fp);
+    
+    free(_start);
+    free(_count);
+    return;
+}
+
+void cfio_enddef_c_(
+	int *ncid, int *ierr)
+{
+    *ierr = cfio_enddef(*ncid);
+    return;
+}
+
+void cfio_close_c_(
+	int *ncid, int *ierr)
+{
+    *ierr = cfio_close(*ncid);
+    return;
 }
 

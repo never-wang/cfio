@@ -19,13 +19,13 @@
 #include "cfio.h"
 #include "debug.h"
 
-#define LAT 6
-#define LON 6
+#define LAT 10
+#define LON 16
 
-#define LAT_PROC 2
-#define LON_PROC 2
+#define LAT_PROC 5
+#define LON_PROC 8
 
-#define ratio 4
+#define ratio 8
 
 int main(int argc, char** argv)
 {
@@ -43,13 +43,8 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //assert(size == LAT_PROC * LON_PROC);
-    if(rank == 0)
-    {
-	set_debug_mask(DEBUG_CFIO | DEBUG_MSG); 
-    }
-    //set_debug_mask(DEBUG_ID | DEBUG_IO); 
-    //set_debug_mask(DEBUG_TIME); 
-    //set_debug_mask(DEBUG_SERVER); 
+    //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER | DEBUG_MSG); 
+    set_debug_mask(DEBUG_SERVER); 
     size_t start[2],count[2];
     start[0] = (rank / LAT_PROC) * (LAT / LAT_PROC);
     start[1] = (rank % LON_PROC) * (LON / LON_PROC);
@@ -75,8 +70,10 @@ int main(int argc, char** argv)
     int lat = LAT;
     cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
     cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
+    cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
 
-    cfio_put_att(ncidp, NC_GLOBAL, "test", NC_CHAR, strlen(test), test);
+    int a = 3;
+    cfio_put_att(ncidp, NC_GLOBAL, "test", NC_INT, 1, &a);
 
     cfio_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
     cfio_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
