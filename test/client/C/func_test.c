@@ -44,10 +44,10 @@ int main(int argc, char** argv)
 
     //assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER | DEBUG_MSG); 
-    set_debug_mask(DEBUG_SERVER); 
+    //set_debug_mask(DEBUG_SERVER | DEBUG_MAP); 
     size_t start[2],count[2];
-    start[0] = (rank / LAT_PROC) * (LAT / LAT_PROC);
-    start[1] = (rank % LON_PROC) * (LON / LON_PROC);
+    start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
+    start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
     count[0] = LAT / LAT_PROC;
     count[1] = LON / LON_PROC;
     float *fp = malloc(count[0] * count[1] *sizeof(float));

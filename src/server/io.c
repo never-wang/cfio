@@ -88,7 +88,7 @@ static inline void _add_bitmap(uint8_t *bitmap, int client_id)
 
     assert(client_id < cfio_map_get_client_amount());
     assert(bitmap != NULL);
-
+    
     client_index = cfio_map_get_client_index_of_server(client_id);
 
     i = client_index >> 3;
@@ -178,7 +178,7 @@ static inline int _recv_client_io(
 	val = qlist_entry(link, cfio_io_val_t, hash_link);
     }
     _add_bitmap(val->client_bitmap, 
-	    cfio_map_get_client_index_of_server(client_id));
+	    client_id);
     *io_info = val;
 
     return CFIO_ERROR_NONE;

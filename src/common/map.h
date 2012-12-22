@@ -71,6 +71,15 @@ int cfio_map_get_server_amount();
  */
 int cfio_map_get_client_amount();
 /**
+ * @brief: get all clients id of a server
+ *
+ * @param server_id: server id
+ * @param client_id: pointer to the array storing clients id
+ *
+ * @return: error code
+ */
+int cfio_map_get_clients(int server_id, int* client_id);
+/**
  * @brief: get client number of a server
  *
  * @param server_id: the server's id

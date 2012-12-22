@@ -219,6 +219,40 @@ int cfio_map_get_client_amount()
     return client_amount;
 }
 
+int cfio_map_get_clients(int server_id, int *client_id)
+{
+    int client_x_index, client_y_index;
+    int client_x_start_index, client_y_start_index;
+    int client_per_server_x, client_per_server_y;
+    int server_x_index, server_y_index;
+    int client_num;
+    int i;
+    int server_index;
+   
+    server_index = cfio_map_get_server_index(server_id);
+    server_x_index = server_index % server_x_num;
+    server_y_index = server_index / server_x_num;
+
+    debug(DEBUG_MAP, "rank(%d) : (%d, %d)", server_id, server_x_index, 
+	    server_y_index);
+
+    client_num = cfio_map_get_client_num_of_server(server_id);
+    client_per_server_x = client_x_num / server_x_num;
+    client_per_server_y = client_y_num / server_y_num;
+
+    client_x_start_index = server_x_index * client_per_server_x;
+    client_y_start_index = server_y_index * client_per_server_y;
+    
+    for(i = 0; i < client_num ; i ++)
+    {
+	client_x_index = i % client_per_server_x + client_x_start_index;
+	client_y_index = i / client_per_server_x + client_y_start_index;
+	client_id[i] = client_x_index + client_y_index * client_x_num;
+    }
+
+    return CFIO_ERROR_NONE;
+}
+
 int cfio_map_get_client_num_of_server(int server_id)
 {
 

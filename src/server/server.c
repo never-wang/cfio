@@ -134,16 +134,24 @@ static void* cfio_writer(void *argv)
     cfio_msg_t *msg;
     int i, server_index, client_num;
     uint32_t func_code;
+    int *client_id;
 
     server_index = cfio_map_get_server_index(rank);
     client_num = cfio_map_get_client_num_of_server(rank);
+    client_id = malloc(sizeof(int) * client_num);
+    if(client_id == NULL)
+    {
+	error("malloc fail.");
+	return (void*)0;
+    }
+    cfio_map_get_clients(rank, client_id);
 
     while(!writer_done)
     {
 	/*  recv from client one by one, to make sure that data recv and output in time */
-	for(i = server_index * client_num; i < (server_index + 1) * client_num; i ++)
+	for(i = 0; i < client_num; i ++)
 	{
-	    cfio_msg_recv(i, rank, cfio_map_get_comm(), &msg, &func_code);
+	    cfio_msg_recv(client_id[i], rank, cfio_map_get_comm(), &msg, &func_code);
 	    if(func_code == FUNC_END_IO)
 	    {
 		debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
