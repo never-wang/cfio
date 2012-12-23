@@ -61,6 +61,7 @@ int main(int argc, char** argv)
     //{
     //    set_debug_mask(DEBUG_MSG | DEBUG_CFIO);
     //}
+    //set_debug_mask(DEBUG_SERVER | DEBUG_SENDER);
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
     start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
     count[0] = LAT / LAT_PROC;

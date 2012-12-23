@@ -103,6 +103,7 @@ int cfio_map_get_server_index(int server_id);
  * @return: client_index
  */
 int cfio_map_get_client_index_of_server(int client_id);
+int cfio_map_get_server_of_client(int client_id);
 /**
  * @brief: map from client proc to server proc, store map information in msg struct 
  *

@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  unmap.h
+ *       Filename:  io.h
  *
  *    Description: unmap the io_forward op into a real operation 
  *
@@ -15,11 +15,10 @@
  *
  * =====================================================================================
  */
-#ifndef _UNMAP_H
-#define _UNMAP_H
-#include "buffer.h"
-#include "mpi.h"
-#include "quicklist.h"
+#ifndef _IO_H
+#define _IO_H
+
+#include "msg.h"
 
 #define IO_HASH_TABLE_SIZE 32
 
@@ -68,11 +67,11 @@ int cfio_io_init();
 int cfio_io_final();
 int cfio_io_reader_done(int client_id, int *server_done);
 int cfio_io_writer_done(int client_id, int *server_done);
-int cfio_io_create(int client_proc);
-int cfio_io_def_dim(int client_proc);
-int cfio_io_def_var(int client_proc);
-int cfio_io_enddef(int client_proc);
-int cfio_io_put_vara(int client_proc);
-int cfio_io_close(int client_proc);
+int cfio_io_create(cfio_msg_t *msg);
+int cfio_io_def_dim(cfio_msg_t *msg);
+int cfio_io_def_var(cfio_msg_t *msg);
+int cfio_io_enddef(cfio_msg_t *msg);
+int cfio_io_put_vara(cfio_msg_t *msg);
+int cfio_io_close(cfio_msg_t *msg);
 
 #endif

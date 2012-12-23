@@ -8,12 +8,13 @@ common = $(common_dir)/buffer.c	$(common_dir)/buffer.h 	    $(common_dir)/debug.
 
 server_dir = ../../server
 server = $(server_dir)/io.c $(server_dir)/io.h  \
-	 $(server_dir)/server.c  $(server_dir)/server.h
+	 $(server_dir)/server.c  $(server_dir)/server.h \
+	 $(server_dir)/recv.c  $(server_dir)/recv.h
 
 lib_LIBRARIES = libcfio.a
-libcfio_a_SOURCES = cfio.h cfio.c \
+libcfio_a_SOURCES = cfio.h cfio.c send.h send.c\
 		    $(common) $(server)
-libcfio_a_CFLAGS = -I$(common_dir)
+libcfio_a_CFLAGS = -I$(common_dir) -I$(server_dir)
 
 include_HEADERS = cfio.h
 

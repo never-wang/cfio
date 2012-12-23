@@ -15,8 +15,6 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
-#define SERVER_BUF_SIZE ((size_t)3*1024*1024*1024)
-
 /**
  * @brief: init
  *

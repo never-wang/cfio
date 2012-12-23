@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
     //assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER | DEBUG_MSG); 
-    //set_debug_mask(DEBUG_SERVER | DEBUG_MAP); 
+    set_debug_mask(DEBUG_SERVER); 
     size_t start[2],count[2];
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
     start[1] = (rank / LAT_PROC) * (LON / LON_PROC);

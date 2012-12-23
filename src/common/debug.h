@@ -34,6 +34,8 @@
 #define DEBUG_ID    	((uint32_t)1 << 7)
 #define DEBUG_BUF   	((uint32_t)1 << 8)
 #define DEBUG_SERVER	((uint32_t)1 << 9)
+#define DEBUG_SEND	((uint32_t)1 << 10)
+#define DEBUG_RECV	((uint32_t)1 << 11)
 
 extern int debug_mask;
 

@@ -290,7 +290,7 @@ int cfio_map_get_server_index(int server_id)
 }
 int cfio_map_get_client_index_of_server(int client_id)
 {
-    assert(cfio_map_proc_type(client_id) == CFIO_MAP_TYPE_CLIENT);
+    //assert(cfio_map_proc_type(client_id) == CFIO_MAP_TYPE_CLIENT);
     /* consider only partition of one dimension, and not  divisible(zheng cu)*/
     //int client_num_per_server, low_server_num;
 
@@ -332,6 +332,27 @@ int cfio_map_get_client_index_of_server(int client_id)
     return client_index;
 }
 
+int cfio_map_get_server_of_client(int client_id)
+{
+    int server_id;
+    int client_x_index, client_y_index;
+    int server_x_index, server_y_index;
+    int client_per_server_x, client_per_server_y;
+    
+    client_x_index = client_id % client_x_num;
+    client_y_index = client_id / client_x_num;
+
+    client_per_server_x = client_x_num / server_x_num;
+    client_per_server_y = client_y_num / server_y_num;
+
+    server_x_index = client_x_index / client_per_server_x;
+    server_y_index = client_y_index / client_per_server_y;
+
+    server_id = server_x_index + server_y_index * server_x_num;
+
+    return server_id + client_amount;
+}
+
 int cfio_map_forwarding(
 	cfio_msg_t *msg)
 {
@@ -357,23 +378,7 @@ int cfio_map_forwarding(
     //}
     
     /* consider partition of two dimension and only divisible*/
-    int client_id, server_id;
-    int client_x_index, client_y_index;
-    int server_x_index, server_y_index;
-    int client_per_server_x, client_per_server_y;
-    
-    client_id = msg->src;
-    client_x_index = client_id % client_x_num;
-    client_y_index = client_id / client_x_num;
-
-    client_per_server_x = client_x_num / server_x_num;
-    client_per_server_y = client_y_num / server_y_num;
-
-    server_x_index = client_x_index / client_per_server_x;
-    server_y_index = client_y_index / client_per_server_y;
-
-    server_id = server_x_index + server_y_index * server_x_num;
-    msg->dst = server_id + client_amount;
+    msg->dst = cfio_map_get_server_of_client(msg->src);
     
     msg->comm = comm;
 

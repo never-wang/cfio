@@ -16,12 +16,11 @@
 #include <string.h>
 
 #include "server.h"
-#include "map.h"
+#include "recv.h"
 #include "io.h"
 #include "id.h"
 #include "mpi.h"
 #include "debug.h"
-#include "msg.h"
 #include "times.h"
 #include "define.h"
 #include "cfio_error.h"
@@ -42,7 +41,7 @@ static int decode(cfio_msg_t *msg)
     int ret = 0;
     uint32_t code;
     /* TODO the buf control here may have some bad thing */
-    cfio_msg_unpack_func_code(msg, &code);
+    cfio_recv_unpack_func_code(msg, &code);
     client_id = msg->src;
 
     switch(code)
@@ -50,42 +49,42 @@ static int decode(cfio_msg_t *msg)
 	case FUNC_NC_CREATE: 
 	    debug(DEBUG_SERVER,"server %d recv nc_create from client %d",
 		    rank, client_id);
-	    cfio_io_create(client_id);
+	    cfio_io_create(msg);
 	    debug(DEBUG_SERVER, "server %d done nc_create for client %d\n",
 		    rank,client_id);
 	    return CFIO_ERROR_NONE;
 	case FUNC_NC_DEF_DIM:
 	    debug(DEBUG_SERVER,"server %d recv nc_def_dim from client %d",
 		    rank, client_id);
-	    cfio_io_def_dim(client_id);
+	    cfio_io_def_dim(msg);
 	    debug(DEBUG_SERVER, "server %d done nc_def_dim for client %d\n",
 		    rank,client_id);
 	    return CFIO_ERROR_NONE;
 	case FUNC_NC_DEF_VAR:
 	    debug(DEBUG_SERVER,"server %d recv nc_def_var from client %d",
 		    rank, client_id);
-	    cfio_io_def_var(client_id);
+	    cfio_io_def_var(msg);
 	    debug(DEBUG_SERVER, "server %d done nc_def_var for client %d\n",
 		    rank,client_id);
 	    return CFIO_ERROR_NONE;
 	case FUNC_PUT_ATT:
 	    debug(DEBUG_SERVER, "server %d recv nc_put_att from client %d",
 		    rank, client_id);
-	    cfio_io_put_att(client_id);
+	    cfio_io_put_att(msg);
 	    debug(DEBUG_SERVER, "server %d done nc_put_att from client %d",
 		    rank, client_id);
 	    return CFIO_ERROR_NONE;
 	case FUNC_NC_ENDDEF:
 	    debug(DEBUG_SERVER,"server %d recv nc_enddef from client %d",
 		    rank, client_id);
-	    cfio_io_enddef(client_id);
+	    cfio_io_enddef(msg);
 	    debug(DEBUG_SERVER, "server %d done nc_enddef for client %d\n",
 		    rank,client_id);
 	    return CFIO_ERROR_NONE;
 	case FUNC_NC_PUT_VARA:
 	    debug(DEBUG_SERVER,"server %d recv nc_put_vara from client %d",
 		    rank, client_id);
-	    cfio_io_put_vara(client_id);
+	    cfio_io_put_vara(msg);
 	    debug(DEBUG_SERVER, 
 		    "server %d done nc_put_vara_float from client %d\n", 
 		    rank, client_id);
@@ -93,7 +92,7 @@ static int decode(cfio_msg_t *msg)
 	case FUNC_NC_CLOSE:
 	    debug(DEBUG_SERVER,"server %d recv nc_close from client %d",
 		    rank, client_id);
-	    cfio_io_close(client_id);
+	    cfio_io_close(msg);
 	    debug(DEBUG_SERVER,"server %d received nc_close from client %d\n",
 		    rank, client_id);
 	    return CFIO_ERROR_NONE;
@@ -118,7 +117,7 @@ static void * cfio_reader(void *argv)
     
     while(!reader_done)
     {
-        msg = cfio_msg_get_first();
+        msg = cfio_recv_get_first();
         if(NULL != msg)
         {
             decode(msg);
@@ -151,14 +150,14 @@ static void* cfio_writer(void *argv)
 	/*  recv from client one by one, to make sure that data recv and output in time */
 	for(i = 0; i < client_num; i ++)
 	{
-	    cfio_msg_recv(client_id[i], rank, cfio_map_get_comm(), &msg, &func_code);
+	    cfio_recv(client_id[i], rank, cfio_map_get_comm(), &func_code);
 	    if(func_code == FUNC_END_IO)
 	    {
 		debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
-			rank, msg->src);
-		cfio_io_writer_done(msg->src, &writer_done);
+			rank, client_id[i]);
+		cfio_io_writer_done(client_id[i], &writer_done);
 		debug(DEBUG_SERVER, "server(writer) %d done client_end_io for client %d\n",
-			rank,msg->src);
+			rank,client_id[i]);
 	    }
 	}
     }
@@ -199,7 +198,7 @@ int cfio_server_init()
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if((ret = cfio_msg_init(SERVER_BUF_SIZE)) < 0)
+    if((ret = cfio_recv_init()) < 0)
     {
 	error("");
 	return ret;
@@ -227,7 +226,7 @@ int cfio_server_final()
 {
     cfio_io_final();
     cfio_id_final();
-    cfio_msg_final();
+    cfio_recv_final();
 
     return CFIO_ERROR_NONE;
 }

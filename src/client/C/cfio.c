@@ -21,10 +21,10 @@
 #include "mpi.h"
 
 #include "cfio.h"
+#include "send.h"
 #include "map.h"
 #include "id.h"
 #include "buffer.h"
-#include "msg.h"
 #include "debug.h"
 #include "times.h"
 #include "cfio_error.h"
@@ -34,31 +34,6 @@ static int rank;
 /*  the num of the app proc*/
 static int client_num;
 static MPI_Comm inter_comm;
-
-static pthread_t sender;
-
-static void* sender_thread(void *arg)
-{
-    cfio_msg_t *msg;
-    int sender_finish = 0;
-
-    while(sender_finish == 0)
-    {
-	msg = cfio_msg_get_first();
-	if(msg != NULL)
-	{
-	    cfio_msg_send(msg);
-	    if(msg->func_code == FUNC_END_IO)
-	    {
-		sender_finish = 1;
-	    }
-	}
-	free(msg);
-    }
-
-    debug(DEBUG_CFIO, "Proc %d : sender finish", rank);
-    return (void*)0;
-}
 
 int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 {
@@ -118,7 +93,7 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	}
     }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
-	if((ret = cfio_msg_init(CLIENT_BUF_SIZE)) < 0)
+	if((ret = cfio_send_init(CLIENT_BUF_SIZE)) < 0)
 	{
 	    error("");
 	    return ret;
@@ -130,11 +105,6 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	    return ret;
 	}
 	
-	if( (ret = pthread_create(&sender,NULL,sender_thread,NULL))<0  )
-	{
-	    error("Thread Writer create error()");
-	    return CFIO_ERROR_PTHREAD_CREATE;
-	}
     }
 
     debug(DEBUG_CFIO, "success return.");
@@ -146,35 +116,26 @@ int cfio_finalize()
     int ret,flag;
     cfio_msg_t *msg;
 
-    debug_mark(DEBUG_CFIO);
     ret = MPI_Finalized(&flag);
-    debug_mark(DEBUG_CFIO);
     if(flag)
     {
 	error("***You should not call MPI_Finalize before cfio_Finalized*****\n");
 	return CFIO_ERROR_FINAL_AFTER_MPI;
     }
-    debug_mark(DEBUG_CFIO);
     if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
-	cfio_msg_pack_io_done(&msg, rank);
-	cfio_msg_isend(msg);
+	cfio_send_io_done(&msg, rank);
     }
-    debug_mark(DEBUG_CFIO);
     
     if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_SERVER)
     {
 	cfio_server_final();
     }else if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT)
     {
-	debug_mark(DEBUG_CFIO);
-	pthread_join(sender, NULL);
-	
 	cfio_id_final();
 
-	cfio_msg_final();
+	cfio_send_final();
     }
-    debug_mark(DEBUG_CFIO);
 
     cfio_map_final();
     debug(DEBUG_CFIO, "success return.");
@@ -225,8 +186,9 @@ int cfio_create(
 	return ret;
     }
 
-    cfio_msg_pack_create(&msg, rank, path, cmode, *ncidp);
-    cfio_msg_isend(msg);
+    cfio_send_create(path, cmode, *ncidp);
+
+    debug(DEBUG_CFIO, "path = %s, ncid = %d", path, *ncidp);
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
@@ -263,8 +225,7 @@ int cfio_def_dim(
 	return ret;
     }
 
-    cfio_msg_pack_def_dim(&msg, rank, ncid, name, len, *idp);
-    cfio_msg_isend(msg);
+    cfio_send_def_dim(ncid, name, len, *idp);
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
@@ -293,9 +254,8 @@ int cfio_def_var(
 	return ret;
     }
     
-    cfio_msg_pack_def_var(&msg, rank, ncid, name, xtype, 
+    cfio_send_def_var(ncid, name, xtype, 
 	    ndims, dimids, start, count, *varidp);
-    cfio_msg_isend(msg);
     
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
@@ -309,9 +269,8 @@ int cfio_put_att(
     
     //if(cfio_map_get_client_index_of_server(rank) == 0)
     //{
-    cfio_msg_pack_put_att(&msg, rank, ncid, varid, name,
+    cfio_send_put_att(ncid, varid, name,
 	    xtype, len, op);
-    cfio_msg_isend(msg);
     //}
     debug(DEBUG_CFIO, "ncid = %d, var_id = %d, name = %s, len = %lu",
 	    ncid, varid, name, len);
@@ -325,8 +284,7 @@ int cfio_enddef(
 {
     cfio_msg_t *msg;
 
-    cfio_msg_pack_enddef(&msg, rank, ncid);
-    cfio_msg_isend(msg);
+    cfio_send_enddef(ncid);
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
@@ -412,7 +370,7 @@ int cfio_enddef(
 //	left_dim = count[div_dim];
 //	for(i = 0; i < count[div_dim]; i += div)
 //	{
-//	    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+//	    cfio_send_put_vara(&msg, rank, ncid, varid, dim, 
 //		    cur_start, cur_count, fp_type, cur_fp);
 //	    cfio_msg_isend(msg);
 //	    left_dim -= div;
@@ -447,9 +405,8 @@ int cfio_put_vara_float(
     //  start, count, CFIO_FLOAT, fp, head_size, dim - 1);
     debug(DEBUG_CFIO, "start :(%lu, %lu), count :(%lu, %lu)", 
 	    start[0], start[1], count[0], count[1]);
-    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+    cfio_send_put_vara(ncid, varid, dim, 
 	    start, count, CFIO_FLOAT, fp);
-    cfio_msg_isend(msg);
 
     debug_mark(DEBUG_CFIO);
 
@@ -478,9 +435,8 @@ int cfio_put_vara_double(
 
     //_put_vara(io_proc_id, ncid, varid, dim,
     //        start, count, CFIO_DOUBLE, fp, head_size, dim - 1);
-    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+    cfio_send_put_vara(ncid, varid, dim, 
 	    start, count, CFIO_DOUBLE, fp);
-    cfio_msg_isend(msg);
 
     debug_mark(DEBUG_CFIO);
 
@@ -509,9 +465,8 @@ int cfio_put_vara_int(
 
     //_put_vara(io_proc_id, ncid, varid, dim,
     //        start, count, CFIO_DOUBLE, fp, head_size, dim - 1);
-    cfio_msg_pack_put_vara(&msg, rank, ncid, varid, dim, 
+    cfio_send_put_vara(ncid, varid, dim, 
 	    start, count, CFIO_INT, fp);
-    cfio_msg_isend(msg);
 
     debug_mark(DEBUG_CFIO);
 
@@ -533,8 +488,7 @@ int cfio_close(
 	error("");
 	return ret;
     }
-    cfio_msg_pack_close(&msg, rank, ncid);
-    cfio_msg_isend(msg);
+    cfio_send_close(ncid);
 
     //cfio_msg_test();
 

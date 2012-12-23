@@ -548,7 +548,7 @@ int cfio_io_writer_done(int client_id, int *server_done)
     return CFIO_ERROR_NONE;	
 }
 
-int cfio_io_create(int client_id)
+int cfio_io_create(cfio_msg_t *msg)
 {
     int ret, cmode;
     char *_path = NULL;
@@ -559,8 +559,9 @@ int cfio_io_create(int client_id)
     int func_code = FUNC_NC_CREATE;
     char *path;
     int sub_file_amount;
+    int client_id = msg->src;
 
-    cfio_msg_unpack_create(&_path,&cmode, &client_nc_id);
+    cfio_recv_unpack_create(msg, &_path,&cmode, &client_nc_id);
 
 #ifdef SVR_UNPACK_ONLY
     free(_path);
@@ -631,7 +632,7 @@ RETURN:
     return return_code;
 }
 
-int cfio_io_def_dim(int client_id)
+int cfio_io_def_dim(cfio_msg_t *msg)
 {
     int ret = 0;
     int dim_id;
@@ -641,11 +642,12 @@ int cfio_io_def_dim(int client_id)
     cfio_io_val_t *io_info;
     size_t len;
     char *name = NULL;
+    int client_id = msg->src;
 
     int func_code = FUNC_NC_DEF_DIM;
     int return_code;
 
-    cfio_msg_unpack_def_dim(&client_nc_id, &name, &len, &client_dim_id);
+    cfio_recv_unpack_def_dim(msg, &client_nc_id, &name, &len, &client_dim_id);
     
     debug(DEBUG_CFIO, "ncid = %d, name = %s, len = %lu",
 	    client_nc_id, name, len);
@@ -726,7 +728,7 @@ RETURN :
     return return_code;
 }
 
-int cfio_io_def_var(int client_id)
+int cfio_io_def_var(cfio_msg_t *msg)
 {
     int ret = 0, i;
     int nc_id, var_id, ndims;
@@ -741,11 +743,12 @@ int cfio_io_def_var(int client_id)
     size_t *start = NULL, *count = NULL;
     nc_type xtype;
     int client_num;
+    int client_id = msg->src;
 
     int func_code = FUNC_NC_DEF_VAR;
     int return_code;
 
-    ret = cfio_msg_unpack_def_var(&client_nc_id, &name, &xtype, &ndims, 
+    ret = cfio_recv_unpack_def_var(msg, &client_nc_id, &name, &xtype, &ndims, 
 	    &client_dim_ids, &start, &count, &client_var_id);
     
 #ifdef SVR_UNPACK_ONLY
@@ -861,8 +864,9 @@ RETURN :
     return return_code;
 }
 
-int cfio_io_put_att(int client_id)
+int cfio_io_put_att(cfio_msg_t *msg)
 {
+    int client_id = msg->src;
     int client_nc_id, client_var_id; 
     int return_code, ret;
     cfio_id_nc_t *nc;
@@ -874,7 +878,7 @@ int cfio_io_put_att(int client_id)
     char *data;
 
     int func_code = FUNC_PUT_ATT;
-    ret = cfio_msg_unpack_put_att(
+    ret = cfio_recv_unpack_put_att(msg,
 	    &client_nc_id, &client_var_id, &name, &xtype, &len, (void **)&data);
     if( ret < 0 )
     {
@@ -930,16 +934,17 @@ RETURN:
 	return return_code;
     }
 
-int cfio_io_enddef(int client_id)
+int cfio_io_enddef(cfio_msg_t *msg)
 {
     int client_nc_id, ret;
     cfio_id_nc_t *nc;
     cfio_io_val_t *io_info;
     cfio_id_val_t *iter, *nc_val;
+    int client_id = msg->src;
 
     int func_code = FUNC_NC_ENDDEF;
 
-    ret = cfio_msg_unpack_enddef(&client_nc_id);
+    ret = cfio_recv_unpack_enddef(msg, &client_nc_id);
     if( ret < 0 )
     {
 	error("unapck msg error");
@@ -985,7 +990,7 @@ int cfio_io_enddef(int client_id)
     return CFIO_ERROR_NONE;
 }
 
-int cfio_io_put_vara(int client_id)
+int cfio_io_put_vara(cfio_msg_t *msg)
 {
     int i,ret = 0, ndims;
     cfio_id_nc_t *nc;
@@ -999,12 +1004,13 @@ int cfio_io_put_vara(int client_id)
     char *total_data = NULL;
     int data_len, data_type, client_index;
     size_t *put_start;
+    int client_id = msg->src;
 
     int func_code = FUNC_NC_PUT_VARA;
     int return_code;
 
     //    ret = cfio_unpack_msg_extra_data_size(h_buf, &data_size);
-    ret = cfio_msg_unpack_put_vara(
+    ret = cfio_recv_unpack_put_vara(msg, 
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
     if( ret < 0 )
@@ -1144,15 +1150,16 @@ RETURN :
 
 }
 
-int cfio_io_close(int client_id)
+int cfio_io_close(cfio_msg_t *msg)
 {
     int client_nc_id, nc_id, ret;
     cfio_id_nc_t *nc;
     cfio_io_val_t *io_info;
     int func_code = FUNC_NC_CLOSE;
     cfio_id_val_t *iter, *next, *nc_val;
+    int client_id = msg->src;
 
-    ret = cfio_msg_unpack_close(&client_nc_id);
+    ret = cfio_recv_unpack_close(msg, &client_nc_id);
 
     if( ret < 0 )
     {
