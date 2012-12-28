@@ -197,14 +197,7 @@ int cfio_send_init()
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-
-    server_id = cfio_map_get_server_of_client(rank);
-    client_num_of_server = cfio_map_get_client_num_of_server(server_id);
-    max_msg_size = RECV_BUF_SIZE / client_num_of_server / 2;
-    if(max_msg_size > SEND_BUF_SIZE / 2)
-    {
-	max_msg_size = SEND_BUF_SIZE / 2;
-    }
+    max_msg_size = cfio_msg_get_max_size(rank);
     
     buffer = cfio_buf_open(SEND_BUF_SIZE, &error);
 
@@ -213,7 +206,6 @@ int cfio_send_init()
 	error("");
 	return error;
     }
-
 
     if( (ret = pthread_create(&sender,NULL,sender_thread,NULL))<0  )
     {
@@ -627,3 +619,18 @@ int cfio_send_io_done()
     
     return CFIO_ERROR_NONE;
 }
+
+int cfio_send_io_end()
+{
+    pthread_mutex_lock(&mutex);
+    if(merge_msg != NULL)
+    {
+	qlist_add_tail(&(merge_msg->link), &(msg_head->link));
+	merge_msg = NULL;
+    }
+    pthread_mutex_unlock(&mutex);
+    pthread_cond_signal(&empty_cond);
+    
+    return CFIO_ERROR_NONE;
+}
+

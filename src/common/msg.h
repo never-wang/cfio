@@ -36,6 +36,9 @@
 #define FUNC_READER_END_IO		((uint32_t)41)
 #define FUNC_WRITER_END_IO		((uint32_t)42)
 
+//define for msg buf size in a proc
+#define MSG_BUF_SIZE ((size_t)16*1024*1024)
+
 typedef struct
 {
     uint32_t func_code;	/* function code , like FUNC_NC_CREATE */
@@ -50,4 +53,5 @@ typedef struct
 
 cfio_msg_t *cfio_msg_create();
 
+int cfio_msg_get_max_size(int proc_id);
 #endif

@@ -16,7 +16,8 @@
 #define _SEND_H
 #include <stdlib.h>
 
-#define SEND_BUF_SIZE 64*1024*1024
+#define SEND_BUF_SIZE ((size_t)64*1024*1024)
+#define SEND_MSG_MIN_SIZE ((size_t)2*1024*1024)
 
 /**
  * @brief: init the buffer and msg queue

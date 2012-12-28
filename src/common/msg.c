@@ -20,8 +20,13 @@
 #include "debug.h"
 #include "times.h"
 #include "map.h"
+#include "send.h"
+#include "recv.h"
 #include "cfio_error.h"
 #include "define.h"
+
+#define min(a,b) (a<b?a:b)
+#define max(a,b) (a>b?a:b)
 
 cfio_msg_t *cfio_msg_create()
 {
@@ -34,4 +39,25 @@ cfio_msg_t *cfio_msg_create()
     memset(msg, 0, sizeof(cfio_msg_t));
 
     return msg;
+}
+
+int cfio_msg_get_max_size(int proc_id)
+{   
+    int client_num_of_server, server_id, max_msg_size; 
+    
+    if(cfio_map_proc_type(proc_id) == CFIO_MAP_TYPE_CLIENT)
+    {
+	server_id = cfio_map_get_server_of_client(proc_id);
+	client_num_of_server = cfio_map_get_client_num_of_server(server_id);
+    }else if(cfio_map_proc_type(proc_id) == CFIO_MAP_TYPE_SERVER)
+    {
+	client_num_of_server = cfio_map_get_client_num_of_server(proc_id);
+	
+    }
+    max_msg_size = MSG_BUF_SIZE / client_num_of_server;
+    max_msg_size = min(max_msg_size, RECV_BUF_SIZE / client_num_of_server / 2);
+    max_msg_size = min(max_msg_size, SEND_BUF_SIZE / 2);
+    max_msg_size = max(max_msg_size, SEND_MSG_MIN_SIZE);
+
+    return max_msg_size;
 }

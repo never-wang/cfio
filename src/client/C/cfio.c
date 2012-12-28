@@ -475,6 +475,13 @@ int cfio_put_vara_int(
     return CFIO_ERROR_NONE;
 }
 
+int cfio_io_end()
+{
+    cfio_send_io_end();
+
+    return CFIO_ERROR_NONE;
+}
+
 int cfio_close(
 	int ncid)
 {

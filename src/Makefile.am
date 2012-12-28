@@ -1,1 +1,1 @@
-SUBDIRS = common server client 
+SUBDIRS = client 

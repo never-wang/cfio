@@ -76,11 +76,7 @@ int cfio_recv_init()
 	}
     }
 
-    max_msg_size = RECV_BUF_SIZE / client_num / 2;
-    if(max_msg_size > SEND_BUF_SIZE / 2)
-    {
-	max_msg_size = SEND_BUF_SIZE / 2;
-    }
+    max_msg_size = cfio_msg_get_max_size(rank);
 
     return CFIO_ERROR_NONE;
 }

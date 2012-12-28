@@ -108,6 +108,7 @@ int main(int argc, char** argv)
 	//cfio_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
 	cfio_close(ncidp);
+	cfio_io_end();
 	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }
     free(fp);
