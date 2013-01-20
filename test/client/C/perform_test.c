@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     //assert(size == LAT_PROC * LON_PROC);
     //set_debug_mask(DEBUG_SERVER | DEBUG_ID | DEBUG_IO); 
     //set_debug_mask(DEBUG_IO); 
-    //set_debug_mask(DEBUG_TIME); 
+    //set_debug_mask(DEBUG_CFIO); 
     //if(rank == 0)
     //{
     //    set_debug_mask(DEBUG_MSG | DEBUG_CFIO);

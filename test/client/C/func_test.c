@@ -80,6 +80,9 @@ int main(int argc, char** argv)
     cfio_enddef(ncidp);
     cfio_put_vara_float(ncidp,var1, 2,start, count,fp); 
 
+    cfio_start_communication();
+    cfio_end_communication();
+
     cfio_close(ncidp);
     free(fp);
 

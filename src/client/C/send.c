@@ -37,17 +37,23 @@ static pthread_cond_t empty_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t full_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t full_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static pthread_cond_t pause_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t pause_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static pthread_t sender;
 
 static int rank;
 
 static int max_msg_size;
+//static int send_pause = 0;
 
 static inline int _send_msg(
 	cfio_msg_t *msg)
 {
-    MPI_Send(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
-	    msg->comm);
+    MPI_Status status;
+//    MPI_Send(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
+//	    msg->comm);
+    MPI_Wait(&(msg->req), &status);
 
     pthread_mutex_lock(&full_mutex);
     assert(check_used_addr(msg->addr, buffer));
@@ -89,8 +95,12 @@ static inline void _add_msg(
     {
 	if(merge_msg != NULL)
 	{
+	    MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
+		    merge_msg->dst, tag, merge_msg->comm, &(merge_msg->req));
 	    qlist_add_tail(&(merge_msg->link), &(msg_head->link));
 	}
+	MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
+		msg->dst, tag, msg->comm, &(msg->req));
 	qlist_add_tail(&(msg->link), &(msg_head->link));
     }else
     {
@@ -104,6 +114,8 @@ static inline void _add_msg(
 		free(msg);
 	    }else
 	    {
+		MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
+			merge_msg->dst, tag, merge_msg->comm, &(merge_msg->req));
 		qlist_add_tail(&(merge_msg->link), &(msg_head->link));
 		merge_msg = msg;
 	    }
@@ -178,6 +190,12 @@ static void* sender_thread(void *arg)
 	    }
 	}
 	free(msg);
+	//    pthread_mutex_lock(&pause_mutex);
+	//if(send_pause == 1)
+	//{
+	//    pthread_cond_wait(&pause_cond, &pause_mutex);
+	//}
+	//    pthread_mutex_unlock(&pause_mutex);
     }
 
     debug(DEBUG_CFIO, "Proc %d : sender finish", rank);
@@ -625,6 +643,8 @@ int cfio_send_io_end()
     pthread_mutex_lock(&mutex);
     if(merge_msg != NULL)
     {
+	MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
+		merge_msg->dst, merge_msg->src, merge_msg->comm, &(merge_msg->req));
 	qlist_add_tail(&(merge_msg->link), &(msg_head->link));
 	merge_msg = NULL;
     }
@@ -633,4 +653,24 @@ int cfio_send_io_end()
     
     return CFIO_ERROR_NONE;
 }
+
+int cfio_send_pause()
+{
+    //pthread_mutex_lock(&pause_mutex);
+    //send_pause = 1;
+    //pthread_mutex_unlock(&pause_mutex);
+    
+    return CFIO_ERROR_NONE;
+}
+
+int cfio_send_resume()
+{
+    //pthread_mutex_lock(&pause_mutex);
+    //send_pause = 0;
+    //pthread_mutex_unlock(&pause_mutex);
+    //pthread_cond_signal(&pause_cond);
+    
+    return CFIO_ERROR_NONE;
+}
+
 

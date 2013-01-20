@@ -1,9 +1,9 @@
 AC_INIT([CFIO], [1.09], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
-CC=mpiicc
+CC=mpiswcc
 AC_PROG_FC
-FC=mpiifort
+FC=mpiswf90
 
 #AM_PATH_CHECK
 

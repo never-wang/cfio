@@ -482,6 +482,21 @@ int cfio_io_end()
     return CFIO_ERROR_NONE;
 }
 
+int cfio_start_communication()
+{
+    cfio_send_pause();
+
+    return CFIO_ERROR_NONE;
+}
+
+int cfio_end_communication()
+{
+    cfio_send_resume();
+
+    return CFIO_ERROR_NONE;
+
+}
+
 int cfio_close(
 	int ncid)
 {
@@ -744,6 +759,17 @@ void cfio_close_c_(
 	int *ncid, int *ierr)
 {
     *ierr = cfio_close(*ncid);
+    return;
+}
+
+void cfio_start_communication_c_(int *ierr)
+{
+    *ierr = cfio_start_communication();
+    return;
+}
+void cfio_stop_communication_c_(int *ierr)
+{
+    *ierr = cfio_end_communication();
     return;
 }
 

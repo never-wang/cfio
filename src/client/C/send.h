@@ -16,8 +16,8 @@
 #define _SEND_H
 #include <stdlib.h>
 
-#define SEND_BUF_SIZE ((size_t)64*1024*1024)
-#define SEND_MSG_MIN_SIZE ((size_t)2*1024*1024)
+#define SEND_BUF_SIZE ((size_t)1024*1024*1024)
+#define SEND_MSG_MIN_SIZE ((size_t)70*1024*1024)
 
 /**
  * @brief: init the buffer and msg queue
@@ -144,5 +144,7 @@ int cfio_send_close(
  * @return: error code
  */
 int cfio_send_io_done();
+int cfio_send_pause();
+int cfio_send_resume();
 
 #endif
