@@ -42,6 +42,7 @@ static int client_num;
 /* index used when call cfio_recv_get_first */
 static int client_get_index = 0;
 static int max_msg_size;
+size_t total_size = 0, min_size = 0, max_size = 0;
 
 int cfio_recv_init()
 {
@@ -87,6 +88,9 @@ int cfio_recv_final()
     MPI_Status status;
     int i = 0;
 
+//    printf("Server %d ; recv size : %f M; max size : %f M; min size : %lu B\n",
+//	    rank, total_size/1024.0/1024.0, max_size/1024.0/1024.0, min_size);
+
     if(msg_head != NULL)
     {
 	free(msg_head);
@@ -106,10 +110,33 @@ int cfio_recv_final()
 
 static void cfio_recv_server_buf_free()
 {
+    assert(1 == 2);
+#ifndef disable_subfiling
     pthread_mutex_lock(&full_mutex);
     pthread_cond_wait(&full_cond, &full_mutex);
     pthread_mutex_unlock(&full_mutex);
+#endif
     return;
+}
+
+int cfio_iprobe(
+	int *src, int src_len, MPI_Comm comm, int *flag)
+{
+    int i;
+    MPI_Status status;
+    int _flag;
+
+    for(i = 0; i < src_len; i ++)
+    {
+	MPI_Iprobe(src[i], src[i], comm, &_flag, &status);
+	if(_flag == 1)
+	{
+	    *flag = 1;
+	    return CFIO_ERROR_NONE;
+	}
+    }
+    *flag = 0;
+    return CFIO_ERROR_NONE;
 }
 
 int cfio_recv(
@@ -123,14 +150,27 @@ int cfio_recv(
     client_index = cfio_map_get_client_index_of_server(src);
     //times_start();
     debug(DEBUG_RECV, "client_index = %d", client_index);
-    ensure_free_space(buffer[client_index], max_msg_size, 
-	    cfio_recv_server_buf_free);
-    //debug(DEBUG_TIME, "%f", times_end());
+    if(is_free_space_enough(buffer[client_index], max_msg_size)
+	    == CFIO_BUF_FREE_SPACE_NOT_ENOUGH)
+    {
+	return CFIO_RECV_BUF_FULL;
+    }
+//    ensure_free_space(buffer[client_index], max_msg_size, 
+//	    cfio_recv_server_buf_free);
 
     MPI_Recv(buffer[client_index]->free_addr, max_msg_size, MPI_BYTE, src,  
 	    MPI_ANY_TAG, comm, &status);
     MPI_Get_count(&status, MPI_BYTE, &size);
     debug(DEBUG_RECV, "recv: size = %d", size);
+    //total_size += size;
+    //if(min_size == 0 || min_size > size)
+    //{
+    //    min_size = size;
+    //}
+    //if(max_size == 0 || max_size < size)
+    //{
+    //    max_size = size;
+    //}
 
     //printf("proc %d , recv: size = %d, from %d\n",rank, size, src);
     //debug(DEBUG_RECV, "code = %u", *((uint32_t *)buffer->free_addr));
@@ -155,10 +195,17 @@ int cfio_recv(
 #endif
     
     /* need lock */
+#ifndef disable_subfiling
     pthread_mutex_lock(&mutex);
-    qlist_add_tail(&(msg->link), &(msg_head[client_index].link));
+#endif
+    if((*func_code) != FUNC_IO_END)
+    {
+	qlist_add_tail(&(msg->link), &(msg_head[client_index].link));
+    }
+#ifndef disable_subfiling
     pthread_mutex_unlock(&mutex);
     pthread_cond_signal(&empty_cond);
+#endif
     
     //debug(DEBUG_RECV, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_RECV, "success return");
@@ -171,10 +218,13 @@ cfio_msg_t *cfio_recv_get_first()
     cfio_msg_t *_msg = NULL, *msg;
     qlist_head_t *link;
     size_t size;
-
+#ifndef disable_subfiling
     pthread_cond_signal(&full_cond);
+#endif
 
+#ifndef disable_subfiling
     pthread_mutex_lock(&mutex);
+#endif
     debug(DEBUG_RECV, "client_get_index = %d", client_get_index);
     if(qlist_empty(&(msg_head[client_get_index].link)))
     {
@@ -187,7 +237,9 @@ cfio_msg_t *cfio_recv_get_first()
     if(NULL == link)
     {
 	msg = NULL;
+#ifndef disable_subfiling
 	pthread_cond_wait(&empty_cond, &mutex);
+#endif
     }else
     {
 	msg = qlist_entry(link, cfio_msg_t, link);
@@ -207,7 +259,9 @@ cfio_msg_t *cfio_recv_get_first()
 	}
 	client_get_index = (client_get_index + 1) % client_num;
     }
+#ifndef disable_subfiling
     pthread_mutex_unlock(&mutex);
+#endif
 
     if(_msg != NULL)
     {

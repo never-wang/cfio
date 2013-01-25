@@ -12,6 +12,17 @@
  *	    Email:  never.wencan@gmail.com
  *        Company:  HPC Tsinghua
  ***************************************************************************/
-#undef SVR_RECV_ONLY 
+//#define SVR_RECV_ONLY 
 #undef SVR_UNPACK_ONLY
 #undef SVR_META_ONLY
+//#define async_send
+//#define async_send
+
+//#define async_isend
+
+
+//#define disable_aggregation
+#define disable_subfiling
+
+
+//#define disbale_merge //merge in send

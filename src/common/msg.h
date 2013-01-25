@@ -31,10 +31,11 @@
 #define FUNC_NC_DEF_VAR		((uint32_t)12)
 #define FUNC_PUT_ATT		((uint32_t)13)
 #define FUNC_NC_PUT_VARA	((uint32_t)20)
-#define FUNC_END_IO		((uint32_t)40)
+#define FUNC_IO_END		((uint32_t)30)
+#define FUNC_FINAL		((uint32_t)40)
 /* below two are only used in io.c */
-#define FUNC_READER_END_IO		((uint32_t)41)
-#define FUNC_WRITER_END_IO		((uint32_t)42)
+#define FUNC_READER_FINAL		((uint32_t)41)
+#define FUNC_WRITER_FINAL		((uint32_t)42)
 
 //define for msg buf size in a proc
 #define MSG_BUF_SIZE ((size_t)16*1024*1024)

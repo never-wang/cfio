@@ -96,7 +96,7 @@ static int decode(cfio_msg_t *msg)
 	    debug(DEBUG_SERVER,"server %d received nc_close from client %d\n",
 		    rank, client_id);
 	    return CFIO_ERROR_NONE;
-	case FUNC_END_IO:
+	case FUNC_FINAL:
 	    debug(DEBUG_SERVER,"server %d recv client_end_io from client %d",
 		    rank, msg->src);
 	    cfio_io_reader_done(msg->src, &reader_done);
@@ -121,19 +121,35 @@ static void * cfio_reader(void *argv)
         if(NULL != msg)
         {
             decode(msg);
+	    free(msg);
         }
-	free(msg);
     }
     
     debug(DEBUG_SERVER, "Server(%d) Reader done", rank);
     return ((void *)0);
 }
+static inline void process_one(int client_num)
+{
+    int i;
+    cfio_msg_t *msg;
+
+    for(i = 0; i < client_num; i++)
+    {
+	msg = cfio_recv_get_first();
+	decode(msg);
+	free(msg);
+    }
+}
+
 static void* cfio_writer(void *argv)
 {
     cfio_msg_t *msg;
     int i, server_index, client_num;
     uint32_t func_code;
     int *client_id;
+    double comm_time = 0.0, IO_time = 0.0;
+    double start_time = times_cur();
+    int decode_num, flag;
 
     server_index = cfio_map_get_server_index(rank);
     client_num = cfio_map_get_client_num_of_server(rank);
@@ -148,10 +164,17 @@ static void* cfio_writer(void *argv)
     while(!writer_done)
     {
 	/*  recv from client one by one, to make sure that data recv and output in time */
+	//times_start();
 	for(i = 0; i < client_num; i ++)
 	{
-	    cfio_recv(client_id[i], rank, cfio_map_get_comm(), &func_code);
-	    if(func_code == FUNC_END_IO)
+	    while(cfio_recv(client_id[i], rank, cfio_map_get_comm(), &func_code)
+		    == CFIO_RECV_BUF_FULL)
+	    {
+	//times_start();
+		process_one(client_num);
+	//IO_time += times_end();
+	    }
+	    if(func_code == FUNC_FINAL)
 	    {
 		debug(DEBUG_SERVER,"server(writer) %d recv client_end_io from client %d",
 			rank, client_id[i]);
@@ -160,7 +183,52 @@ static void* cfio_writer(void *argv)
 			rank,client_id[i]);
 	    }
 	}
+	//comm_time += times_end();
+	//msg = cfio_recv_get_first();
+	//while(NULL != msg)
+	//{
+	//    decode(msg);
+	//    free(msg);
+	//    msg = cfio_recv_get_first();
+	//}
+	//times_start();
+#ifdef disable_subfiling
+	if(func_code == FUNC_IO_END)
+	{
+	    //printf("recv point : %f\n", times_cur() - start_time);
+	    decode_num = 0;
+	    msg = cfio_recv_get_first();
+	    while(NULL != msg)
+	    {
+		decode(msg);
+		free(msg);
+		decode_num ++;
+		if(decode_num == client_num)
+		{
+		    cfio_iprobe(client_id, client_num, cfio_map_get_comm(), &flag);
+		    if(flag == 1) // has recv arrived , recv first
+		    {
+			break;
+		    }
+		    decode_num = 0;
+		}
+		msg = cfio_recv_get_first();
+	    }
+	}
+#endif
+	//IO_time += times_end();
     }
+	//times_start();
+    msg = cfio_recv_get_first();
+    while(NULL != msg)
+    {
+	decode(msg);
+	free(msg);
+	msg = cfio_recv_get_first();
+    }
+	//IO_time += times_end();
+    //printf("Server %d comm time : %f\n", rank, comm_time);
+    //printf("Server %d pnetcdf time : %f\n", rank, IO_time);
     debug(DEBUG_SERVER, "Server(%d) Writer done", rank);
     return ((void *)0);
 }
@@ -169,6 +237,11 @@ int cfio_server_start()
 {
     int ret = 0;
 
+#ifdef disable_subfiling
+    cfio_writer((void*)0);
+    return CFIO_ERROR_NONE;
+#endif
+
 #ifndef SVR_RECV_ONLY
     if( (ret = pthread_create(&reader,NULL,cfio_reader,NULL))<0  )
     {
@@ -176,16 +249,17 @@ int cfio_server_start()
         return CFIO_ERROR_PTHREAD_CREATE;
     }
 #endif
-
     if( (ret = pthread_create(&writer,NULL,cfio_writer,NULL))<0  )
     {
         error("Thread Reader create error()");
         return CFIO_ERROR_PTHREAD_CREATE;
     }
 
+
 #ifndef SVR_RECV_ONLY
     pthread_join(reader, NULL);
 #endif
+    
 
     pthread_join(writer, NULL);
     return CFIO_ERROR_NONE;

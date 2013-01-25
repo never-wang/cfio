@@ -37,7 +37,7 @@
 int cfio_map_init(
 	int _client_x_num, int _client_y_num,
 	int _server_amount, int best_server_amount,
-	MPI_Comm _comm);
+	MPI_Comm _comm, MPI_Comm server_comm);
 /**
  * @brief: cfio map finalize
  *
@@ -58,6 +58,7 @@ int cfio_map_proc_type(int porc_id);
  * @return: MPI Communication
  */
 int cfio_map_get_comm();
+int cfio_map_get_server_comm();
 /**
  * @brief: get server proc amount
  *

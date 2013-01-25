@@ -21,6 +21,9 @@
 
 #define CFIO_BUF_MAGIC 0xABCD
 
+#define CFIO_BUF_FREE_SPACE_ENOUGH	1
+#define CFIO_BUF_FREE_SPACE_NOT_ENOUGH	2
+
 #define SET_ERROR(pnt, val) \
     do { \
 	if(NULL != (pnt)) { \
@@ -113,6 +116,31 @@ static inline void ensure_free_space(cfio_buf_t *buf_p, size_t size, void(*free)
     {
 	free();
     }
+}
+
+static inline int is_free_space_enough(cfio_buf_t *buf_p, size_t size)
+{
+    size_t left_space = buf_p->start_addr + buf_p->size - buf_p->free_addr;
+    volatile size_t free_size;
+
+    debug(DEBUG_BUF, "free_size = %lu; left_space = %lu; size = %lu", 
+	    free_buf_size(buf_p), left_space, size);
+    
+    if((free_size = free_buf_size(buf_p)) < size)
+    {
+	return CFIO_BUF_FREE_SPACE_NOT_ENOUGH;
+    }
+    /* if buffer tail left size < data size, move free_addr to start of buffer*/
+    if(size > left_space)
+    {
+	use_buf(buf_p, left_space);
+    }
+    
+    if((free_size = free_buf_size(buf_p)) < size)
+    {
+	return CFIO_BUF_FREE_SPACE_NOT_ENOUGH;
+    }
+    return CFIO_BUF_FREE_SPACE_ENOUGH;
 }
 
 /**

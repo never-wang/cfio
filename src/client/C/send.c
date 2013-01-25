@@ -51,9 +51,9 @@ static inline int _send_msg(
 	cfio_msg_t *msg)
 {
     MPI_Status status;
-//    MPI_Send(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
-//	    msg->comm);
-    MPI_Wait(&(msg->req), &status);
+    MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
+	    msg->comm);
+   //MPI_Wait(&(msg->req), &status);
 
     pthread_mutex_lock(&full_mutex);
     assert(check_used_addr(msg->addr, buffer));
@@ -65,6 +65,24 @@ static inline int _send_msg(
 
     return CFIO_ERROR_NONE;
 }
+
+/*send msg in main thread*/
+static inline void _main_send_msg(cfio_msg_t *msg)
+{
+#ifdef async_isend
+    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
+	    msg->dst, msg->src, msg->comm, &(msg->req));
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+#elif (defined async_send)
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+#else
+    MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
+	    msg->comm);
+    buffer->used_addr = msg->addr;
+    free_buf(buffer, msg->size);
+#endif
+}
+
 
 static inline void _add_msg(
 	cfio_msg_t *msg)
@@ -90,20 +108,42 @@ static inline void _add_msg(
     // *TODO , it's not good to put free here
     // **/
     //free(msg);
+#ifdef async_send
     pthread_mutex_lock(&mutex);
-    if(msg->func_code == FUNC_END_IO)
+#endif
+
+#ifdef disable_merge
+#ifdef async_isend
+    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
+	    msg->dst, msg->src, msg->comm, &(msg->req));
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+#elif (defined async_send)
+    qlist_add_tail(&(msg->link), &(msg_head->link));
+#else
+    MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
+	    msg->comm);
+    buffer->used_addr = msg->addr;
+    free_buf(buffer, msg->size);
+#endif
+#else
+
+    if(msg->func_code == FUNC_FINAL || FUNC_IO_END) //FINAL,  IO_END, not merge
     {
 	if(merge_msg != NULL)
 	{
-	    MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
-		    merge_msg->dst, tag, merge_msg->comm, &(merge_msg->req));
-	    qlist_add_tail(&(merge_msg->link), &(msg_head->link));
+	    _main_send_msg(merge_msg);
+	    merge_msg = NULL;
 	}
-	MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
-		msg->dst, tag, msg->comm, &(msg->req));
-	qlist_add_tail(&(msg->link), &(msg_head->link));
-    }else
+	_main_send_msg(msg);
+    }else if(msg->func_code == FUNC_NC_PUT_VARA) // put data , not merge
     {
+	if(merge_msg != NULL)
+	{
+	    _main_send_msg(merge_msg);
+	    merge_msg = NULL;
+	}
+	_main_send_msg(msg);
+    }else{                         //
 	if(merge_msg != NULL)
 	{
 	    if(merge_msg->addr < msg->addr && 
@@ -114,9 +154,7 @@ static inline void _add_msg(
 		free(msg);
 	    }else
 	    {
-		MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
-			merge_msg->dst, tag, merge_msg->comm, &(merge_msg->req));
-		qlist_add_tail(&(merge_msg->link), &(msg_head->link));
+		_main_send_msg(merge_msg);
 		merge_msg = msg;
 	    }
 	}else
@@ -124,7 +162,8 @@ static inline void _add_msg(
 	    merge_msg = msg;
 	}
     }
-    //if(!qlist_empty(&(msg_head->link)) && msg->func_code != FUNC_END_IO)
+#endif
+    //if(!qlist_empty(&(msg_head->link)) && msg->func_code != FUNC_FINAL)
     //{
     //    last_msg = qlist_entry(msg_head->link.prev, cfio_msg_t, link);
     //    if(last_msg->addr < msg->addr && 
@@ -141,9 +180,10 @@ static inline void _add_msg(
     //{
     //    qlist_add_tail(&(msg->link), &(msg_head->link));
     //}
+#ifdef async_send
     pthread_mutex_unlock(&mutex);
     pthread_cond_signal(&empty_cond);
-
+#endif
     //debug(DEBUG_TIME, "%f ms", times_end());
     debug(DEBUG_SEND, "success return.");
 }
@@ -158,7 +198,7 @@ static inline cfio_msg_t *_get_first_msg()
     if(NULL == link)
     {
 	msg = NULL;
-	pthread_cond_wait(&empty_cond, &mutex);
+	//pthread_cond_wait(&empty_cond, &mutex);
     }else
     {
 	msg = qlist_entry(link, cfio_msg_t, link);
@@ -184,7 +224,7 @@ static void* sender_thread(void *arg)
 	if(msg != NULL)
 	{
 	    _send_msg(msg);
-	    if(msg->func_code == FUNC_END_IO)
+	    if(msg->func_code == FUNC_FINAL)
 	    {
 		sender_finish = 1;
 	    }
@@ -219,17 +259,20 @@ int cfio_send_init()
     
     buffer = cfio_buf_open(SEND_BUF_SIZE, &error);
 
+#ifdef async_send
+    if( (ret = pthread_create(&sender,NULL,sender_thread,NULL))<0  )
+    {
+        error("Thread Writer create error()");
+        return CFIO_ERROR_PTHREAD_CREATE;
+    }
+#endif
+
     if(NULL == buffer)
     {
 	error("");
 	return error;
     }
 
-    if( (ret = pthread_create(&sender,NULL,sender_thread,NULL))<0  )
-    {
-	error("Thread Writer create error()");
-	return CFIO_ERROR_PTHREAD_CREATE;
-    }
 
     return CFIO_ERROR_NONE;
 }
@@ -238,22 +281,22 @@ int cfio_send_final()
 {
     cfio_msg_t *msg, *next;
     MPI_Status status;
-    int i = 0;
 
-    //if(msg_head != NULL)
-    //{
-    //    i ++;
-    //    debug(DEBUG_SEND, "wait msg : %d", i);
-    //    qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
-    //    {
-    //        MPI_Wait(&msg->req, &status);
-    //        free(msg);
-    //    }
-    //    free(msg_head);
-    //    msg_head = NULL;
-    //}
-
+#ifdef async_send
     pthread_join(sender, NULL);
+#endif
+    
+    if(msg_head != NULL)
+    {
+        qlist_for_each_entry_safe(msg, next, &(msg_head->link), link)
+        {
+            MPI_Wait(&msg->req, &status);
+            free(msg);
+        }
+        free(msg_head);
+        msg_head = NULL;
+    }
+
     
     if(msg_head != NULL)
     {
@@ -273,7 +316,25 @@ int cfio_send_final()
  */
 static void cfio_send_client_buf_free()
 {
+    cfio_msg_t *msg = NULL;
+    qlist_head_t *link;
+    MPI_Status status;
+
+#ifdef async_isend
+    link = qlist_pop(&(msg_head->link));
+    if(NULL != link)
+    {
+	msg = qlist_entry(link, cfio_msg_t, link);
+	MPI_Wait(&msg->req, &status);
+	buffer->used_addr = msg->addr;
+	free_buf(buffer, msg->size);
+	free(msg);
+    }
+#endif
+
+#ifdef async_send
     pthread_cond_wait(&full_cond, &full_mutex);
+#endif
 
     return;
 }
@@ -287,6 +348,7 @@ int cfio_send_create(
     debug(DEBUG_SEND, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_CREATE;
 
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
@@ -294,9 +356,13 @@ int cfio_send_create(
     msg->size += cfio_buf_data_size(sizeof(int));
     msg->size += cfio_buf_data_size(sizeof(int));
 
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
 
     msg->addr = buffer->free_addr;
 
@@ -325,6 +391,7 @@ int cfio_send_def_dim(
 
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_DEF_DIM;
     
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
@@ -333,9 +400,13 @@ int cfio_send_def_dim(
     msg->size += cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(int));
 
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
     
     msg->addr = buffer->free_addr;
 
@@ -364,6 +435,7 @@ int cfio_send_def_var(
 
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_DEF_VAR;
     
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
@@ -375,9 +447,13 @@ int cfio_send_def_var(
     msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(int));
 
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
     
     msg->addr = buffer->free_addr;
 
@@ -409,6 +485,7 @@ int cfio_send_put_att(
 
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_PUT_ATT;
 
     cfio_types_size(att_size, xtype);
 
@@ -420,9 +497,13 @@ int cfio_send_put_att(
     msg->size += cfio_buf_data_size(sizeof(nc_type));
     msg->size += cfio_buf_data_array_size(len, att_size);
 
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
 
     msg->addr = buffer->free_addr;
 
@@ -452,14 +533,19 @@ int cfio_send_enddef(
 
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_ENDDEF;
     
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
     msg->size += cfio_buf_data_size(sizeof(int));
     
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
     
     msg->addr = buffer->free_addr;
 
@@ -505,6 +591,7 @@ int cfio_send_put_vara(
     
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_PUT_VARA;
     
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
@@ -535,9 +622,13 @@ int cfio_send_put_vara(
 	    break;
     }
 	    
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
 
     msg->addr = buffer->free_addr;
 
@@ -589,14 +680,19 @@ int cfio_send_close(
     //times_start();
     msg = cfio_msg_create();
     msg->src = rank;
+    msg->func_code = FUNC_NC_CLOSE;
     
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
     msg->size += cfio_buf_data_size(sizeof(int));
     
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
 
     msg->addr = buffer->free_addr;
 
@@ -613,7 +709,7 @@ int cfio_send_close(
 
 int cfio_send_io_done()
 {
-    uint32_t code = FUNC_END_IO;
+    uint32_t code = FUNC_FINAL;
     cfio_msg_t *msg;
     
     msg = cfio_msg_create();
@@ -623,9 +719,13 @@ int cfio_send_io_done()
     msg->size = cfio_buf_data_size(sizeof(size_t));
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
     
+#ifdef async_send
     pthread_mutex_lock(&full_mutex);
+#endif
     ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
     pthread_mutex_unlock(&full_mutex);
+#endif
     
     msg->addr = buffer->free_addr;
     
@@ -640,17 +740,37 @@ int cfio_send_io_done()
 
 int cfio_send_io_end()
 {
-    pthread_mutex_lock(&mutex);
-    if(merge_msg != NULL)
-    {
-	MPI_Isend(merge_msg->addr, merge_msg->size, MPI_BYTE, 
-		merge_msg->dst, merge_msg->src, merge_msg->comm, &(merge_msg->req));
-	qlist_add_tail(&(merge_msg->link), &(msg_head->link));
-	merge_msg = NULL;
-    }
-    pthread_mutex_unlock(&mutex);
-    pthread_cond_signal(&empty_cond);
+    uint32_t code = FUNC_IO_END;
+    cfio_msg_t *msg;
     
+    debug(DEBUG_SEND, "Start");
+
+    /*send IO end*/
+    msg = cfio_msg_create();
+    msg->src = rank;
+    msg->func_code = code;
+    
+    msg->size = cfio_buf_data_size(sizeof(size_t));
+    msg->size += cfio_buf_data_size(sizeof(uint32_t));
+    
+#ifdef async_send
+    pthread_mutex_lock(&full_mutex);
+#endif
+    ensure_free_space(buffer, msg->size, cfio_send_client_buf_free);
+#ifdef async_send
+    pthread_mutex_unlock(&full_mutex);
+#endif
+    
+    msg->addr = buffer->free_addr;
+    
+    cfio_buf_pack_data(&msg->size, sizeof(size_t) , buffer);
+    cfio_buf_pack_data(&code, sizeof(uint32_t), buffer);
+    
+    cfio_map_forwarding(msg);
+    _add_msg(msg);
+
+    debug(DEBUG_SEND, "Success return");
+
     return CFIO_ERROR_NONE;
 }
 

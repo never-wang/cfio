@@ -18,7 +18,9 @@
 
 #include "msg.h"
 
-#define RECV_BUF_SIZE ((size_t)3*1024*1024*1024)
+#define RECV_BUF_SIZE ((size_t)1*1024*1024*1024)
+
+#define CFIO_RECV_BUF_FULL 1
 
 /**
  * @brief: init the buffer and msg queue
@@ -32,6 +34,8 @@ int cfio_recv_init();
  * @return: error code
  */
 int cfio_recv_final();
+int cfio_iprobe(
+	int *src, int src_len, MPI_Comm comm, int *flag);
 /**
  * @brief: recv msg from client
  *

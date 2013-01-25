@@ -34,6 +34,7 @@ static int rank;
 /*  the num of the app proc*/
 static int client_num;
 static MPI_Comm inter_comm;
+static MPI_Comm client_comm, server_comm;
 
 int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 {
@@ -43,6 +44,8 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     int error, ret;
     int server_proc_num;
     int best_server_amount;
+    MPI_Group group, client_group, server_group;
+    int *ranks;
 
     //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);d:w
     //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
@@ -71,9 +74,28 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 	best_server_amount = 1;
     }
 
+    MPI_Comm_group(MPI_COMM_WORLD, &group);
+    ranks = malloc(client_num * sizeof(int));
+    for(i = 0; i < client_num; i ++)
+    {
+	ranks[i] = i;
+    }
+    MPI_Group_incl(group, client_num, ranks, &client_group);
+    MPI_Comm_create(MPI_COMM_WORLD, client_group, &client_comm);
+    free(ranks);
+
+    ranks = malloc(server_proc_num * sizeof(int));
+    for(i = 0; i < server_proc_num; i ++)
+    {
+	ranks[i] = i + client_num;
+    }
+    MPI_Group_incl(group, server_proc_num, ranks, &server_group);
+    MPI_Comm_create(MPI_COMM_WORLD, server_group, &server_comm);
+    free(ranks);
+
     if((ret = cfio_map_init(
 		    x_proc_num, y_proc_num, server_proc_num, 
-		    best_server_amount, MPI_COMM_WORLD)) < 0)
+		    best_server_amount, MPI_COMM_WORLD, server_comm)) < 0)
     {
 	error("Map Init Fail.");
 	return ret;
@@ -479,6 +501,11 @@ int cfio_io_end()
 {
     cfio_send_io_end();
 
+#ifndef async_send
+    MPI_Barrier(client_comm);
+#endif
+
+    debug(DEBUG_CFIO, "Finish cfio_io_end");
     return CFIO_ERROR_NONE;
 }
 
@@ -767,9 +794,16 @@ void cfio_start_communication_c_(int *ierr)
     *ierr = cfio_start_communication();
     return;
 }
-void cfio_stop_communication_c_(int *ierr)
+void cfio_end_communication_c_(int *ierr)
 {
     *ierr = cfio_end_communication();
+    return;
+}
+
+void cfio_io_end_c_(int *ierr)
+{
+    *ierr = cfio_io_end();
+
     return;
 }
 

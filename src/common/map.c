@@ -26,6 +26,7 @@ static MPI_Comm comm;
 static int server_amount;
 static int server_x_num;
 static int server_y_num;
+static int server_comm;
 
 /**
  * @brief: get all factor of a interger n
@@ -160,7 +161,7 @@ static int _gen_server_x_and_y(int best_server_amount)
 int cfio_map_init(
 	int _client_x_num, int _client_y_num,
 	int _server_amount, int best_server_amount,
-	MPI_Comm _comm)
+	MPI_Comm _comm, MPI_Comm _server_comm)
 {
     assert(_client_x_num > 0);
     assert(_client_y_num > 0);
@@ -172,6 +173,7 @@ int cfio_map_init(
     client_y_num = _client_y_num;
     client_amount = client_x_num * client_y_num;
     comm = _comm;
+    server_comm = _server_comm;
 
     server_amount = _server_amount;
 
@@ -207,6 +209,11 @@ int cfio_map_proc_type(int proc_id)
 int cfio_map_get_comm()
 {
     return comm; 
+}
+
+int cfio_map_get_server_comm()
+{
+    return server_comm; 
 }
 
 int cfio_map_get_server_amount()
