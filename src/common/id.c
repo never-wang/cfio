@@ -301,6 +301,39 @@ int cfio_id_assign_var(int nc_id, char *var_name, int *var_id)
     }
 }
 
+int cfio_id_inq_var(int nc_id, char *var_name, int *var_id)
+{
+    assert(var_id != NULL);
+	
+    cfio_id_key_t key;
+    cfio_id_val_t *val;
+    cfio_id_client_name_t *name_entry;
+    struct qhash_head *link;
+    
+    memset(&key, 0, sizeof(cfio_id_key_t));
+    key.client_nc_id = nc_id;
+
+    if(NULL == (link = qhash_search(assign_table, &key)))
+    {
+	error("nc_id(%d) not found in assign_table.", nc_id);
+	return CFIO_ERROR_NC_NO_EXIST;
+    }else
+    {
+	val = qlist_entry(link, cfio_id_val_t, hash_link);
+	link = qlist_find(val->var_head, _compare_client_name, var_name);
+	if(link == NULL)
+	{
+	    return CFIO_ERROR_VAR_NO_EXIST;
+	}else
+	{
+	    name_entry = qlist_entry(link, cfio_id_client_name_t, link);
+	    *var_id = name_entry->id;
+	}
+	debug(DEBUG_ID, "success return.");
+	return CFIO_ERROR_NONE;
+    }
+}
+
 int cfio_id_map_nc(
 	int client_nc_id, int server_nc_id)
 {
@@ -566,19 +599,19 @@ int cfio_id_put_var(
 	val = qlist_entry(link, cfio_id_val_t, hash_link);
 	var = val->var;
 
-	for(i = 0; i < var->ndims; i ++)
-	{
-	    if(start[i] + count[i] > var->start[i] + var->count[i] ||
-		    start[i] < var->start[i])
-	    {
-		debug(DEBUG_ID, "Index exceeds : (start[%d] = %lu), "
-			"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] "
-			"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
-			client_nc_id, client_var_id, 
-			i, var->start[i], i, var->count[i]);
-		return CFIO_ERROR_EXCEED_BOUND;
-	    }
-	}
+	//for(i = 0; i < var->ndims; i ++)
+	//{
+	//    if(start[i] + count[i] > var->start[i] + var->count[i] ||
+	//	    start[i] < var->start[i])
+	//    {
+	//	debug(DEBUG_ID, "Index exceeds : (start[%d] = %lu), "
+	//		"(count[%d] = %lu) ; (var(%d, 0, %d) : (start[%d] "
+	//		"= %lu), (count[%d] = %lu", i, start[i], i, count[i],
+	//		client_nc_id, client_var_id, 
+	//		i, var->start[i], i, var->count[i]);
+	//	return CFIO_ERROR_EXCEED_BOUND;
+	//    }
+	//}
 
 	//float *_data = data;
 	//for(i = 0; i < 4; i ++)

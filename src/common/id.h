@@ -33,15 +33,16 @@
 #define DATA_MODE   1
 
 /**
- * special id assigned to nc, dim and var when the real server nc ,dim or var id 
- * hasn't been created
- **/
+ *  * special id assigned to nc, dim and var when the real server nc ,dim or var id 
+ *   * hasn't been created
+ *    **/
 #define CFIO_ID_NC_INVALID -1   
 #define CFIO_ID_DIM_INVALID -1
 #define CFIO_ID_VAR_INVALID -1
 #define CFIO_ID_DIM_LOCAL_NULL -1 /* when the def_var not be called, the local 
 				     dim_len will to set to this value, mean that
 				     we don't need to call nc_def_dim */
+
 
 #define cfio_id_val_entry(ptr, member) \
     (cfio_id_val_t *)((char *)ptr - (size_t)&(((cfio_id_val_t *)0)->member)) 
@@ -185,6 +186,16 @@ int cfio_id_assign_dim(int nc_id, char *dim_name, int *dim_id);
  * @return: error code
  */
 int cfio_id_assign_var(int nc_id, char *var_name, int *var_id);
+/**
+ * @brief: get a var id in client
+ *
+ * @param nc_id: the nc id
+ * @param var_name : the var name
+ * @param var_id : the got var id
+ *
+ * @return: error code
+ */
+int cfio_id_inq_var(int nc_id, char *var_name, int *var_id);
 /**
  * @brief: add a new map(client_nc_id->server_nc_id) in server
  *

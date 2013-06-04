@@ -13,16 +13,14 @@
  *        Company:  HPC Tsinghua
  ***************************************************************************/
 //#define SVR_RECV_ONLY 
-#undef SVR_UNPACK_ONLY
+//#define SVR_UNPACK_ONLY
+//#define SVR_NO_IO
 #undef SVR_META_ONLY
-//#define async_send
 //#define async_send
 
 //#define async_isend
 
 
 //#define disable_aggregation
-#define disable_subfiling
-
 
 //#define disbale_merge //merge in send

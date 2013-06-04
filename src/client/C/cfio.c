@@ -49,8 +49,6 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
 
     //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);d:w
     //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
-    //set_debug_mask(DEBUG_SERVER | DEBUG_CFIO | DEBUG_IO | DEBUG_ID);
-
     rc = MPI_Initialized(&i); 
     if( !i )
     {
@@ -61,6 +59,11 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    //if(rank == 100)
+    //{
+    //    set_debug_mask(DEBUG_MAP);
+    //}
+    
     client_num = x_proc_num * y_proc_num;
     server_proc_num = size - client_num;
     if(server_proc_num < 0)
@@ -75,14 +78,15 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     }
 
     MPI_Comm_group(MPI_COMM_WORLD, &group);
-    ranks = malloc(client_num * sizeof(int));
-    for(i = 0; i < client_num; i ++)
-    {
-	ranks[i] = i;
-    }
-    MPI_Group_incl(group, client_num, ranks, &client_group);
-    MPI_Comm_create(MPI_COMM_WORLD, client_group, &client_comm);
-    free(ranks);
+    
+    //ranks = malloc(client_num * sizeof(int));
+    //for(i = 0; i < client_num; i ++)
+    //{
+    //    ranks[i] = i;
+    //}
+    //MPI_Group_incl(group, client_num, ranks, &client_group);
+    //MPI_Comm_create(MPI_COMM_WORLD, client_group, &client_comm);
+    //free(ranks);
 
     ranks = malloc(server_proc_num * sizeof(int));
     for(i = 0; i < server_proc_num; i ++)
@@ -92,6 +96,8 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     MPI_Group_incl(group, server_proc_num, ranks, &server_group);
     MPI_Comm_create(MPI_COMM_WORLD, server_group, &server_comm);
     free(ranks);
+
+    //times_start();
 
     if((ret = cfio_map_init(
 		    x_proc_num, y_proc_num, server_proc_num, 
@@ -226,7 +232,7 @@ int cfio_create(
  * @return: 0 if success
  */
 int cfio_def_dim(
-	int ncid, const char *name, size_t len, int *idp)
+	int ncid, char *name, size_t len, int *idp)
 {
     if(name == NULL || idp == NULL)
     {
@@ -254,7 +260,7 @@ int cfio_def_dim(
 }
 
 int cfio_def_var(
-	int ncid, const char *name, nc_type xtype,
+	int ncid, char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, 
 	int *varidp)
@@ -310,6 +316,23 @@ int cfio_enddef(
 
     debug(DEBUG_CFIO, "success return.");
     return CFIO_ERROR_NONE;
+}
+
+int cfio_inq_varid(int ncid, char *var_name, int *varid)
+{
+    int ret;
+
+    debug(DEBUG_CFIO, "nc_id = %d, var_name = %s", ncid, var_name);
+    
+    if((ret = cfio_id_inq_var(ncid, var_name, varid)) < 0)
+    {
+	error("");
+	return ret;
+    }
+
+    debug(DEBUG_CFIO, "get varid = %d", *varid);
+    return CFIO_ERROR_NONE;
+
 }
 
 //TODO Maybe can rewrite so better performance
@@ -499,10 +522,18 @@ int cfio_put_vara_int(
 
 int cfio_io_end()
 {
+    debug(DEBUG_CFIO, "Start cfio_io_end");
+
+
+    
     cfio_send_io_end();
 
 #ifndef async_send
-    MPI_Barrier(client_comm);
+    //MPI_Barrier(client_comm);
+#endif
+
+#ifdef async_isend
+    cfio_send_test();
 #endif
 
     debug(DEBUG_CFIO, "Finish cfio_io_end");
@@ -674,8 +705,8 @@ void cfio_put_vara_float_c_(
     size_t *_start, *_count;
     int i, j;
 
-    debug(DEBUG_CFIO, "start :(%d, %d), count :(%d, %d)", 
-	    start[0], start[1], count[0], count[1]);
+    debug(DEBUG_CFIO, "ndims : %d, start :(%d, %d), count :(%d, %d)", 
+	    *ndims, start[0], start[1], count[0], count[1]);
     
     _start = malloc((*ndims) * sizeof(size_t));
     if(NULL == _start)
@@ -779,6 +810,21 @@ void cfio_enddef_c_(
 	int *ncid, int *ierr)
 {
     *ierr = cfio_enddef(*ncid);
+    return;
+}
+
+void cfio_inq_varid_c_(int *ncid, char *var_name, int *name_len, int *varid, int *ierr)
+{
+    char *name;
+    
+    name = malloc(*name_len + 1);
+    snprintf(name, (*name_len + 1), "%s", var_name);
+    
+
+    *ierr = cfio_inq_varid(*ncid, name, varid);
+
+    free(name);
+
     return;
 }
 

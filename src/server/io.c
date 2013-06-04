@@ -36,6 +36,8 @@
 
 static struct qhash_table *io_table;
 static int server_id;
+//static double start_time;
+//static int file_num = 0;
 //static double write_time = 0.0;
 
 static int _compare(void *key, struct qhash_head *link)
@@ -331,7 +333,12 @@ static inline int _handle_def(cfio_id_val_t *val)
 	dim->nc_id = nc->nc_id;
 	debug(DEBUG_IO, "dim_len = %d", dim->dim_len);
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	ret = ncmpi_def_dim(nc->nc_id, dim->name, dim->global_dim_len, &dim->dim_id);
+#else
+	ret = NC_NOERR;
+	dim->dim_id = 10;
+#endif
 #else
 	if(dim->dim_len != CFIO_ID_DIM_LOCAL_NULL)
 	{
@@ -368,23 +375,44 @@ static inline int _handle_def(cfio_id_val_t *val)
 	}
 	var->nc_id = dim->nc_id;
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	ret = ncmpi_def_var(var->nc_id, var->name, var->data_type, var->ndims,
 		var->dim_ids, &var->var_id);
+#else
+	ret = NC_NOERR;
+	var->var_id = 10;
+#endif
 	qlist_for_each_entry(att, var->att_head, link)
 	{
 	    switch(att->xtype)
 	    {
 		case CFIO_CHAR :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_text(var->nc_id, var->var_id, att->name, att->len, att->data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_INT :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_int(nc->nc_id, var->var_id, att->name, att->xtype, att->len, att->data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_FLOAT :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_float(nc->nc_id, var->var_id, att->name, att->xtype, att->len, att->data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_DOUBLE :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_double(nc->nc_id, var->var_id, att->name, att->xtype, att->len, att->data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 	    }
 	    if(ret != NC_NOERR)
@@ -492,13 +520,22 @@ void _merge_var_data(
     int i;
     size_t data_size, ele_size;
     char *data;
+    
+    debug(DEBUG_IO, "_merge_var_data");
+    debug(DEBUG_IO, "ndims = %d\n", var->ndims);
+	
+    assert(var->recv_data != NULL);
 
     for(i = 0; i < var->ndims; i ++)
     {
+	assert(var->recv_data[0].start != NULL);
+	assert(var->recv_data[0].count != NULL);
+	debug(DEBUG_IO, "start = %d\n", var->recv_data[0].start[i]);
+	debug(DEBUG_IO, "count = %d\n", var->recv_data[0].count[i]);
 	start[i] = var->recv_data[0].start[i];
 	count[i] = var->recv_data[0].count[i];
     }
-
+    
     for(i = 1; i < var->client_num; i ++)
     {
 	_update_start_and_count(var->ndims,start, count,
@@ -540,6 +577,7 @@ int cfio_io_init()
     io_table = qhash_init(_compare, _hash, IO_HASH_TABLE_SIZE);
     MPI_Comm_rank(MPI_COMM_WORLD, &server_id);
 
+    //start_time = times_cur();
     return CFIO_ERROR_NONE;
 }
 
@@ -599,10 +637,17 @@ int cfio_io_create(cfio_msg_t *msg)
     int sub_file_amount;
     int client_id = msg->src;
 
+    //printf("create %d time : %f\n", (file_num ++) % 4, times_cur() - start_time);
+    //printf("create %d time : %f\n", file_num ++, times_cur() - start_time);
+
     cfio_recv_unpack_create(msg, &_path,&cmode, &client_nc_id);
 
 #ifdef SVR_UNPACK_ONLY
-    free(_path);
+    if(_path != NULL)
+    {
+	free(_path);
+	_path = NULL;
+    }
     return CFIO_ERROR_NONE;
 #endif
 
@@ -622,7 +667,12 @@ int cfio_io_create(cfio_msg_t *msg)
 	//if(_bitmap_full(io_info->client_bitmap))
 	//{
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	ret = ncmpi_create(cfio_map_get_server_comm(), path, cmode, MPI_INFO_NULL, &nc_id);
+#else
+	ret = NC_NOERR;
+	nc_id = NC_NOERR;
+#endif
 #else
 	ret = nc_create(path,cmode,&nc_id);
 #endif
@@ -701,7 +751,11 @@ int cfio_io_def_dim(cfio_msg_t *msg)
 	    client_nc_id, name, len);
 
 #ifdef SVR_UNPACK_ONLY
-    free(name);
+    if(name != NULL)
+    {
+	free(name);
+	name = NULL;
+    }
     return CFIO_ERROR_NONE;
 #endif
 
@@ -720,7 +774,6 @@ int cfio_io_def_dim(cfio_msg_t *msg)
     {
         cfio_id_map_dim(client_nc_id, client_dim_id, CFIO_ID_NC_INVALID, 
         	CFIO_ID_DIM_INVALID, name, len);
-	debug_mark(DEBUG_IO);
     }else
     {
 	free(name);
@@ -800,10 +853,26 @@ int cfio_io_def_var(cfio_msg_t *msg)
 	    &client_dim_ids, &start, &count, &client_var_id);
     
 #ifdef SVR_UNPACK_ONLY
-    free(name);
-    free(start);
-    free(count);
-    free(client_dim_ids);
+    if(name != NULL)
+    {
+	free(name);
+	name = NULL;
+    }
+    if(start != NULL)
+    {
+	free(start);
+	start = NULL;
+    }
+    if(count != NULL)
+    {
+	free(count);
+	count = NULL;
+    }
+    if(client_dim_ids != NULL)
+    {
+	free(client_dim_ids);
+	client_dim_ids = NULL;
+    }
     return CFIO_ERROR_NONE;
 #endif
 
@@ -935,8 +1004,16 @@ int cfio_io_put_att(cfio_msg_t *msg)
     }
 
 #if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
-    free(name);
-    free(data);
+    if(name != NULL)
+    {
+	free(name);
+	name = NULL;
+    }
+    if(data != NULL)
+    {
+	free(data);
+	data = NULL;
+    }
     return CFIO_ERROR_NONE;
 #endif
     
@@ -957,16 +1034,32 @@ int cfio_io_put_att(cfio_msg_t *msg)
 	    switch(xtype)
 	    {
 		case CFIO_CHAR :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_text(nc->nc_id, NC_GLOBAL, name, len, data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_INT :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_int(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_FLOAT :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_float(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 		case CFIO_DOUBLE :
+#ifndef SVR_NO_IO
 		    ret = ncmpi_put_att_double(nc->nc_id, NC_GLOBAL, name, xtype, len, data);
+#else
+		    ret = NC_NOERR;
+#endif
 		    break;
 	    }
 	    if(ret != NC_NOERR)
@@ -1039,7 +1132,11 @@ int cfio_io_enddef(cfio_msg_t *msg)
 		}
 	    }
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	    ret = ncmpi_enddef(nc->nc_id);
+#else
+	    ret = NC_NOERR;
+#endif
 #else
 	    ret = nc_enddef(nc->nc_id);
 #endif
@@ -1081,6 +1178,16 @@ int cfio_io_put_vara(cfio_msg_t *msg)
     ret = cfio_recv_unpack_put_vara(msg, 
 	    &client_nc_id, &client_var_id, &ndims, &start, &count,
 	    &data_len, &data_type, &data);	
+	
+    for(i = 0; i < ndims; i ++)
+    {
+	    debug(DEBUG_IO, "recv dim %d: start(%lu), count(%lu)", 
+		    i, start[i], count[i]);
+	    debug(DEBUG_IO, "recv data = %f", ((float *)data)[0]);
+	//    printf( "dim %d: start(%lu), count(%lu)\n", 
+	//	    i, total_start[i], total_count[i]);
+    }
+    debug(DEBUG_IO, "client_var_id = %d", client_var_id);
     if( ret < 0 )
     {
 	error("");
@@ -1088,9 +1195,21 @@ int cfio_io_put_vara(cfio_msg_t *msg)
     }
 
 #if defined(SVR_UNPACK_ONLY) || defined(SVR_META_ONLY)
-    free(start);
-    free(count);
-    free(data);
+    if(start != NULL)
+    {
+	free(start);
+	start = NULL;
+    }
+    if(count != NULL)
+    {
+	free(count);
+	count = NULL;
+    }
+    if(data != NULL)
+    {
+	free(data);
+	data = NULL;
+    }
     return CFIO_ERROR_NONE;
 #endif
     //float *_data = data;
@@ -1131,8 +1250,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 	    break;
 	case CFIO_SHORT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	    ret = ncmpi_put_vara_short_all(nc->nc_id, var->var_id, 
 		    start, count, (short*)data);
+#else
+	    ret = NC_NOERR;
+#endif
 #else
 	    ret = nc_put_vara_short(nc->nc_id, var->var_id, 
 		    put_start, count, (short*)data);
@@ -1140,8 +1263,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 	    break;
 	case CFIO_INT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	    ret = ncmpi_put_vara_int_all(nc->nc_id, var->var_id, 
 		    start, count, (short*)data);
+#else
+	    ret = NC_NOERR;
+#endif
 #else
 	    ret = nc_put_vara_int(nc->nc_id, var->var_id, 
 		    put_start, count, (int*)data);
@@ -1149,8 +1276,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 	    break;
 	case CFIO_FLOAT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	    ret = ncmpi_put_vara_float_all(nc->nc_id, var->var_id, 
 		    start, count, (short*)data);
+#else
+	    ret = NC_NOERR;
+#endif
 #else
 	    ret = nc_put_vara_float(nc->nc_id, var->var_id, 
 		    put_start, count, (float*)data);
@@ -1158,14 +1289,19 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 	    break;
 	case CFIO_DOUBLE :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	    ret = ncmpi_put_vara_double_all(nc->nc_id, var->var_id, 
 		    start, count, (short*)data);
+#else
+	    ret = NC_NOERR;
+#endif
 #else
 	    ret = nc_put_vara_double(nc->nc_id, var->var_id, 
 		    put_start, count, (double*)data);
 #endif
 	    break;
     }
+    printf("proc %d : start(%d, %d)\n", rank, start[0], start[1]);
     assert( ret == NC_NOERR );
     free(start);
     free(count);
@@ -1210,22 +1346,26 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 
         if(ndims != var->ndims)
         {
-            debug(DEBUG_IO, "wrong ndims.");
+            debug(DEBUG_IO, "wrong ndims(%s), ndims(%d), var->ndims(%d)", 
+		    var->name, ndims, var->ndims);
             return_code = CFIO_ERROR_WRONG_NDIMS;
             goto RETURN;
         }
-        
+
 	total_start = malloc(sizeof(size_t) * var->ndims);
 	total_count = malloc(sizeof(size_t) * var->ndims);
         _merge_var_data(var, total_start, total_count, &total_data);
-
+	
 	for(i = 0; i < var->ndims; i ++)
 	{
 	    debug(DEBUG_IO, "dim %d: start(%lu), count(%lu)", 
 		    i, total_start[i], total_count[i]);
-	//    printf( "dim %d: start(%lu), count(%lu)\n", 
-	//	    i, total_start[i], total_count[i]);
+	//    printf( "server %d: dim %d: start(%lu), count(%lu)\n", 
+	//	    server_id, i, total_start[i], total_count[i]);
 	}
+	debug(DEBUG_IO, "nc_id = %d, var_id = %d", nc->nc_id, var->var_id);
+	debug(DEBUG_IO, "first data = %f", ((float *)total_data)[0]);
+
 
 	//put_start = malloc(var->ndims * sizeof(size_t));
 	//if(NULL == put_start)
@@ -1247,8 +1387,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 		break;
 	    case CFIO_SHORT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 		ret = ncmpi_put_vara_short_all(nc->nc_id, var->var_id, 
 			total_start, total_count, (short*)total_data);
+#else
+		ret = NC_NOERR;
+#endif
 #else
 		ret = nc_put_vara_short(nc->nc_id, var->var_id, 
 			put_start, total_count, (short*)total_data);
@@ -1256,8 +1400,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 		break;
 	    case CFIO_INT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 		ret = ncmpi_put_vara_int_all(nc->nc_id, var->var_id, 
 			total_start, total_count, (int*)total_data);
+#else
+		ret = NC_NOERR;
+#endif
 #else
 		ret = nc_put_vara_int(nc->nc_id, var->var_id, 
 			put_start, total_count, (int*)total_data);
@@ -1265,8 +1413,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 		break;
 	    case CFIO_FLOAT :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 		ret = ncmpi_put_vara_float_all(nc->nc_id, var->var_id, 
 			total_start, total_count, (float*)total_data);
+#else
+		ret = NC_NOERR;
+#endif
 #else
 		ret = nc_put_vara_float(nc->nc_id, var->var_id, 
 			put_start, total_count, (float*)total_data);
@@ -1274,8 +1426,12 @@ int cfio_io_put_vara(cfio_msg_t *msg)
 		break;
 	    case CFIO_DOUBLE :
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 		ret = ncmpi_put_vara_double_all(nc->nc_id, var->var_id, 
 			total_start, total_count, (double*)total_data);
+#else
+		ret = NC_NOERR;
+#endif
 #else
 		ret = nc_put_vara_double(nc->nc_id, var->var_id, 
 			put_start, total_count, (double*)total_data);
@@ -1354,7 +1510,11 @@ int cfio_io_close(cfio_msg_t *msg)
 	    return CFIO_ERROR_INVALID_NC;
 	}
 #ifdef disable_subfiling
+#ifndef SVR_NO_IO
 	ret = ncmpi_close(nc->nc_id);
+#else
+	ret = NC_NOERR;
+#endif
 #else
 	ret = nc_close(nc->nc_id);
 #endif
@@ -1372,7 +1532,6 @@ int cfio_io_close(cfio_msg_t *msg)
 	    qlist_del(&(iter->link));
 	    qhash_del(&(iter->hash_link));
 	    cfio_id_val_free(iter);
-	debug_mark(DEBUG_IO);
 	}
 	qhash_del(&(nc_val->hash_link));
 	free(nc_val);

@@ -33,6 +33,7 @@
 /* In id.c */
 #define CFIO_ERROR_EXCEED_BOUND	    -400    /* data index exceeds dimension bound */
 #define CFIO_ERROR_NC_NO_EXIST	    -401    /* nc_id not found in assign_table */
+#define CFIO_ERROR_VAR_NO_EXIST	    -401    /* nc_id not found in assign_table */
 /* In io.c */
 #define CFIO_ERROR_NC		    -500    /* nc operation error */
 #define CFIO_ERROR_INVALID_NC	    -501    /* invalid nc id */

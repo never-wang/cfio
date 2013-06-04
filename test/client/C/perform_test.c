@@ -25,16 +25,18 @@ int main(int argc, char** argv)
 {
     int rank, size;
     int ncidp;
-    int dim1,var1,i, j;
+    int dim1,var1,i, j, l;
 
     int LAT_PROC, LON_PROC;
     size_t start[2],count[2];
     char fileName[100];
     char var_name[16];
     int var[VALN];
+    double compute_time = 0.0, IO_time = 0.0;
 
     size_t len = 10;
     MPI_Comm comm = MPI_COMM_WORLD;
+    volatile double a;
 
     if(4 != argc)
     {
@@ -50,13 +52,12 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     times_init();
-    times_start();
-    times_start();
+    double start_time = times_cur();
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_SERVER | DEBUG_ID | DEBUG_IO); 
-    //set_debug_mask(DEBUG_IO); 
-    //set_debug_mask(DEBUG_CFIO); 
+    //set_debug_mask(DEBUG_SERVER | DEBUG_IO | DEBUG_RECV); 
+    //set_debug_mask(DEBUG_MAP); 
+    //set_debug_mask(DEBUG_SEND); 
     //if(rank == 0)
     //{
     //    set_debug_mask(DEBUG_MSG | DEBUG_CFIO);
@@ -66,6 +67,10 @@ int main(int argc, char** argv)
     start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
     count[0] = LAT / LAT_PROC;
     count[1] = LON / LON_PROC;
+    //start[0] = 0;
+    //start[1] = rank * (LON / size);
+    //count[0] = LAT ;
+    //count[1] = LON / size;
     double *fp = malloc(count[0] * count[1] *sizeof(double));
 
 //    printf("Proc %d : start(%lu, %lu) ; count(%lu, %lu)\n", 
@@ -76,11 +81,26 @@ int main(int argc, char** argv)
 	fp[i] = i + rank * count[0] * count[1];
     }
 
+    times_start();
     cfio_init( LAT_PROC, LON_PROC, CFIO_RATIO);
     CFIO_START(rank);
+    double start_time = times_cur();
+    //printf("Loop : %d\n", LOOP);
     for(i = 0; i < LOOP; i ++)
     {
-	sleep(SLEEP_TIME);
+	times_start();
+	if( SLEEP_TIME != 0)
+	{
+	    for(j = 0; j < 1000000; j ++)
+	    {
+		for(l = 0; l < 11000; l ++)
+		{
+		    a = 123124.21312/1231.23123;
+		}
+	    }
+	}
+	compute_time += times_end();
+	//printf("proc %d, loop %d compute time : %f\n", rank, i, times_end());
 	times_start();
 	sprintf(fileName,"%s/cfio-%d.nc", argv[3], i);
 	int dimids[2];
@@ -88,7 +108,7 @@ int main(int argc, char** argv)
 	int lat = LAT;
 	cfio_def_dim(ncidp, "lat", LAT,&dimids[0]);
 	cfio_def_dim(ncidp, "lon", LON,&dimids[1]);
-	//cfio_put_att(ncidp, NC_GLOBAL, "global", NC_CHAR, 6, "global");
+	////cfio_put_att(ncidp, NC_GLOBAL, "global", NC_CHAR, 6, "global");
 
 	for(j = 0; j < VALN; j++)
 	{
@@ -108,16 +128,23 @@ int main(int argc, char** argv)
 	//cfio_put_vara_float(rank,ncidp,var1, 2,start, count,fp); 
 
 	cfio_close(ncidp);
+	//printf("send point : %f\n", times_cur() - start_time);
 	cfio_io_end();
-	printf("proc %d, loop %d time : %f\n", rank, i, times_end());
+	//printf("proc %d send point : %f\n", rank, times_cur() - start_time);
+	IO_time += times_end();
+	//printf("proc %d, loop %d time : %f\n", rank, i, times_end());
     }
     free(fp);
 
+    //printf("proc %d before cfio final time : %f\n", rank, times_cur() - start_time);
     CFIO_END();
     cfio_finalize();
-    printf("proc %d cfio time : %f\n", rank, times_end());
-    MPI_Finalize();
+    printf("proc %d compute time : %f\n", rank, compute_time);
+    printf("proc %d IO time : %f\n", rank, IO_time);
     printf("proc %d total time : %f\n", rank, times_end());
+    
+    MPI_Finalize();
+    
     times_final();
     return 0;
 }

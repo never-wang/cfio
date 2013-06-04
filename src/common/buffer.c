@@ -25,15 +25,13 @@
  * @param data: 
  * @param size: 
  */
-static inline void put_buf_data(cfio_buf_t *buf_p, const void *data, size_t size)
+static inline void put_buf_data(cfio_buf_t *buf_p, void *data, size_t size)
 {
-    char *_data = data;
-	
     if(0 == size)
     {
 	return;
     }
-    memcpy(buf_p->free_addr, _data, size);
+    memcpy(buf_p->free_addr, data, size);
 }
 static inline void get_buf_data(cfio_buf_t *buf_p, void *data, size_t size)
 {

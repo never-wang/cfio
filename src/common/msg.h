@@ -38,7 +38,7 @@
 #define FUNC_WRITER_FINAL		((uint32_t)42)
 
 //define for msg buf size in a proc
-#define MSG_BUF_SIZE ((size_t)16*1024*1024)
+#define MSG_BUF_SIZE ((size_t)512*1024)
 
 typedef struct
 {

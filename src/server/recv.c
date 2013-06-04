@@ -162,6 +162,10 @@ int cfio_recv(
 	    MPI_ANY_TAG, comm, &status);
     MPI_Get_count(&status, MPI_BYTE, &size);
     debug(DEBUG_RECV, "recv: size = %d", size);
+    if(src == 0)
+    {
+	printf(DEBUG_RECV, "recv: size = %lu", size);
+    }
     //total_size += size;
     //if(min_size == 0 || min_size > size)
     //{
@@ -200,7 +204,9 @@ int cfio_recv(
 #endif
     if((*func_code) != FUNC_IO_END)
     {
+#ifndef SVR_RECV_ONLY
 	qlist_add_tail(&(msg->link), &(msg_head[client_index].link));
+#endif
     }
 #ifndef disable_subfiling
     pthread_mutex_unlock(&mutex);

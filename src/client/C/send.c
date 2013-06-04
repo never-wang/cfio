@@ -44,8 +44,11 @@ static pthread_t sender;
 
 static int rank;
 
+static double start_time;
+
 static int max_msg_size;
 //static int send_pause = 0;
+double send_time = 0;
 
 static inline int _send_msg(
 	cfio_msg_t *msg)
@@ -53,6 +56,10 @@ static inline int _send_msg(
     MPI_Status status;
     MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
 	    msg->comm);
+    //if(msg->func_code == FUNC_IO_END)
+    //{
+    //    printf("proc %d send point : %f\n", rank, times_cur() - start_time);
+    //}
    //MPI_Wait(&(msg->req), &status);
 
     pthread_mutex_lock(&full_mutex);
@@ -69,6 +76,8 @@ static inline int _send_msg(
 /*send msg in main thread*/
 static inline void _main_send_msg(cfio_msg_t *msg)
 {
+    debug(DEBUG_SEND, "src=%d; dst=%d; func_code = %d; size = %lu", 
+	    msg->src, msg->dst, msg->func_code, msg->size);
 #ifdef async_isend
     MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 	    msg->dst, msg->src, msg->comm, &(msg->req));
@@ -76,10 +85,16 @@ static inline void _main_send_msg(cfio_msg_t *msg)
 #elif (defined async_send)
     qlist_add_tail(&(msg->link), &(msg_head->link));
 #else
+    //times_start();
     MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
 	    msg->comm);
+    //send_time += times_end();
     buffer->used_addr = msg->addr;
     free_buf(buffer, msg->size);
+    free(msg);
+    msg = NULL;
+
+    debug(DEBUG_SEND, "Success return.");
 #endif
 }
 
@@ -93,9 +108,13 @@ static inline void _add_msg(
  
 	//times_start();
 
-    debug(DEBUG_SEND, "isend: src=%d; dst=%d; comm = %d; size = %lu", 
-	    msg->src, msg->dst, msg->comm, msg->size);
+    debug(DEBUG_SEND, "src=%d; dst=%d; func_code = %d; size = %lu", 
+	    msg->src, msg->dst, msg->func_code, msg->size);
     assert(msg->size <= max_msg_size);
+    if(rank == 0)
+    {
+	printf("send size : %lu", msg->size);
+    }
 
 //    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 //	    msg->dst, tag, msg->comm, &(msg->req));
@@ -113,37 +132,33 @@ static inline void _add_msg(
 #endif
 
 #ifdef disable_merge
-#ifdef async_isend
-    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
-	    msg->dst, msg->src, msg->comm, &(msg->req));
-    qlist_add_tail(&(msg->link), &(msg_head->link));
-#elif (defined async_send)
-    qlist_add_tail(&(msg->link), &(msg_head->link));
-#else
-    MPI_Ssend(msg->addr, msg->size, MPI_BYTE, msg->dst, msg->src, 
-	    msg->comm);
-    buffer->used_addr = msg->addr;
-    free_buf(buffer, msg->size);
-#endif
+    _main_send_msg(msg);
 #else
 
-    if(msg->func_code == FUNC_FINAL || FUNC_IO_END) //FINAL,  IO_END, not merge
+    if((msg->func_code == FUNC_FINAL) || (msg->func_code ==  FUNC_IO_END))
+	 //   || (msg->func_code == FUNC_NC_PUT_VARA)) //FINAL,  IO_END, not merge
     {
+	if(msg->func_code == FUNC_IO_END)
+	{
+	    debug(DEBUG_SEND, "Send IO_END msg");
+	}
 	if(merge_msg != NULL)
 	{
+	    //printf("send msg size : %lu\n", merge_msg->size);
 	    _main_send_msg(merge_msg);
 	    merge_msg = NULL;
 	}
 	_main_send_msg(msg);
-    }else if(msg->func_code == FUNC_NC_PUT_VARA) // put data , not merge
-    {
-	if(merge_msg != NULL)
-	{
-	    _main_send_msg(merge_msg);
-	    merge_msg = NULL;
-	}
-	_main_send_msg(msg);
-    }else{                         //
+	//printf("send msg size : %lu\n", msg->size);
+//    }else if(msg->func_code == FUNC_NC_PUT_VARA) // put data , not merge
+//    {
+//	if(merge_msg != NULL)
+//	{
+//	    _main_send_msg(merge_msg);
+//	    merge_msg = NULL;
+//	}
+//	_main_send_msg(msg);
+  }else{        
 	if(merge_msg != NULL)
 	{
 	    if(merge_msg->addr < msg->addr && 
@@ -154,6 +169,7 @@ static inline void _add_msg(
 		free(msg);
 	    }else
 	    {
+		//printf("send msg size : %lu\n", merge_msg->size);
 		_main_send_msg(merge_msg);
 		merge_msg = msg;
 	    }
@@ -198,7 +214,7 @@ static inline cfio_msg_t *_get_first_msg()
     if(NULL == link)
     {
 	msg = NULL;
-	//pthread_cond_wait(&empty_cond, &mutex);
+	pthread_cond_wait(&empty_cond, &mutex);
     }else
     {
 	msg = qlist_entry(link, cfio_msg_t, link);
@@ -228,8 +244,8 @@ static void* sender_thread(void *arg)
 	    {
 		sender_finish = 1;
 	    }
+	    free(msg);
 	}
-	free(msg);
 	//    pthread_mutex_lock(&pause_mutex);
 	//if(send_pause == 1)
 	//{
@@ -245,6 +261,8 @@ static void* sender_thread(void *arg)
 int cfio_send_init()
 {
     int error, ret, server_id, client_num_of_server;
+
+    start_time = times_cur();
 
     msg_head = malloc(sizeof(cfio_msg_t));
     if(NULL == msg_head)
@@ -306,6 +324,8 @@ int cfio_send_final()
 	
     cfio_buf_close(buffer);
 
+    //printf("send time : %f\n", send_time);
+
     return CFIO_ERROR_NONE;
 }
 
@@ -345,7 +365,6 @@ int cfio_send_create(
     uint32_t code = FUNC_NC_CREATE;
     cfio_msg_t *msg;
 
-    debug(DEBUG_SEND, "path = %s; cmode = %d, ncid = %d", path, cmode, ncid);
     msg = cfio_msg_create();
     msg->src = rank;
     msg->func_code = FUNC_NC_CREATE;
@@ -770,6 +789,24 @@ int cfio_send_io_end()
     _add_msg(msg);
 
     debug(DEBUG_SEND, "Success return");
+
+    return CFIO_ERROR_NONE;
+}
+
+int cfio_send_test()
+{
+    qlist_head_t *link;
+    MPI_Status status;
+    int flag;
+    cfio_msg_t *msg;
+    
+    link = msg_head->link.prev;
+        
+    qlist_for_each_entry(msg, &(msg_head->link), link)
+    {
+	MPI_Test(&(msg->req), &flag, &status);
+	//printf("fuck flag : %d\n", flag);
+    }
 
     return CFIO_ERROR_NONE;
 }

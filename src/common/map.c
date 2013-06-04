@@ -126,6 +126,9 @@ static int _gen_server_x_and_y(int best_server_amount)
 	}
     }
 
+    debug(DEBUG_MAP, "I/O decomp : %d * %d", factor_x[index_x],
+	    factor_y[index_y]);
+
     if(((double)(min_sub) / (double)(best_server_amount)) < GEN_SERVER_ERROR)
     {
 	best_server_amount = factor_x[min_index_x] * factor_y[min_index_y];

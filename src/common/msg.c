@@ -56,10 +56,12 @@ int cfio_msg_get_max_size(int proc_id)
     }
     client_amount = cfio_map_get_client_amount();
 
-    max_msg_size = MSG_BUF_SIZE / client_num_of_server;
+    max_msg_size = MSG_BUF_SIZE;
     max_msg_size = min(max_msg_size, RECV_BUF_SIZE / client_num_of_server / 2);
     max_msg_size = min(max_msg_size, SEND_BUF_SIZE / 2);
     max_msg_size = max(max_msg_size, SEND_MSG_MIN_SIZE / client_amount);
+    
+    //printf("max_msg_size = %d\n", max_msg_size);
 
     return max_msg_size;
 }

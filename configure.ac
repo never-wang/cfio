@@ -1,13 +1,13 @@
 AC_INIT([CFIO], [1.09], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
-CC=mpicc
+CC=mpiicc
 AC_PROG_FC
-FC=mpif90
+FC=mpiifort
 
 #AM_PATH_CHECK
 
-CPPFLAGS="$CPPFLAGS -shared-intel"
+CPPFLAGS="$CPPFLAGS -mcmodel=medium -shared-intel"
 #CPPFLAGS="$CPPFLAGS"
 
 AC_ARG_WITH([dependency],
@@ -66,23 +66,23 @@ AC_CHECK_LIB([curl], [curl_version],,AC_MSG_ERROR([invalid curl library]))
 dnl -----------------------------------------------
 dnl hdf5
 
-AC_ARG_WITH([hdf5],
-	    [AC_HELP_STRING([--with-hdf5=DIR],
-			    [Specify path to external hdf5 library.])],
-			    [if test "$withval" != no; then
-			     if test "$withval" != yes; then
-				 HDF5_DIR=$withval
-			     fi
-			 fi])
-
-if test -n "$HDF5_DIR"; then
-    #CPPFLAGS="$CPPFLAGS -I$HDF5_DIR/include"
-    LDFLAGS="$LDFLAGS -L$HDF5_DIR/lib"
-fi
-
-AC_CHECK_LIB([hdf5], [H5Fclose],,AC_MSG_ERROR([invalid hdf5 library]), [-lsz])
-AC_CHECK_LIB([hdf5_hl], [H5DSis_scale],, AC_MSG_ERROR([invalid hdf5 high-level library]))
-
+#AC_ARG_WITH([hdf5],
+#	    [AC_HELP_STRING([--with-hdf5=DIR],
+#			    [Specify path to external hdf5 library.])],
+#			    [if test "$withval" != no; then
+#			     if test "$withval" != yes; then
+#				 HDF5_DIR=$withval
+#			     fi
+#			 fi])
+#
+#if test -n "$HDF5_DIR"; then
+#    #CPPFLAGS="$CPPFLAGS -I$HDF5_DIR/include"
+#    LDFLAGS="$LDFLAGS -L$HDF5_DIR/lib"
+#fi
+#
+#AC_CHECK_LIB([hdf5], [H5Fclose],,AC_MSG_ERROR([invalid hdf5 library]), [-lsz])
+#AC_CHECK_LIB([hdf5_hl], [H5DSis_scale],, AC_MSG_ERROR([invalid hdf5 high-level library]))
+#
 dnl -----------------------------------------------
 dnl pnetcdf
 

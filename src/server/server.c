@@ -195,9 +195,10 @@ static void* cfio_writer(void *argv)
 #ifdef disable_subfiling
 	if(func_code == FUNC_IO_END)
 	{
-	    //printf("recv point : %f\n", times_cur() - start_time);
+	    //printf("Server %d recv point : %f\n", rank, times_cur() - start_time);
 	    decode_num = 0;
 	    msg = cfio_recv_get_first();
+	    //times_start();
 	    while(NULL != msg)
 	    {
 		decode(msg);
@@ -208,12 +209,14 @@ static void* cfio_writer(void *argv)
 		    cfio_iprobe(client_id, client_num, cfio_map_get_comm(), &flag);
 		    if(flag == 1) // has recv arrived , recv first
 		    {
-			break;
+		    //    printf("Server %d iprobe true : %f\n", rank, times_cur() - start_time);
+		        break;
 		    }
 		    decode_num = 0;
 		}
 		msg = cfio_recv_get_first();
 	    }
+	    //printf("Server %d one loop time : %f\n", rank, times_end());
 	}
 #endif
 	//IO_time += times_end();
@@ -229,6 +232,7 @@ static void* cfio_writer(void *argv)
 	//IO_time += times_end();
     //printf("Server %d comm time : %f\n", rank, comm_time);
     //printf("Server %d pnetcdf time : %f\n", rank, IO_time);
+    //printf("Server end : %f\n", times_cur() - start_time);
     debug(DEBUG_SERVER, "Server(%d) Writer done", rank);
     return ((void *)0);
 }

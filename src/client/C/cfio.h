@@ -88,7 +88,7 @@ int cfio_create(
  * @return: 0 if success
  */
 int cfio_def_dim(
-	int ncid, const char *name, size_t len, int *idp);
+	int ncid, char *name, size_t len, int *idp);
 /**
  * @brief: cfio_def_var
  *
@@ -108,7 +108,7 @@ int cfio_def_dim(
  * @return: 0 if success
  */
 int cfio_def_var(
-	int ncid, const char *name, nc_type xtype,
+	int ncid, char *name, nc_type xtype,
 	int ndims, const int *dimids, 
 	const size_t *start, const size_t *count, 
 	int *varidp);
@@ -137,6 +137,7 @@ int cfio_put_att(
  */
 int cfio_enddef(
 	int ncid);
+int cfio_inq_varid(int ncid, char *var_name, int *varid);
 /**
  * @brief: cfio_put_vara_float
  *
