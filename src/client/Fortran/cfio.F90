@@ -1,7 +1,6 @@
 
 
 module cfio
-use netcdf
 implicit none
 
 integer, parameter :: CFIO_PROC_SERVER = 1
@@ -10,6 +9,13 @@ integer, parameter :: CFIO_PROC_BLANK = 3
 
 integer :: char_len = 128
 integer :: array_len = 128
+
+integer, parameter :: cfio_byte   = 0
+integer, parameter :: cfio_char   = 1
+integer, parameter :: cfio_short  = 2
+integer, parameter :: cfio_int	  = 3
+integer, parameter :: cfio_float  = 4
+integer, parameter :: cfio_double = 5
 
 interface cfio_put_att
     module procedure cfio_put_att_str
@@ -96,7 +102,7 @@ integer function cfio_put_att_str(ncid, varid, name, values)
     
     name_length = len(trim(name))
 
-    call cfio_put_att_c(ncid, varid, trim(name), name_length, nf90_char, len(values), values, &
+    call cfio_put_att_c(ncid, varid, trim(name), name_length, cfio_char, len(values), values, &
 	cfio_put_att_str)
 
 end function
@@ -110,7 +116,7 @@ integer function cfio_put_att_int(ncid, varid, name, values)
     
     name_length = len(trim(name))
 
-    call cfio_put_att_c(ncid, varid, trim(name), name_length, nf90_int, 1, values, &
+    call cfio_put_att_c(ncid, varid, trim(name), name_length, cfio_int, 1, values, &
 	cfio_put_att_int)
 
 end function
@@ -124,7 +130,7 @@ integer function cfio_put_att_real(ncid, varid, name, values)
     
     name_length = len(trim(name))
 
-    call cfio_put_att_c(ncid, varid, trim(name), name_length, nf90_float, 1, values, &
+    call cfio_put_att_c(ncid, varid, trim(name), name_length, cfio_float, 1, values, &
 	cfio_put_att_real)
 
 end function
@@ -138,7 +144,7 @@ integer function cfio_put_att_double(ncid, varid, name, values)
     
     name_length = len(trim(name))
 
-    call cfio_put_att_c(ncid, varid, trim(name), name_length, nf90_double, 1, values, &
+    call cfio_put_att_c(ncid, varid, trim(name), name_length, cfio_double, 1, values, &
 	cfio_put_att_double)
 
 end function

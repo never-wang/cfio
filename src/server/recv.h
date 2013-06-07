@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include "msg.h"
+#include "cfio_types.h"
 
 #define RECV_BUF_SIZE ((size_t)1*1024*1024*1024)
 
@@ -113,7 +114,7 @@ int cfio_recv_unpack_def_dim(
  */
 int cfio_recv_unpack_def_var(
 	cfio_msg_t *msg,
-	int *ncid, char **name, nc_type *xtype,
+	int *ncid, char **name, cfio_type *xtype,
 	int *ndims, int **dimids, 
 	size_t **start, size_t **count, int *varid);
 /**
@@ -133,7 +134,7 @@ int cfio_recv_unpack_def_var(
 int cfio_recv_unpack_put_att(
 	cfio_msg_t *msg,
 	int *ncid, int *varid, char **name, 
-	nc_type *xtype, int *len, void **op);
+	cfio_type *xtype, int *len, void **op);
 /**
  * @brief: unpack arguments for the cfio_enddef function 
  *

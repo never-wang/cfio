@@ -20,7 +20,4 @@
 
 //#define async_isend
 
-
-//#define disable_aggregation
-
 //#define disbale_merge //merge in send

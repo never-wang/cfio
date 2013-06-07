@@ -1,9 +1,9 @@
 AC_INIT([CFIO], [1.09], [never.wencan@gmail.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 #AC_PROG_CC
-CC=mpiicc
+#CC=mpiicc
 AC_PROG_FC
-FC=mpiifort
+#FC=mpiifort
 
 #AM_PATH_CHECK
 
@@ -27,42 +27,42 @@ fi
 dnl ---------------------------------------------------------------------
 dnl szlib (for hdf5)
 
-AC_ARG_WITH([szlib],
-			[AC_HELP_STRING([--with-szlib=DIR],
-				[Specify path to external szlib library.])],
-			[if test "$withval" != no; then
-				if test "$withval" != yes; then
-					SZLIB_DIR=$withval
-				fi
-			fi])
-
-if test -n "$SZLIB_DIR"; then
-	#CPPFLAGS="$CPPFLAGS -L$SZLIB_DIR/include"
-	LDFLAGS="$LDFLAGS -L$SZLIB_DIR/lib"
-fi
-	
-AC_CHECK_HEADERS([szlib.h],,AC_MSG_ERROR(can not find szlib.h))
-AC_CHECK_LIB(sz, SZ_BufftoBuffCompress,, AC_MSG_ERROR([invalid szlib]))
-
-dnl -----------------------------------------------
-dnl curl
-
-AC_ARG_WITH([curl],
-	    [AC_HELP_STRING([--with-curl=DIR],
-			    [Specify path to external curl library.])],
-			    [if test "$withval" != no; then
-			     if test "$withval" != yes; then
-				 CURL_DIR=$withval
-			     fi
-			 fi])
-
-if test -n "$CURL_DIR"; then
-    #CPPFLAGS="$CPPFLAGS -I$CURL_DIR/include"
-    LDFLAGS="$LDFLAGS -L$CURL_DIR/lib"
-fi
-
-AC_CHECK_LIB([curl], [curl_version],,AC_MSG_ERROR([invalid curl library]))
-
+#AC_ARG_WITH([szlib],
+#			[AC_HELP_STRING([--with-szlib=DIR],
+#				[Specify path to external szlib library.])],
+#			[if test "$withval" != no; then
+#				if test "$withval" != yes; then
+#					SZLIB_DIR=$withval
+#				fi
+#			fi])
+#
+#if test -n "$SZLIB_DIR"; then
+#	#CPPFLAGS="$CPPFLAGS -L$SZLIB_DIR/include"
+#	LDFLAGS="$LDFLAGS -L$SZLIB_DIR/lib"
+#fi
+#	
+#AC_CHECK_HEADERS([szlib.h],,AC_MSG_ERROR(can not find szlib.h))
+#AC_CHECK_LIB(sz, SZ_BufftoBuffCompress,, AC_MSG_ERROR([invalid szlib]))
+#
+#dnl -----------------------------------------------
+#dnl curl
+#
+#AC_ARG_WITH([curl],
+#	    [AC_HELP_STRING([--with-curl=DIR],
+#			    [Specify path to external curl library.])],
+#			    [if test "$withval" != no; then
+#			     if test "$withval" != yes; then
+#				 CURL_DIR=$withval
+#			     fi
+#			 fi])
+#
+#if test -n "$CURL_DIR"; then
+#    #CPPFLAGS="$CPPFLAGS -I$CURL_DIR/include"
+#    LDFLAGS="$LDFLAGS -L$CURL_DIR/lib"
+#fi
+#
+#AC_CHECK_LIB([curl], [curl_version],,AC_MSG_ERROR([invalid curl library]))
+#
 dnl -----------------------------------------------
 dnl hdf5
 
@@ -106,23 +106,23 @@ AC_CHECK_LIB([pnetcdf], [ncmpi_close],,AC_MSG_ERROR([invalid pnetcdf library]))
 dnl -----------------------------------------------
 dnl netcdf
 
-AC_ARG_WITH([netcdf],
-	    [AC_HELP_STRING([--with-netcdf=DIR],
-			    [Specify path to netcdf library.])],
-	    [if test "$withval" != no; then
-		if test "withval" != yes; then
-		    NETCDF_DIR=$withval
-		fi
-	    fi])
-
-if test -n "$NETCDF_DIR"; then
-    CPPFLAGS="$CPPFLAGS -I$NETCDF_DIR/include"
-    LDFLAGS="$LDFLAGS -L$NETCDF_dir/lib"
-fi
-
-AC_CHECK_HEADERS([netcdf.h],,AC_MSG_ERROR(can not find netcdf.h))
-AC_CHECK_LIB([netcdf], [nc_close],,AC_MSG_ERROR([invalid netcdf library]), [-lpnetcdf -lhdf5_hl -lhdf5 -lcurl -lsz])
-
+#AC_ARG_WITH([netcdf],
+#	    [AC_HELP_STRING([--with-netcdf=DIR],
+#			    [Specify path to netcdf library.])],
+#	    [if test "$withval" != no; then
+#		if test "withval" != yes; then
+#		    NETCDF_DIR=$withval
+#		fi
+#	    fi])
+#
+#if test -n "$NETCDF_DIR"; then
+#    CPPFLAGS="$CPPFLAGS -I$NETCDF_DIR/include"
+#    LDFLAGS="$LDFLAGS -L$NETCDF_dir/lib"
+#fi
+#
+#AC_CHECK_HEADERS([netcdf.h],,AC_MSG_ERROR(can not find netcdf.h))
+#AC_CHECK_LIB([netcdf], [nc_close],,AC_MSG_ERROR([invalid netcdf library]), [-lpnetcdf -lhdf5_hl -lhdf5 -lcurl -lsz])
+#
 dnl -----------------------------------------------
 dnl pnetcdf
 

@@ -410,7 +410,7 @@ int cfio_id_map_var(
 	int server_nc_id, int server_var_id,
 	int ndims, int *dim_ids,
 	size_t *start, size_t *count,
-	int data_type, int client_num)
+	cfio_type data_type, int client_num)
 {
     int i;
     size_t data_size;
@@ -644,7 +644,7 @@ int cfio_id_put_var(
 
 int cfio_id_put_att(
 	int client_nc_id, int client_var_id,
-	char *name, nc_type xtype, int len, char *data)
+	char *name, cfio_type xtype, int len, char *data)
 {
     cfio_id_key_t key;
     cfio_id_val_t *val;

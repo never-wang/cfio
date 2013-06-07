@@ -97,7 +97,7 @@ size_t cfio_buf_pack_size(
 }
 
 int cfio_buf_pack_data(
-	const void *data, size_t size, cfio_buf_t *buf_p)
+	void *data, size_t size, cfio_buf_t *buf_p)
 {
     assert(NULL != data);
     assert(NULL != buf_p);
@@ -135,7 +135,7 @@ size_t cfio_buf_pack_array_size(
 
 
 int cfio_buf_pack_data_array(
-	const void *data, int len,
+	void *data, int len,
 	size_t size, cfio_buf_t *buf_p)
 {
     

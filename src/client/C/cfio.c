@@ -197,7 +197,7 @@ int cfio_proc_type(int rank)
  * @return: 0 if success
  */
 int cfio_create(
-	const char *path, int cmode, int *ncidp)
+	char *path, int cmode, int *ncidp)
 {
     if(path == NULL || ncidp == NULL)
     {
@@ -260,9 +260,9 @@ int cfio_def_dim(
 }
 
 int cfio_def_var(
-	int ncid, char *name, nc_type xtype,
-	int ndims, const int *dimids, 
-	const size_t *start, const size_t *count, 
+	int ncid, char *name, cfio_type xtype,
+	int ndims, int *dimids, 
+	size_t *start, size_t *count, 
 	int *varidp)
 {
     if(name == NULL || varidp == NULL || start == NULL || count == NULL)
@@ -290,8 +290,8 @@ int cfio_def_var(
 }
 
 int cfio_put_att(
-	int ncid, int varid, const char *name, 
-	nc_type xtype, size_t len, const void *op)
+	int ncid, int varid, char *name, 
+	cfio_type xtype, size_t len, void *op)
 {
     cfio_msg_t *msg;
     
@@ -335,104 +335,9 @@ int cfio_inq_varid(int ncid, char *var_name, int *varid)
 
 }
 
-//TODO Maybe can rewrite so better performance
-//Just not use it
-//static int _put_vara(
-//	int ncid, int varid, int dim,
-//	const size_t *start, const size_t *count, 
-//	const int  fp_type, const char *fp,
-//	size_t head_size, int div_dim)
-//{
-//    size_t *cur_start, *cur_count;
-//    int div, left_dim;
-//    const char *cur_fp;
-//    size_t desc_data_size, div_data_size;
-//    int i;
-//    cfio_msg_t *msg;
-//
-//    //times_start();
-//
-//    debug(DEBUG_CFIO, "dim = %d; div_dim = %d", dim, div_dim);
-//
-//    cur_start = malloc(dim * sizeof(size_t));
-//    cur_count = malloc(dim *sizeof(size_t));
-//    memcpy(cur_start, (void *)start, dim * sizeof(size_t));
-//    memcpy(cur_count, (void *)count, dim * sizeof(size_t));
-//    cur_fp = fp;
-//    
-//    desc_data_size = 1;
-//    for(i = 0; i < div_dim; i ++)
-//    {
-//	desc_data_size *= count[i]; 
-//    }
-//    switch(fp_type)
-//    {
-//	case CFIO_BYTE :
-//	    break;
-//	case CFIO_CHAR :
-//	    break;
-//	case CFIO_SHORT :
-//	    desc_data_size *= sizeof(short);
-//	    break;
-//	case CFIO_INT :
-//	    desc_data_size *= sizeof(int);
-//	    break;
-//	case CFIO_FLOAT :
-//	    desc_data_size *= sizeof(float);
-//	    break;
-//	case CFIO_DOUBLE :
-//	    desc_data_size *= sizeof(double);
-//	    break;
-//    }
-//    div_data_size = desc_data_size * count[div_dim];
-//    
-//    div = count[div_dim];
-//    //TODO can use binary search
-//    while(div_data_size + head_size > MSG_MAX_SIZE)
-//    {
-//	div_data_size -= desc_data_size;
-//	div --;
-//    }
-//    debug(DEBUG_CFIO, "desc_data_size = %lu, div_data_size = %lu, div = %d",
-//	    desc_data_size, div_data_size, div);
-//
-//    if(0 == div_data_size)
-//    {
-//	/**
-//	 *even take 1 layer can't be ok, so consider the forward dim
-//	 **/
-//	cur_count[div_dim] = 1;
-//	for(i = 0; i < count[div_dim]; i ++)
-//	{
-//	    _put_vara(io_proc_id, ncid, varid, dim, cur_start, cur_count,
-//		    fp_type, cur_fp, head_size, div_dim - 1);
-//	    cur_start[div_dim] += 1;
-//	    cur_fp += desc_data_size;
-//	}
-//    }else
-//    {
-//	cur_count[div_dim] = div;
-//	left_dim = count[div_dim];
-//	for(i = 0; i < count[div_dim]; i += div)
-//	{
-//	    cfio_send_put_vara(&msg, rank, ncid, varid, dim, 
-//		    cur_start, cur_count, fp_type, cur_fp);
-//	    cfio_msg_isend(msg);
-//	    left_dim -= div;
-//	    cur_start[div_dim] += div;
-//	    cur_count[div_dim] = left_dim >= div ? div : left_dim; 
-//	    cur_fp += div_data_size;
-//	}
-//    }
-//
-//    //debug(DEBUG_TIME, "%f ms", times_end());
-//    debug(DEBUG_CFIO, "success return.");
-//    return CFIO_ERROR_NONE;
-//}
-
 int cfio_put_vara_float(
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const float *fp)
+	size_t *start, size_t *count, float *fp)
 {
     if(start == NULL || count == NULL || fp == NULL)
     {
@@ -462,7 +367,7 @@ int cfio_put_vara_float(
 
 int cfio_put_vara_double(
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const double *fp)
+	size_t *start, size_t *count, double *fp)
 {
     if(start == NULL || count == NULL || fp == NULL)
     {
@@ -492,7 +397,7 @@ int cfio_put_vara_double(
 
 int cfio_put_vara_int(
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const int *fp)
+	size_t *start, size_t *count, int *fp)
 {
     if(start == NULL || count == NULL || fp == NULL)
     {
@@ -538,21 +443,6 @@ int cfio_io_end()
 
     debug(DEBUG_CFIO, "Finish cfio_io_end");
     return CFIO_ERROR_NONE;
-}
-
-int cfio_start_communication()
-{
-    cfio_send_pause();
-
-    return CFIO_ERROR_NONE;
-}
-
-int cfio_end_communication()
-{
-    cfio_send_resume();
-
-    return CFIO_ERROR_NONE;
-
 }
 
 int cfio_close(
@@ -628,8 +518,8 @@ void cfio_def_dim_c_(
 
 void cfio_def_var_c_(
 	int *ncid, char *name, int *name_len,
-	int *xtype, int *ndims, int *dimids, 
-	int *start, const int *count, int *varidp,
+	cfio_type *xtype, int *ndims, int *dimids, 
+	int *start, int *count, int *varidp,
 	int *ierr)
 {
     size_t *_start, *_count;
@@ -680,7 +570,7 @@ void cfio_def_var_c_(
 
 void cfio_put_att_c_(
 	int *ncid, int *varid, char *name, int *name_len,
-	nc_type *xtype, int *len, const void *op, int *ierr)
+	cfio_type *xtype, int *len, void *op, int *ierr)
 {
     int _varid;
 
@@ -700,7 +590,7 @@ void cfio_put_att_c_(
 }
 void cfio_put_vara_float_c_(
 	int *ncid, int *varid, int *ndims,
-	const int *start, const int *count, const float *fp, int *ierr)
+	int *start, int *count, float *fp, int *ierr)
 {
     size_t *_start, *_count;
     int i, j;
@@ -738,7 +628,7 @@ void cfio_put_vara_float_c_(
 
 void cfio_put_vara_double_c_(
 	int *ncid, int *varid, int *ndims,
-	const int *start, const int *count, const double *fp, int *ierr)
+	int *start, int *count, double *fp, int *ierr)
 {
     size_t *_start, *_count;
     int i, j;
@@ -773,7 +663,7 @@ void cfio_put_vara_double_c_(
 
 void cfio_put_vara_int_c_(
 	int *ncid, int *varid, int *ndims,
-	const int *start, const int *count, const int *fp, int *ierr)
+	int *start, int *count, int *fp, int *ierr)
 {
     size_t *_start, *_count;
     int i, j;
@@ -832,17 +722,6 @@ void cfio_close_c_(
 	int *ncid, int *ierr)
 {
     *ierr = cfio_close(*ncid);
-    return;
-}
-
-void cfio_start_communication_c_(int *ierr)
-{
-    *ierr = cfio_start_communication();
-    return;
-}
-void cfio_end_communication_c_(int *ierr)
-{
-    *ierr = cfio_end_communication();
     return;
 }
 

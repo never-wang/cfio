@@ -192,7 +192,6 @@ static void* cfio_writer(void *argv)
 	//    msg = cfio_recv_get_first();
 	//}
 	//times_start();
-#ifdef disable_subfiling
 	if(func_code == FUNC_IO_END)
 	{
 	    //printf("Server %d recv point : %f\n", rank, times_cur() - start_time);
@@ -218,7 +217,6 @@ static void* cfio_writer(void *argv)
 	    }
 	    //printf("Server %d one loop time : %f\n", rank, times_end());
 	}
-#endif
 	//IO_time += times_end();
     }
 	//times_start();
@@ -241,31 +239,7 @@ int cfio_server_start()
 {
     int ret = 0;
 
-#ifdef disable_subfiling
     cfio_writer((void*)0);
-    return CFIO_ERROR_NONE;
-#endif
-
-#ifndef SVR_RECV_ONLY
-    if( (ret = pthread_create(&reader,NULL,cfio_reader,NULL))<0  )
-    {
-        error("Thread Writer create error()");
-        return CFIO_ERROR_PTHREAD_CREATE;
-    }
-#endif
-    if( (ret = pthread_create(&writer,NULL,cfio_writer,NULL))<0  )
-    {
-        error("Thread Reader create error()");
-        return CFIO_ERROR_PTHREAD_CREATE;
-    }
-
-
-#ifndef SVR_RECV_ONLY
-    pthread_join(reader, NULL);
-#endif
-    
-
-    pthread_join(writer, NULL);
     return CFIO_ERROR_NONE;
 }
 

@@ -19,7 +19,6 @@
 #include "msg.h"
 #include "recv.h"
 #include "send.h"
-#include "netcdf.h"
 #include "debug.h"
 #include "times.h"
 #include "map.h"
@@ -111,11 +110,6 @@ int cfio_recv_final()
 static void cfio_recv_server_buf_free()
 {
     assert(1 == 2);
-#ifndef disable_subfiling
-    pthread_mutex_lock(&full_mutex);
-    pthread_cond_wait(&full_cond, &full_mutex);
-    pthread_mutex_unlock(&full_mutex);
-#endif
     return;
 }
 
@@ -162,10 +156,6 @@ int cfio_recv(
 	    MPI_ANY_TAG, comm, &status);
     MPI_Get_count(&status, MPI_BYTE, &size);
     debug(DEBUG_RECV, "recv: size = %d", size);
-    if(src == 0)
-    {
-	printf(DEBUG_RECV, "recv: size = %lu", size);
-    }
     //total_size += size;
     //if(min_size == 0 || min_size > size)
     //{
@@ -199,19 +189,12 @@ int cfio_recv(
 #endif
     
     /* need lock */
-#ifndef disable_subfiling
-    pthread_mutex_lock(&mutex);
-#endif
     if((*func_code) != FUNC_IO_END)
     {
 #ifndef SVR_RECV_ONLY
 	qlist_add_tail(&(msg->link), &(msg_head[client_index].link));
 #endif
     }
-#ifndef disable_subfiling
-    pthread_mutex_unlock(&mutex);
-    pthread_cond_signal(&empty_cond);
-#endif
     
     //debug(DEBUG_RECV, "uesd_size = %lu", used_buf_size(buffer));
     debug(DEBUG_RECV, "success return");
@@ -224,13 +207,7 @@ cfio_msg_t *cfio_recv_get_first()
     cfio_msg_t *_msg = NULL, *msg;
     qlist_head_t *link;
     size_t size;
-#ifndef disable_subfiling
-    pthread_cond_signal(&full_cond);
-#endif
 
-#ifndef disable_subfiling
-    pthread_mutex_lock(&mutex);
-#endif
     debug(DEBUG_RECV, "client_get_index = %d", client_get_index);
     if(qlist_empty(&(msg_head[client_get_index].link)))
     {
@@ -243,9 +220,6 @@ cfio_msg_t *cfio_recv_get_first()
     if(NULL == link)
     {
 	msg = NULL;
-#ifndef disable_subfiling
-	pthread_cond_wait(&empty_cond, &mutex);
-#endif
     }else
     {
 	msg = qlist_entry(link, cfio_msg_t, link);
@@ -265,9 +239,6 @@ cfio_msg_t *cfio_recv_get_first()
 	}
 	client_get_index = (client_get_index + 1) % client_num;
     }
-#ifndef disable_subfiling
-    pthread_mutex_unlock(&mutex);
-#endif
 
     if(_msg != NULL)
     {
@@ -354,7 +325,7 @@ int cfio_recv_unpack_def_dim(
 
 int cfio_recv_unpack_def_var(
 	cfio_msg_t *msg,
-	int *ncid, char **name, nc_type *xtype,
+	int *ncid, char **name, cfio_type *xtype,
 	int *ndims, int **dimids, 
 	size_t **start, size_t **count, int *varid)
 {
@@ -364,7 +335,7 @@ int cfio_recv_unpack_def_var(
     
     cfio_buf_unpack_data(ncid, sizeof(int), buffer[client_index]);
     cfio_buf_unpack_str(name, buffer[client_index]);
-    cfio_buf_unpack_data(xtype, sizeof(nc_type), buffer[client_index]);
+    cfio_buf_unpack_data(xtype, sizeof(cfio_type), buffer[client_index]);
     cfio_buf_unpack_data_array((void **)dimids, ndims, 
 	    sizeof(int), buffer[client_index]);
     cfio_buf_unpack_data_array((void **)start, ndims, 
@@ -380,7 +351,7 @@ int cfio_recv_unpack_def_var(
 int cfio_recv_unpack_put_att(
 	cfio_msg_t *msg,
 	int *ncid, int *varid, char **name, 
-	nc_type *xtype, int *len, void **op)
+	cfio_type *xtype, int *len, void **op)
 {
     size_t att_size;
     int client_index;
@@ -391,7 +362,7 @@ int cfio_recv_unpack_put_att(
     cfio_buf_unpack_data(ncid, sizeof(int), buffer[client_index]);
     cfio_buf_unpack_data(varid, sizeof(int), buffer[client_index]);
     cfio_buf_unpack_str(name, buffer[client_index]);
-    cfio_buf_unpack_data(xtype, sizeof(nc_type), buffer[client_index]);
+    cfio_buf_unpack_data(xtype, sizeof(cfio_type), buffer[client_index]);
     
     cfio_types_size(att_size, *xtype);
     cfio_buf_unpack_data_array(op, len, att_size, buffer[client_index]);

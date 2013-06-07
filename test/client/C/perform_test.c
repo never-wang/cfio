@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 	for(j = 0; j < VALN; j++)
 	{
 	    sprintf(var_name, "time_v%d", j);
-	    cfio_def_var(ncidp,var_name, NC_DOUBLE, 2,dimids, 
+	    cfio_def_var(ncidp,var_name, CFIO_DOUBLE, 2,dimids, 
 		    start, count, &var[j]);
 	//    cfio_put_att(ncidp, var[j], "global", NC_CHAR, 
 	//	    strlen(var_name), var_name );

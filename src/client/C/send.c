@@ -19,7 +19,6 @@
 #include "msg.h"
 #include "send.h"
 #include "recv.h"
-#include "netcdf.h"
 #include "debug.h"
 #include "times.h"
 #include "map.h"
@@ -111,10 +110,6 @@ static inline void _add_msg(
     debug(DEBUG_SEND, "src=%d; dst=%d; func_code = %d; size = %lu", 
 	    msg->src, msg->dst, msg->func_code, msg->size);
     assert(msg->size <= max_msg_size);
-    if(rank == 0)
-    {
-	printf("send size : %lu", msg->size);
-    }
 
 //    MPI_Isend(msg->addr, msg->size, MPI_BYTE, 
 //	    msg->dst, tag, msg->comm, &(msg->req));
@@ -360,7 +355,7 @@ static void cfio_send_client_buf_free()
 }
 
 int cfio_send_create(
-	const char *path, int cmode, int ncid)
+	char *path, int cmode, int ncid)
 {
     uint32_t code = FUNC_NC_CREATE;
     cfio_msg_t *msg;
@@ -403,7 +398,7 @@ int cfio_send_create(
  *pack msg function
  **/
 int cfio_send_def_dim(
-	int ncid, const char *name, size_t len, int dimid)
+	int ncid, char *name, size_t len, int dimid)
 {
     uint32_t code = FUNC_NC_DEF_DIM;
     cfio_msg_t *msg;
@@ -445,9 +440,9 @@ int cfio_send_def_dim(
 }
 
 int cfio_send_def_var(
-	int ncid, const char *name, nc_type xtype,
-	int ndims, const int *dimids, 
-	const size_t *start, const size_t *count, int varid)
+	int ncid, char *name, cfio_type xtype,
+	int ndims, int *dimids, 
+	size_t *start, size_t *count, int varid)
 {
     uint32_t code = FUNC_NC_DEF_VAR;
     cfio_msg_t *msg;
@@ -460,7 +455,7 @@ int cfio_send_def_var(
     msg->size += cfio_buf_data_size(sizeof(uint32_t));
     msg->size += cfio_buf_data_size(sizeof(int));
     msg->size += cfio_buf_str_size(name);
-    msg->size += cfio_buf_data_size(sizeof(nc_type));
+    msg->size += cfio_buf_data_size(sizeof(cfio_type));
     msg->size += cfio_buf_data_array_size(ndims, sizeof(int));
     msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
     msg->size += cfio_buf_data_array_size(ndims, sizeof(size_t));
@@ -480,7 +475,7 @@ int cfio_send_def_var(
     cfio_buf_pack_data(&code , sizeof(uint32_t), buffer);
     cfio_buf_pack_data(&ncid, sizeof(int), buffer);
     cfio_buf_pack_str(name, buffer);
-    cfio_buf_pack_data(&xtype, sizeof(nc_type), buffer);
+    cfio_buf_pack_data(&xtype, sizeof(cfio_type), buffer);
     cfio_buf_pack_data_array(dimids, ndims, sizeof(int), buffer);
     cfio_buf_pack_data_array(start, ndims, sizeof(size_t), buffer);
     cfio_buf_pack_data_array(count, ndims, sizeof(size_t), buffer);
@@ -495,8 +490,8 @@ int cfio_send_def_var(
 }
 
 int cfio_send_put_att(
-	int ncid, int varid, const char *name, 
-	nc_type xtype, size_t len, const void *op)
+	int ncid, int varid, char *name, 
+	cfio_type xtype, size_t len, void *op)
 {
     uint32_t code = FUNC_PUT_ATT;
     cfio_msg_t *msg;
@@ -513,7 +508,7 @@ int cfio_send_put_att(
     msg->size += cfio_buf_data_size(sizeof(int));
     msg->size += cfio_buf_data_size(sizeof(int));
     msg->size += cfio_buf_str_size(name);
-    msg->size += cfio_buf_data_size(sizeof(nc_type));
+    msg->size += cfio_buf_data_size(sizeof(cfio_type));
     msg->size += cfio_buf_data_array_size(len, att_size);
 
 #ifdef async_send
@@ -531,7 +526,7 @@ int cfio_send_put_att(
     cfio_buf_pack_data(&ncid, sizeof(int), buffer);
     cfio_buf_pack_data(&varid, sizeof(int), buffer);
     cfio_buf_pack_str(name, buffer);
-    cfio_buf_pack_data(&xtype, sizeof(nc_type), buffer);
+    cfio_buf_pack_data(&xtype, sizeof(cfio_type), buffer);
     cfio_buf_pack_data_array(op, len, att_size, buffer);
 
     cfio_map_forwarding(msg);
@@ -582,8 +577,8 @@ int cfio_send_enddef(
 
 int cfio_send_put_vara(
 	int ncid, int varid, int ndims,
-	const size_t *start, const size_t *count, 
-	const int fp_type, const void *fp)
+	size_t *start, size_t *count, 
+	int fp_type, void *fp)
 {
     int i;
     size_t data_len;
@@ -792,42 +787,4 @@ int cfio_send_io_end()
 
     return CFIO_ERROR_NONE;
 }
-
-int cfio_send_test()
-{
-    qlist_head_t *link;
-    MPI_Status status;
-    int flag;
-    cfio_msg_t *msg;
-    
-    link = msg_head->link.prev;
-        
-    qlist_for_each_entry(msg, &(msg_head->link), link)
-    {
-	MPI_Test(&(msg->req), &flag, &status);
-	//printf("fuck flag : %d\n", flag);
-    }
-
-    return CFIO_ERROR_NONE;
-}
-
-int cfio_send_pause()
-{
-    //pthread_mutex_lock(&pause_mutex);
-    //send_pause = 1;
-    //pthread_mutex_unlock(&pause_mutex);
-    
-    return CFIO_ERROR_NONE;
-}
-
-int cfio_send_resume()
-{
-    //pthread_mutex_lock(&pause_mutex);
-    //send_pause = 0;
-    //pthread_mutex_unlock(&pause_mutex);
-    //pthread_cond_signal(&pause_cond);
-    
-    return CFIO_ERROR_NONE;
-}
-
 

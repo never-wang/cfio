@@ -16,6 +16,8 @@
 #define _SEND_H
 #include <stdlib.h>
 
+#include "cfio_types.h"
+
 #define SEND_BUF_SIZE ((size_t)1024*1024*1024)
 #define SEND_MSG_MIN_SIZE ((size_t)70*1024*1024)
 
@@ -42,7 +44,7 @@ int cfio_send_final();
  * @return: error code
  */
 int cfio_send_create(
-	const char *path, int cmode, int ncid);
+	char *path, int cmode, int ncid);
 /**
  * @brief: pack cfio_def_dim into msg
  *
@@ -54,7 +56,7 @@ int cfio_send_create(
  * @return: error_code
  */
 int cfio_send_def_dim(
-	int ncid, const char *name, size_t len, int dimid);
+	int ncid, char *name, size_t len, int dimid);
 /**
  * @brief: pack cfio_def_var into msg
  *
@@ -77,9 +79,9 @@ int cfio_send_def_dim(
  * @return: error code
  */
 int cfio_send_def_var(
-	int ncid, const char *name, nc_type xtype,
-	int ndims, const int *dimids, 
-	const size_t *start, const size_t *count, int varid);
+	int ncid, char *name, cfio_type xtype,
+	int ndims, int *dimids, 
+	size_t *start, size_t *count, int varid);
 /**
  * @brief: pack cfio_put_att into msg
  *
@@ -93,8 +95,8 @@ int cfio_send_def_var(
  * @return: error code
  */
 int cfio_send_put_att(
-	int ncid, int varid, const char *name, 
-	nc_type xtype, size_t len, const void *op);
+	int ncid, int varid, char *name, 
+	cfio_type xtype, size_t len, void *op);
 /**
  * @brief: pack cfio_enddef into msg
  
@@ -125,8 +127,8 @@ int cfio_send_enddef(
  */
 int cfio_send_put_vara(
 	int ncid, int varid, int ndims,
-	const size_t *start, const size_t *count, 
-	const int fp_type, const void *fp);
+	size_t *start, size_t *count, 
+	int fp_type, void *fp);
 /**
  * @brief: pack cfio_close into msg
  *
@@ -144,7 +146,12 @@ int cfio_send_close(
  * @return: error code
  */
 int cfio_send_io_done();
-int cfio_send_pause();
-int cfio_send_resume();
+/**
+ * @brief: pack a special msg, the msg will inform the server that one of the
+ *	client's IO phases is over
+ *
+ * @return: error code
+ */
+int cfio_send_io_end();
 
 #endif

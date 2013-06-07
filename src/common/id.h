@@ -15,10 +15,8 @@
 #ifndef _ID_H
 #define _ID_H
 
-#include <stdint.h>
-
 #include "quicklist.h"
-#include "netcdf.h"
+#include "cfio_types.h"
 
 #define MAP_HASH_TABLE_SIZE 1024
 #define ASSIGN_HASH_TABLE_SIZE 1024
@@ -94,7 +92,7 @@ typedef struct
     size_t *count;	    /* vector of ndims count index of the variable */
     cfio_id_data_t 
 	*recv_data;	    /* pointer to data vector recieved from client */
-    int data_type;          /* type of data, define in cfio_types.h */
+    cfio_type data_type;          /* type of data, define in cfio_types.h */
     //size_t ele_size;	    /* size of each element in the variable array */
     qlist_head_t 
 	*att_head;	    /* variable attribute list */
@@ -104,7 +102,7 @@ typedef struct
 typedef struct
 {
     char *name;		    /* name of the attribute */
-    nc_type xtype;	    /* type of the attribute */
+    cfio_type xtype;	    /* type of the attribute */
     int len;		    /* len of the attribute data */
     char *data;		    /* data of the attribute */
     qlist_head_t link;
@@ -245,7 +243,7 @@ int cfio_id_map_var(
 	int server_nc_id, int server_var_id,
 	int ndims, int *dim_ids,
 	size_t *start, size_t *count,
-	int data_type, int client_num);
+	cfio_type data_type, int client_num);
 int cfio_id_get_val(
 	int client_nc_id, int client_var_id, int client_dim_id,
 	cfio_id_val_t **val);

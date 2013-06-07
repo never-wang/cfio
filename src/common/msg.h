@@ -17,7 +17,6 @@
 #include <stdlib.h>
 
 #include "mpi.h"
-#include "netcdf.h"
 #include "buffer.h"
 #include "quicklist.h"
 

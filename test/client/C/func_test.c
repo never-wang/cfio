@@ -43,9 +43,7 @@ int main(int argc, char** argv)
     MPI_Comm_size(comm, &size);
 
     //assert(size == LAT_PROC * LON_PROC);
-    //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER | DEBUG_SEND); 
-    //set_debug_mask(DEBUG_SEND | DEBUG_CFIO); 
-    set_debug_mask(DEBUG_RECV | DEBUG_SERVER); 
+    //set_debug_mask(DEBUG_IO); 
     size_t start[2],count[2];
     start[0] = (rank % LAT_PROC) * (LAT / LAT_PROC);
     start[1] = (rank / LAT_PROC) * (LON / LON_PROC);
@@ -75,16 +73,13 @@ int main(int argc, char** argv)
 
     int a = 3;
     double b= 4.0;
-    cfio_put_att(ncidp, NC_GLOBAL, "test", NC_INT, 1, &a);
-    cfio_put_att(ncidp, NC_GLOBAL, "test", NC_FLOAT, 1, &b);
+    cfio_put_att(ncidp, NC_GLOBAL, "test", CFIO_INT, 1, &a);
+    cfio_put_att(ncidp, NC_GLOBAL, "test", CFIO_FLOAT, 1, &b);
 
-    cfio_def_var(ncidp,"time_v", NC_FLOAT, 2, dimids, start, count, &var1);
-    cfio_put_att(ncidp, var1, "test", NC_CHAR, strlen(test), test);
+    cfio_def_var(ncidp,"time_v", CFIO_FLOAT, 2, dimids, start, count, &var1);
+    cfio_put_att(ncidp, var1, "test", CFIO_CHAR, strlen(test), test);
     cfio_enddef(ncidp);
     cfio_put_vara_float(ncidp,var1, 2,start, count,fp); 
-
-    cfio_start_communication();
-    cfio_end_communication();
 
     cfio_close(ncidp);
     cfio_io_end();
@@ -92,8 +87,6 @@ int main(int argc, char** argv)
 
     CFIO_END();
     cfio_finalize();
-    printf("Proc %d : fuck111111\n", rank);
     MPI_Finalize();
-    printf("Proc %d : fuck22222\n", rank);
     return 0;
 }

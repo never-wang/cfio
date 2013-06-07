@@ -19,7 +19,6 @@
 #define	_IO_FW_H
 
 #include <stdlib.h>
-#include <netcdf.h>
 
 #include "mpi.h"
 #include "map.h"
@@ -76,7 +75,7 @@ int cfio_proc_type(int rank);
  * @return: 0 if success
  */
 int cfio_create(
-	const char *path, int cmode, int *ncidp);
+	char *path, int cmode, int *ncidp);
 /**
  * @brief: cfio_def_dim
  *
@@ -108,9 +107,9 @@ int cfio_def_dim(
  * @return: 0 if success
  */
 int cfio_def_var(
-	int ncid, char *name, nc_type xtype,
-	int ndims, const int *dimids, 
-	const size_t *start, const size_t *count, 
+	int ncid, char *name, cfio_type xtype,
+	int ndims, int *dimids, 
+	size_t *start, size_t *count, 
 	int *varidp);
 /**
  * @brief: cfio_put_att
@@ -126,8 +125,8 @@ int cfio_def_var(
  * @return: error code
  */
 int cfio_put_att(
-	int ncid, int varid, const char *name, 
-	nc_type xtype, size_t len, const void *op);
+	int ncid, int varid, char *name, 
+	cfio_type xtype, size_t len, void *op);
 /**
  * @brief:cfio_ enddef
  *
@@ -154,7 +153,7 @@ int cfio_inq_varid(int ncid, char *var_name, int *varid);
  */
 int cfio_put_vara_float(
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const float *fp);
+	size_t *start, size_t *count, float *fp);
 /**
  * @brief: cfio_put_vara_double
  *
@@ -171,7 +170,7 @@ int cfio_put_vara_float(
  */
 int cfio_put_vara_double(
 	int ncid, int varid, int dim,
-	const size_t *start, const size_t *count, const double *fp);
+	size_t *start, size_t *count, double *fp);
 /**
  * @brief: cfio_close
  *

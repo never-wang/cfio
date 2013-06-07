@@ -212,7 +212,7 @@ int cfio_buf_clear(cfio_buf_t *buf_p);
  * @return: error code
  */
 int cfio_buf_pack_data(
-	const void *data, size_t size, cfio_buf_t *buf_p);
+	void *data, size_t size, cfio_buf_t *buf_p);
 
 /**
  * @brief: unpack one data from the buffer
@@ -236,7 +236,7 @@ int cfio_buf_unpack_data(
  * @return: error code
  */
 int cfio_buf_pack_data_array(
-	const void *data, int len,
+	void *data, int len,
 	size_t size, cfio_buf_t *buf_p);
 
 /**
@@ -272,7 +272,7 @@ int cfio_buf_unpack_data_array_ptr(
 
     
 #define cfio_buf_pack_str(str, buf) \
-    cfio_buf_pack_data_array((const void*)(str), strlen((char*)str) + 1, \
+    cfio_buf_pack_data_array((void*)(str), strlen((char*)str) + 1, \
 	    sizeof(char), buf)
 #define cfio_buf_unpack_str(str, buf) \
     cfio_buf_unpack_data_array((void **)str, NULL, sizeof(char), buf)
