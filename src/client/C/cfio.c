@@ -47,8 +47,7 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     MPI_Group group, client_group, server_group;
     int *ranks;
 
-    //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);d:w
-    //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
+    //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER);// | DEBUG_MSG | DEBUG_SERVER);
     rc = MPI_Initialized(&i); 
     if( !i )
     {
@@ -467,22 +466,16 @@ int cfio_close(
 void cfio_init_c_(int *x_proc_num, int *y_proc_num, int *ratio, int *ierr)
 {
     *ierr = cfio_init(*x_proc_num, *y_proc_num, *ratio);
-
-    return;
 }
 
 void cfio_finalize_c_(int *ierr)
 {
     *ierr = cfio_finalize();
-
-    return;
 }
 
 void cfio_proc_type_c_(int *type)
 {
     *type = cfio_proc_type();
-    debug(DEBUG_CFIO, "rank(%d)'s type = %d", rank, *type);
-    return;
 }
 
 void cfio_create_c_(

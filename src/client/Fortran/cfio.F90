@@ -1,5 +1,3 @@
-
-
 module cfio
 implicit none
 
@@ -197,3 +195,4 @@ integer function cfio_close(ncid)
 end function
 
 end module
+

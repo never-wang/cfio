@@ -16,6 +16,6 @@ libcfio_a_SOURCES = cfio.h cfio.c send.h send.c\
 		    $(common) $(server)
 libcfio_a_CFLAGS = -I$(common_dir) -I$(server_dir)
 
-include_HEADERS = cfio.h
+include_HEADERS = cfio.h $(common_dir)/cfio_types.h $(common_dir)/cfio_error.h
 
 
