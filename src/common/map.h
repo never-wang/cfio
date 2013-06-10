@@ -18,8 +18,8 @@
 
 #define GEN_SERVER_ERROR	0.4
 
-#define CFIO_MAP_TYPE_SERVER	1
-#define CFIO_MAP_TYPE_CLIENT	2
+#define CFIO_MAP_TYPE_CLIENT	1
+#define CFIO_MAP_TYPE_SERVER	2
 #define CFIO_MAP_TYPE_BLANK	3 /* the proc who do nothing, because someon may 
 				     start more proc than needed*/
 /**

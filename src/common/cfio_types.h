@@ -19,12 +19,12 @@
 
 typedef enum
 {
-    CFIO_BYTE   =	0,
-    CFIO_CHAR   =	1,
-    CFIO_SHORT  =	2,
-    CFIO_INT    =	3,
-    CFIO_FLOAT  =	4,
-    CFIO_DOUBLE =	5,
+    CFIO_BYTE   =	1,
+    CFIO_CHAR   =	2,
+    CFIO_SHORT  =	3,
+    CFIO_INT    =	4,
+    CFIO_FLOAT  =	5,
+    CFIO_DOUBLE =	6,
 }cfio_type;
 
 static inline nc_type cfio_type_to_nc(cfio_type type)

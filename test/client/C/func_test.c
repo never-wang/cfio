@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 
     cfio_init( LAT_PROC, LON_PROC, ratio);
-    CFIO_START(rank);
+    CFIO_START();
 
     char fileName[100];
     memset(fileName, 0, sizeof(fileName));

@@ -83,7 +83,7 @@ int main(int argc, char** argv)
 
     times_start();
     cfio_init( LAT_PROC, LON_PROC, CFIO_RATIO);
-    CFIO_START(rank);
+    CFIO_START();
     double start_time = times_cur();
     //printf("Loop : %d\n", LOOP);
     for(i = 0; i < LOOP; i ++)

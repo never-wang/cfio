@@ -170,15 +170,9 @@ int cfio_finalize()
     return CFIO_ERROR_NONE;
 }
 
-int cfio_proc_type(int rank)
+int cfio_proc_type()
 {
     int type;
-
-    if(rank < 0)
-    {
-	error("rank should be positive.");
-	return CFIO_ERROR_RANK_INVALID;
-    }
 
     type = cfio_map_proc_type(rank);
 
@@ -484,10 +478,10 @@ void cfio_finalize_c_(int *ierr)
     return;
 }
 
-void cfio_proc_type_c_(int *rank, int *type)
+void cfio_proc_type_c_(int *type)
 {
-    *type = cfio_proc_type(*rank);
-    debug(DEBUG_CFIO, "rank(%d)'s type = %d", *rank, *type);
+    *type = cfio_proc_type();
+    debug(DEBUG_CFIO, "rank(%d)'s type = %d", rank, *type);
     return;
 }
 

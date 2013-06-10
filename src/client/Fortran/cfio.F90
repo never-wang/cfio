@@ -3,19 +3,19 @@
 module cfio
 implicit none
 
-integer, parameter :: CFIO_PROC_SERVER = 1
-integer, parameter :: CFIO_PROC_CLIENT = 2
+integer, parameter :: CFIO_PROC_CLIENT = 1
+integer, parameter :: CFIO_PROC_SERVER = 2
 integer, parameter :: CFIO_PROC_BLANK = 3
 
 integer :: char_len = 128
 integer :: array_len = 128
 
-integer, parameter :: cfio_byte   = 0
-integer, parameter :: cfio_char   = 1
-integer, parameter :: cfio_short  = 2
-integer, parameter :: cfio_int	  = 3
-integer, parameter :: cfio_float  = 4
-integer, parameter :: cfio_double = 5
+integer, parameter :: cfio_byte   = 1
+integer, parameter :: cfio_char   = 2
+integer, parameter :: cfio_short  = 3
+integer, parameter :: cfio_int	  = 4
+integer, parameter :: cfio_float  = 5
+integer, parameter :: cfio_double = 6
 
 interface cfio_put_att
     module procedure cfio_put_att_str
@@ -47,11 +47,10 @@ integer(4) function cfio_finalize()
 
 end function
 
-integer(4) function cfio_proc_type(rank)
+integer(4) function cfio_proc_type()
     implicit none
-    integer(4), intent(in) :: rank
 
-    call cfio_proc_type_c(rank, cfio_proc_type)
+    call cfio_proc_type_c(cfio_proc_type)
 
 end function
 
