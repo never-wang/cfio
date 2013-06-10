@@ -350,6 +350,8 @@ static inline int _handle_def(cfio_id_val_t *val)
 	    var->dim_ids[i] = dim->dim_id;
 	}
 	var->nc_id = dim->nc_id;
+	debug(DEBUG_IO, "Def var : cfio_type(%d), nc_type(%d)", 
+		var->data_type, cfio_type_to_nc(var->data_type));
 #ifndef SVR_NO_IO
 	ret = ncmpi_def_var(var->nc_id, var->name, cfio_type_to_nc(var->data_type), var->ndims,
 		var->dim_ids, &var->var_id);
@@ -1083,7 +1085,7 @@ int cfio_io_put_vara(cfio_msg_t *msg)
     {
 	    debug(DEBUG_IO, "recv dim %d: start(%lu), count(%lu)", 
 		    i, start[i], count[i]);
-	    debug(DEBUG_IO, "recv data = %f", ((float *)data)[0]);
+	    debug(DEBUG_IO, "recv data = %f", ((double *)data)[0]);
 	//    printf( "dim %d: start(%lu), count(%lu)\n", 
 	//	    i, total_start[i], total_count[i]);
     }

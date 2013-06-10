@@ -30,7 +30,7 @@
 int main(int argc, char** argv)
 {
     int rank, size;
-    char *path = "./output/test";
+    char *path = "test";
     int ncidp;
     int dim1,var1,i;
 

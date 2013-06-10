@@ -21,17 +21,16 @@
 #include <stdlib.h>
 
 #include "mpi.h"
-#include "map.h"
 #include "cfio_types.h"
 
 #define CLIENT_BUF_SIZE ((size_t)512*1024*1024)
 
-#define CFIO_PROC_CLIENT CFIO_MAP_TYPE_CLIENT
-#define CFIO_PROC_SERVER CFIO_MAP_TYPE_SERVER
-#define CFIO_PROC_BLANK	 CFIO_MAP_TYPE_BLANK
+#define CFIO_PROC_CLIENT 1
+#define CFIO_PROC_SERVER 2
+#define CFIO_PROC_BLANK	 3
 
 #define CFIO_START(rank) \
-    if(cfio_map_proc_type(rank) == CFIO_MAP_TYPE_CLIENT) {
+    if(cfio_proc_type() == CFIO_PROC_CLIENT) {
 
 #define CFIO_END()	\
     }			
@@ -60,11 +59,9 @@ int cfio_finalize();
 /**
  * @brief: get the process type, client, server or blank
  *
- * @param rank: rank of the proccess
- *
  * @return: the proccess type
  */
-int cfio_proc_type(int rank);
+int cfio_proc_type();
 /**
  * @brief: cfio_create
  *

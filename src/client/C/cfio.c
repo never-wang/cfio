@@ -47,8 +47,7 @@ int cfio_init(int x_proc_num, int y_proc_num, int ratio)
     MPI_Group group, client_group, server_group;
     int *ranks;
 
-    //set_debug_mask(DEBUG_CFIO | DEBUG_MSG | DEBUG_BUF);d:w
-    //set_debug_mask(DEBUG_CFIO | DEBUG_IO);// | DEBUG_MSG | DEBUG_SERVER);
+    //set_debug_mask(DEBUG_CFIO | DEBUG_SERVER);// | DEBUG_MSG | DEBUG_SERVER);
     rc = MPI_Initialized(&i); 
     if( !i )
     {
@@ -170,15 +169,9 @@ int cfio_finalize()
     return CFIO_ERROR_NONE;
 }
 
-int cfio_proc_type(int rank)
+int cfio_proc_type()
 {
     int type;
-
-    if(rank < 0)
-    {
-	error("rank should be positive.");
-	return CFIO_ERROR_RANK_INVALID;
-    }
 
     type = cfio_map_proc_type(rank);
 
@@ -470,25 +463,21 @@ int cfio_close(
 /**
  *For Fortran Call
  **/
-void cfio_init_c_(int *x_proc_num, int *y_proc_num, int *ratio, int *ierr)
+int cfio_init_(int *x_proc_num, int *y_proc_num, int *ratio)
 {
-    *ierr = cfio_init(*x_proc_num, *y_proc_num, *ratio);
-
-    return;
+    return cfio_init(*x_proc_num, *y_proc_num, *ratio);
 }
 
-void cfio_finalize_c_(int *ierr)
+int cfio_finalize_()
 {
-    *ierr = cfio_finalize();
-
-    return;
+    return cfio_finalize();
 }
 
-void cfio_proc_type_c_(int *rank, int *type)
+int cfio_proc_type_()
 {
-    *type = cfio_proc_type(*rank);
-    debug(DEBUG_CFIO, "rank(%d)'s type = %d", *rank, *type);
-    return;
+    int i = cfio_proc_type();
+    printf("rank %d : proc_type(%d)\n", rank, i);
+    return cfio_proc_type();
 }
 
 void cfio_create_c_(
