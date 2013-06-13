@@ -187,6 +187,12 @@ integer function cfio_put_vara_int(ncid, varid, ndims, start, count, fp)
 
 end function
 
+integer function cfio_io_end()
+
+    call cfio_io_end_c(cfio_io_end)
+
+end function
+
 integer function cfio_close(ncid)
     integer(4), intent(in) :: ncid
 
